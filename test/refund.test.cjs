@@ -164,3 +164,19 @@ test('인모드 FX 3회: 정상 440,000 / 리프팅 1년 혜택가 330,000, 선�
   assert.equal(run('PGM-0085B', 'ref'), 313500);
   assert.equal(run('PGM-0085B', 'ret'), 297000);
 });
+
+test('가격 관리 기록: 총 등록금액만 기록·제거, 다른 변경 기록은 유지, 원본 기록 객체는 바뀌지 않음', () => {
+  require('../src/catalog.js'); const CT = globalThis.DachaeumCatalog;
+  const base = { version: 'v1', programs: [{ id: 'A', total: '100' }, { id: 'B', total: '200', name: 'b' }], events: [] };
+  const ov0 = { programs: { B: { name: 'b2', total: '250' } }, added: [{ id: 'X', total: '9' }], deleted: [], events: {}, keep: 1 };
+  const snap = JSON.stringify(ov0);
+  const ov1 = CT.setProgramTotal(ov0, 'A', 150, '2026-10-01 10:00');
+  assert.equal(JSON.stringify(ov0), snap);
+  assert.deepEqual(CT.applyOverride(base, ov1).programs.map(p => [p.id, p.total]), [['A', '150'], ['B', '250'], ['X', '9']]);
+  const ov2 = CT.clearProgramTotal(ov1, 'A', 't'), ov3 = CT.clearProgramTotal(ov2, 'B', 't');
+  assert.equal(ov2.programs.A, undefined);
+  assert.deepEqual(ov3.programs.B, { name: 'b2' }, '총 등록금액만 제거, 다른 변경은 유지');
+  assert.deepEqual([ov3.added, ov3.keep], [[{ id: 'X', total: '9' }], 1]);
+  assert.deepEqual(CT.applyOverride(base, ov3).programs.map(p => p.total), ['100', '200', '9']);
+  assert.deepEqual(CT.setProgramTotal(null, 'A', 120).programs, { A: { total: '120' } });
+});

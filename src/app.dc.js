@@ -1389,6 +1389,73 @@ class Component extends DCLogic {
             if (!this.applyRestore(plan.keys)) return msg('복원에 실패했습니다. 기존 자료는 그대로 남아 있습니다.', true);
             location.reload();
           } };
+      })(),
+      // ---- 가격 관리 (동의서 앱 안에서 열림) ----
+      // 기존 가격 데이터(programs.json) + 기존 변경 기록(dachaeum.priceOverride)을 그대로 사용. 총 등록금액만 수정·되돌림
+      // 저장된 계약은 계약 당시 금액을 따로 가지고 있으므로 바뀌지 않고, 새 계약부터 적용됨
+      ...(() => {
+        const CT = window.DachaeumCatalog, base = this._base;
+        const close = () => this.setState({ pmOpen: false, pmQ: '', pmEdit: {}, pmMsg: '' });
+        const out = { pmShow: () => this.setState({ pmOpen: true, pmQ: '', pmEdit: {}, pmMsg: '' }), pmOpen: !!s.pmOpen, pmClose: close,
+          pmQ: s.pmQ || '', onPmQ: e => this.setState({ pmQ: e.target.value }), pmReady: !!(CT && base), pmLoading: !(CT && base),
+          pmRows: [], pmHint: '', pmChanged: [], pmHasChanged: false, pmOther: '', pmHasOther: false,
+          hasPmMsg: !!s.pmMsg, pmMsg: s.pmMsg || '', pmMsgFg: s.pmErr ? '#b3261e' : '#2f6b45' };
+        if (!s.pmOpen || !CT || !base) return out;
+        const ov = CT.readOverride();
+        const cur = CT.applyOverride(base, ov);
+        const baseOf = {}; (base.programs || []).forEach(p => { baseOf[p.id] = p; });
+        const added = new Set(((ov && ov.added) || []).map(p => p.id));
+        const msg = (t, err) => this.setState({ pmMsg: t, pmErr: !!err });
+        const write = (next, done) => {
+          try { localStorage.setItem(CT.OV_KEY, JSON.stringify(next)); } catch (e) { return msg('기기 저장 공간이 부족해 저장하지 못했습니다. 기존 가격은 그대로입니다', true); }
+          this._dbKey = null; if (this._reload) this._reload();
+          const ed = { ...(s.pmEdit || {}) }; delete ed[done.id];
+          this.setState({ pmEdit: ed }); msg(done.text);
+        };
+        const stamp = () => { const d = new Date(), z = n => String(n).padStart(2, '0');
+          return d.getFullYear() + '-' + z(d.getMonth() + 1) + '-' + z(d.getDate()) + ' ' + z(d.getHours()) + ':' + z(d.getMinutes()); };
+        const row = p => {
+          const b = baseOf[p.id], ovT = ov && ov.programs && ov.programs[p.id] && Object.prototype.hasOwnProperty.call(ov.programs[p.id], 'total');
+          const editable = !!b && !added.has(p.id) && !p.lesion && !!Number(b.total || 0);
+          const note = p.lesion ? '병변 크기별 금액으로 계산 (여기서 수정하지 않음)' : added.has(p.id) ? '가격 관리에서 추가된 항목' : !Number((b || p).total || 0) ? '조건별 금액 (등록 시 입력)' : '';
+          const val = (s.pmEdit || {})[p.id] ?? '';
+          const save = () => {
+            const raw = String(val).trim();
+            if (!/^[0-9][0-9,\s]*원?$/.test(raw)) return msg('금액은 숫자로만 입력해 주세요 (예: 330,000)', true);
+            const price = Number(raw.replace(/[^0-9]/g, ''));
+            if (!(price > 0)) return msg('0원은 저장할 수 없습니다', true);
+            if (price === Number(p.total || 0)) return msg('현재 적용 가격과 같습니다', true);
+            if (!confirm('[' + p.id + '] ' + p.name + '\n총 등록금액 ' + won(p.total) + '원 → ' + won(price) + '원\n\n새 계약부터 적용되고, 이미 저장된 계약 금액은 바뀌지 않습니다.')) return;
+            const next = price === Number(b.total || 0) ? CT.clearProgramTotal(ov, p.id, stamp()) : CT.setProgramTotal(ov, p.id, price, stamp());
+            write(next, { id: p.id, text: p.name + ' 가격을 ' + won(price) + '원으로 저장했습니다 (새 계약부터 적용)' });
+          };
+          const reset = () => {
+            if (!confirm('[' + p.id + '] ' + p.name + '\n변경 가격 ' + won(p.total) + '원을 지우고 기본 가격 ' + won(b.total) + '원으로 되돌립니다.\n이미 저장된 계약 금액은 바뀌지 않습니다.')) return;
+            write(CT.clearProgramTotal(ov, p.id, stamp()), { id: p.id, text: p.name + ' 가격을 기본 가격 ' + won(b.total) + '원으로 되돌렸습니다' });
+          };
+          return { id: p.id, name: p.name, cat: p.cat || '', curText: Number(p.total || 0) ? won(p.total) + '원' : '—',
+            baseText: b && Number(b.total || 0) ? '기본 ' + won(b.total) + '원' : '', changed: !!ovT && editable, notChanged: !(ovT && editable),
+            editable, notEditable: !editable, note, val, onVal: e => this.setState({ pmEdit: { ...(s.pmEdit || {}), [p.id]: e.target.value } }), save, reset };
+        };
+        const q = String(s.pmQ || '').trim().toLowerCase();
+        const hit = p => [p.id, p.name, p.cat, p.g, p.r, p.o].concat((p.items || []).map(i => i.name + ' ' + i.id)).some(t => String(t || '').toLowerCase().includes(q));
+        const found = q ? (cur.programs || []).filter(hit) : [];
+        out.pmRows = found.slice(0, 40).map(row);
+        out.pmHint = !q ? '프로그램 이름·ID 또는 시술 이름으로 검색하세요' : !found.length ? '검색 결과가 없습니다' : found.length > 40 ? '검색 결과 ' + found.length + '건 중 40건만 보입니다. 검색어를 더 입력하세요' : '';
+        // 기존 변경 기록 (총 등록금액 외 변경은 확인만)
+        const ovp = (ov && ov.programs) || {};
+        out.pmChanged = Object.keys(ovp).map(id => { const p = (cur.programs || []).find(x => x.id === id), b = baseOf[id];
+          const keys = Object.keys(ovp[id]), hasT = keys.includes('total'), others = keys.filter(k => k !== 'total');
+          const r = p ? row(p) : null;
+          return { id, name: (p || b || {}).name || id,
+            text: (hasT ? '총 등록금액 ' + (b && Number(b.total || 0) ? won(b.total) + '원 → ' : '') + won(ovp[id].total) + '원' : '') + (others.length ? (hasT ? ' · ' : '') + '기타 변경 ' + others.join(', ') : ''),
+            canReset: !!(r && r.changed), reset: r ? r.reset : () => {} }; });
+        out.pmHasChanged = out.pmChanged.length > 0;
+        const oth = [ov && ov.added && ov.added.length ? '추가 ' + ov.added.length + '건' : '', ov && ov.deleted && ov.deleted.length ? '숨김 ' + ov.deleted.length + '건' : '',
+          ov && ov.events && Object.keys(ov.events).length ? '이벤트 변경 ' + Object.keys(ov.events).length + '건' : ''].filter(Boolean);
+        out.pmOther = oth.length ? '그 밖의 기존 변경 기록: ' + oth.join(' · ') + ' (그대로 유지)' : ''; out.pmHasOther = !!oth.length;
+        out.pmVer = ov && ov.at ? '마지막 변경 ' + ov.at : '변경 기록 없음 · 기본 가격 사용 중';
+        return out;
       })()
     };
   }

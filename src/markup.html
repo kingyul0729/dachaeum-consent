@@ -1439,7 +1439,7 @@ body,body *{word-break:keep-all;overflow-wrap:break-word;line-break:strict}
 <!-- ================= 하단 고정 버튼줄 ================= -->
 <sc-if value="{{ showBar }}" hint-placeholder-val="{{ true }}">
 <div style="height:88px;flex:none;border-top:1px solid #e3e6ea;background:#ffffff;display:flex;align-items:center;justify-content:space-between;padding:0 28px">
-  <div></div>
+  <div><sc-if value="{{ isList }}" hint-placeholder-val="{{ true }}"><div sc-camel-on-click="{{ pmShow }}" title="가격 관리" role="button" style="cursor:pointer;width:44px;height:44px;margin-left:-10px;border-radius:22px;display:flex;align-items:center;justify-content:center;color:#b3b9c0;text-decoration:none" style-hover="color:#5c636b;background:#f3f5f7"><svg width="22" height="22" sc-camel-view-box="0 0 24 24" fill="none" stroke="currentColor" sc-camel-stroke-width="1.6" sc-camel-stroke-linecap="round" sc-camel-stroke-linejoin="round"><circle cx="12" cy="12" r="9.5"></circle><circle cx="12" cy="9.5" r="3.2"></circle><path d="M5.8 18.6c1.4-2 3.6-3.1 6.2-3.1s4.8 1.1 6.2 3.1"></path></svg></div></sc-if></div>
   <div style="display:flex;gap:10px">
     <sc-if value="{{ hasSecondary }}" hint-placeholder-val="{{ true }}">
       <div sc-camel-on-click="{{ onSecondary }}" style="height:44px;padding:0 18px;box-sizing:border-box;border-radius:8px;display:flex;align-items:center;justify-content:center;gap:8px;font-size:14px;font-weight:600;cursor:pointer;white-space:nowrap;flex:none;border:1px solid #c9d3de;background:#ffffff;color:#345b80" style-hover="background:#f3f6f9" style-active="background:#e8eef4">{{ secondary }}</div>
@@ -1499,6 +1499,57 @@ body,body *{word-break:keep-all;overflow-wrap:break-word;line-break:strict}
     </div>
     <sc-if value="{{ hasBkMsg }}" hint-placeholder-val="{{ false }}"><div style="font-size:13px;line-height:1.5;color:{{ bkMsgFg }}">{{ bkMsg }}</div></sc-if>
     <div style="display:flex;justify-content:flex-end"><div sc-camel-on-click="{{ bkClose }}" style="height:40px;padding:0 18px;border-radius:8px;display:flex;align-items:center;font-size:14px;font-weight:600;color:#5c636b;cursor:pointer">닫기</div></div>
+  </div>
+</div>
+</sc-if>
+
+<!-- ================= 가격 관리 ================= -->
+<sc-if value="{{ pmOpen }}" hint-placeholder-val="{{ false }}">
+<div sc-camel-on-click="{{ pmClose }}" style="position:fixed;inset:0;z-index:70;background:rgba(28,31,35,0.38);display:flex;align-items:center;justify-content:center;padding:24px">
+  <div sc-camel-on-click="{{ stop }}" style="width:620px;max-width:100%;max-height:100%;overflow-y:auto;background:#ffffff;border-radius:14px;padding:22px 24px 18px;box-shadow:0 12px 40px rgba(28,31,35,0.2);display:flex;flex-direction:column;gap:14px">
+    <div style="display:flex;align-items:baseline;justify-content:space-between;gap:8px">
+      <div style="font-size:17px;font-weight:600;color:#1c1f23">가격 관리</div>
+      <div style="font-size:12px;color:#8d949b">{{ pmVer }}</div>
+    </div>
+    <div style="font-size:12.5px;color:#5c636b;line-height:1.55">바꾼 가격은 이 기기에 저장되며 새 계약부터 적용됩니다. 이미 저장된 계약의 계약 당시 금액은 바뀌지 않습니다.</div>
+    <sc-if value="{{ pmLoading }}" hint-placeholder-val="{{ false }}"><div style="font-size:13px;color:#8d949b">가격 데이터를 불러오는 중입니다…</div></sc-if>
+    <sc-if value="{{ pmReady }}" hint-placeholder-val="{{ true }}">
+    <div style="display:flex;flex-direction:column;gap:14px">
+    <sc-if value="{{ pmHasChanged }}" hint-placeholder-val="{{ false }}">
+      <div style="display:flex;flex-direction:column;gap:6px;padding:12px 14px;border:1px solid #e9ebee;border-radius:12px">
+        <div style="font-size:13.5px;font-weight:600;color:#1c1f23">현재 변경된 가격</div>
+        <sc-for list="{{ pmChanged }}" as="c" hint-placeholder-count="1">
+          <div style="display:flex;align-items:center;gap:10px;font-size:13px;font-variant-numeric:tabular-nums">
+            <div style="flex:1;min-width:0;color:#2b3036">{{ c.name }} <span style="color:#8d949b">{{ c.id }}</span><div style="color:#5c636b">{{ c.text }}</div></div>
+            <sc-if value="{{ c.canReset }}" hint-placeholder-val="{{ false }}"><div sc-camel-on-click="{{ c.reset }}" style="height:36px;padding:0 12px;border-radius:8px;display:flex;align-items:center;font-size:13px;font-weight:600;color:#5c636b;border:1px solid #d5d9de;cursor:pointer;flex:none">기본 가격으로</div></sc-if>
+          </div>
+        </sc-for>
+      </div>
+    </sc-if>
+    <sc-if value="{{ pmHasOther }}" hint-placeholder-val="{{ false }}"><div style="font-size:12.5px;color:#5c636b">{{ pmOther }}</div></sc-if>
+    <input placeholder="프로그램·시술 검색 (이름 또는 ID)" value="{{ pmQ }}" sc-camel-on-input="{{ onPmQ }}" style="height:42px;box-sizing:border-box;border:1px solid #d5d9de;border-radius:8px;padding:0 12px;font-family:inherit;font-size:14px">
+    <div style="font-size:12.5px;color:#8d949b">{{ pmHint }}</div>
+    <sc-for list="{{ pmRows }}" as="r" hint-placeholder-count="2">
+      <div style="display:flex;flex-direction:column;gap:8px;padding:12px 14px;border:1px solid #e9ebee;border-radius:12px">
+        <div style="display:flex;align-items:baseline;gap:8px">
+          <div style="flex:1;min-width:0;font-size:14px;font-weight:600;color:#1c1f23">{{ r.name }} <span style="font-size:12px;font-weight:400;color:#8d949b">{{ r.id }} · {{ r.cat }}</span></div>
+          <div style="font-size:14px;font-weight:600;font-variant-numeric:tabular-nums;flex:none">{{ r.curText }}</div>
+        </div>
+        <sc-if value="{{ r.changed }}" hint-placeholder-val="{{ false }}"><div style="font-size:12.5px;color:#7a5115">변경된 가격 적용 중 · {{ r.baseText }}</div></sc-if>
+        <sc-if value="{{ r.notEditable }}" hint-placeholder-val="{{ false }}"><div style="font-size:12.5px;color:#8d949b">{{ r.note }}</div></sc-if>
+        <sc-if value="{{ r.editable }}" hint-placeholder-val="{{ true }}">
+          <div style="display:flex;align-items:center;gap:8px">
+            <input placeholder="수정 가격 (원)" value="{{ r.val }}" sc-camel-on-input="{{ r.onVal }}" sc-camel-input-mode="numeric" style="flex:1;min-width:0;height:40px;box-sizing:border-box;border:1px solid #d5d9de;border-radius:8px;padding:0 12px;font-family:inherit;font-size:14px;text-align:right">
+            <div sc-camel-on-click="{{ r.save }}" style="height:40px;padding:0 16px;border-radius:8px;display:flex;align-items:center;font-size:14px;font-weight:600;color:#ffffff;background:#345b80;cursor:pointer;flex:none">저장</div>
+            <sc-if value="{{ r.changed }}" hint-placeholder-val="{{ false }}"><div sc-camel-on-click="{{ r.reset }}" style="height:40px;padding:0 12px;border-radius:8px;display:flex;align-items:center;font-size:13px;font-weight:600;color:#5c636b;border:1px solid #d5d9de;cursor:pointer;flex:none">기본 가격으로</div></sc-if>
+          </div>
+        </sc-if>
+      </div>
+    </sc-for>
+    </div>
+    </sc-if>
+    <sc-if value="{{ hasPmMsg }}" hint-placeholder-val="{{ false }}"><div style="font-size:13px;line-height:1.5;color:{{ pmMsgFg }}">{{ pmMsg }}</div></sc-if>
+    <div style="display:flex;justify-content:flex-end"><div sc-camel-on-click="{{ pmClose }}" style="height:40px;padding:0 18px;border-radius:8px;display:flex;align-items:center;font-size:14px;font-weight:600;color:#5c636b;cursor:pointer">닫기</div></div>
   </div>
 </div>
 </sc-if>

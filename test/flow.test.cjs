@@ -413,19 +413,70 @@ test('PGM-0041 흑자 1cm 1개: 총 등록금액 330,000원 표시·저장, 병�
   assert.deepEqual(p.errors, []);
 });
 
-test('가격 관리 버튼 숨김: 링크 없음(404 방지), 하단 버튼·가격 변경 기록 적용·저장 자료 유지', async () => {
-  const ov = JSON.stringify({ programs: { 'PGM-0001': { total: '1111000' } } });
-  const p = await open([mk('c-keep', '기존 계약')], { storage: { 'dachaeum.priceOverride': ov } });
-  const before = await p.evaluate(() => [localStorage.getItem('dachaeum.v3.contracts'), localStorage.getItem('dachaeum.priceOverride')]);
-  assert.equal(await p.locator('a[href*="dc.html"], [title="가격 관리"]').count(), 0);
-  assert.match(await body(p), /새 동의서 작성/);
-  await click(p, '새 동의서 작성'); const ins = p.locator('input');
-  await ins.nth(0).fill('버튼테스트'); await ins.nth(1).fill('880101'); await ins.nth(2).fill('01011112222');
-  await click(p, '다음 단계'); await click(p, '전체');
-  await p.locator('input[placeholder*="검색"]').fill('PGM-0001'); await p.waitForTimeout(300);
-  assert.match(await body(p), /1,111,000원/, '가격 변경 기록(override)은 그대로 적용');
+
+test('가격 관리: 버튼 표시 → 앱 안에서 열림(404 없음) → 수정·저장 → 새 계약 적용, 기존 계약 불변 → 새로고침 유지 → 기본 가격 복귀, 기존 변경 기록 유지', async () => {
+  const oldOv = { programs: { 'PGM-0002': { total: '1450000' } }, added: [], deleted: [], events: {}, at: '2026-09-01 10:00' };
+  const p = await open([mk('c-keep', '스페셜 토닝 1', { cat: '색소', total: 1320000, paid: 1320000 })], { storage: { 'dachaeum.priceOverride': JSON.stringify(oldOv) } });
+  const keep = JSON.stringify((await contracts(p)).find(c => c.id === 'c-keep'));
+  const ovNow = () => p.evaluate(() => JSON.parse(localStorage.getItem('dachaeum.priceOverride') || 'null'));
+  const openPm = async () => { await p.locator('[title="가격 관리"]').click(); await p.waitForTimeout(400); };
+  assert.equal(await p.locator('[title="가격 관리"]').count(), 1, '가격 관리 버튼 표시');
   assert.equal(await p.locator('a[href*="dc.html"]').count(), 0);
-  const after = await p.evaluate(() => [localStorage.getItem('dachaeum.v3.contracts'), localStorage.getItem('dachaeum.priceOverride')]);
-  assert.deepEqual(after, before);
+  const url = p.url();
+  await openPm();
+  assert.equal(p.url(), url, '다른 파일로 이동하지 않음 (404 없음)');
+  let b = await body(p);
+  assert.match(b, /가격 관리/); assert.match(b, /현재 변경된 가격/);
+  assert.match(b, /스페셜 토닝 2[\s\S]*총 등록금액 1,430,000원 → 1,450,000원/, '기존 변경 기록 표시');
+  // 수정·저장
+  await p.locator('input[placeholder^="프로그램·시술 검색"]').fill('PGM-0001'); await p.waitForTimeout(300);
+  assert.match(await body(p), /스페셜 토닝 1[\s\S]*1,320,000원/);
+  await p.locator('input[placeholder="수정 가격 (원)"]').first().fill('1,400,000');
+  await p.getByText('저장', { exact: true }).first().click(); await p.waitForTimeout(400);
+  assert.match(await body(p), /1,400,000원으로 저장했습니다/);
+  let ov = await ovNow();
+  assert.equal(ov.programs['PGM-0001'].total, '1400000');
+  assert.deepEqual(ov.programs['PGM-0002'], { total: '1450000' }, '기존 변경 기록 유지');
+  // 새로고침 후에도 유지 → 새 계약에 변경 가격 적용
+  await p.reload(); await p.waitForTimeout(2000);
+  await pickProgram(p, 'PGM-0001', '스페셜 토닝 1'); await signAndSave(p);
+  let all = await contracts(p);
+  const c1 = all.find(c => c.id !== 'c-keep');
+  assert.equal(c1.total, 1400000, '새 계약에 변경 가격 적용');
+  assert.equal(JSON.stringify(all.find(c => c.id === 'c-keep')), keep, '기존 계약 불변');
+  // 기본 가격으로 되돌리기
+  await p.goto(URL); await p.waitForTimeout(1500);
+  await openPm();
+  await p.locator('input[placeholder^="프로그램·시술 검색"]').fill('PGM-0001'); await p.waitForTimeout(300);
+  await p.getByText('기본 가격으로', { exact: true }).last().click(); await p.waitForTimeout(400);
+  ov = await ovNow();
+  assert.equal(ov.programs['PGM-0001'], undefined);
+  assert.deepEqual(ov.programs['PGM-0002'], { total: '1450000' }, '다른 변경 기록은 그대로');
+  assert.match(await body(p), /기본 가격 1,320,000원으로 되돌렸습니다/);
+  await p.getByText('닫기', { exact: true }).last().click(); await p.waitForTimeout(300);
+  await pickProgram(p, 'PGM-0001', '스페셜 토닝 1'); await signAndSave(p);
+  all = await contracts(p);
+  assert.deepEqual(all.filter(c => c.id !== 'c-keep').map(c => c.total).sort(), [1320000, 1400000], '되돌린 뒤 새 계약은 기본 가격, 앞서 만든 계약은 그대로');
+  assert.equal(JSON.stringify(all.find(c => c.id === 'c-keep')), keep);
+  assert.deepEqual(p.errors, []);
+});
+
+test('가격 관리: 잘못된 입력·취소는 저장 안 함, 병변·조건별 금액 항목은 수정 칸 없음', async () => {
+  let ans = true;
+  const p = await open(null, { handle: d => (ans ? d.accept() : d.dismiss()) });
+  await p.locator('[title="가격 관리"]').click(); await p.waitForTimeout(400);
+  const q = p.locator('input[placeholder^="프로그램·시술 검색"]');
+  await q.fill('PGM-0001'); await p.waitForTimeout(300);
+  for (const bad of ['', 'abc', '-5000', '0', '12.5']) {
+    await p.locator('input[placeholder="수정 가격 (원)"]').first().fill(bad);
+    await p.getByText('저장', { exact: true }).first().click(); await p.waitForTimeout(200);
+  }
+  ans = false;
+  await p.locator('input[placeholder="수정 가격 (원)"]').first().fill('1500000');
+  await p.getByText('저장', { exact: true }).first().click(); await p.waitForTimeout(200);
+  assert.equal(await p.evaluate(() => localStorage.getItem('dachaeum.priceOverride')), null, '아무것도 저장되지 않음');
+  await q.fill('PGM-0041'); await p.waitForTimeout(300);
+  assert.match(await body(p), /병변 크기별 금액으로 계산/);
+  assert.equal(await p.locator('input[placeholder="수정 가격 (원)"]').count(), 0);
   assert.deepEqual(p.errors, []);
 });

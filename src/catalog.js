@@ -46,5 +46,17 @@
   }
   const readOverride = () => { try { return JSON.parse(localStorage.getItem(OV_KEY) || 'null'); } catch (e) { return null; } };
   const withOverride = base => applyOverride(base, readOverride());
-  g.DachaeumCatalog = { EXCLUDED_SVC, SWAP_EXTRAS, isEditableSvc, svcPool, OV_KEY, diffOverride, applyOverride, readOverride, withOverride };
+  // 가격 관리 화면: 프로그램 총 등록금액(total)만 기록·제거. 같은 기록 안의 다른 변경(다른 필드·추가·삭제·이벤트)은 그대로 둠
+  const copyOv = ov => JSON.parse(JSON.stringify(ov || { programs: {}, added: [], deleted: [], events: {} }));
+  function setProgramTotal(ov, id, total, at) {
+    const o = copyOv(ov); o.programs = o.programs || {};
+    o.programs[id] = { ...(o.programs[id] || {}), total: String(total) }; if (at) o.at = at; return o;
+  }
+  function clearProgramTotal(ov, id, at) {
+    const o = copyOv(ov), p = (o.programs || {})[id];
+    if (!p || !Object.prototype.hasOwnProperty.call(p, 'total')) return o;
+    delete p.total; if (!Object.keys(p).length) delete o.programs[id]; if (at) o.at = at; return o;
+  }
+  g.DachaeumCatalog = { EXCLUDED_SVC, SWAP_EXTRAS, isEditableSvc, svcPool, OV_KEY, diffOverride, applyOverride, readOverride, withOverride,
+    setProgramTotal, clearProgramTotal };
 })(typeof window !== 'undefined' ? window : globalThis);
