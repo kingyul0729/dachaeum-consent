@@ -40,6 +40,67 @@ class Component extends DCLogic {
     this.setState({ contracts, contract: nc });
   }
 
+  // ---- 백업·복원 ----
+  // 대상: 이 앱이 기기에 저장한 자료(dachaeum.* — 계약·계약 당시 단가·결제내역·이용기록·작성 중/확정 환불·서명 문서와 버전·가격 관리 설정)만.
+  // 재고관리 등 다른 앱 자료는 읽지도 바꾸지도 않음. 파일은 비밀번호로 암호화(PBKDF2-SHA256 → AES-GCM 256)
+  static BK = { format: 'dachaeum-consent-backup', version: 1, prefix: 'dachaeum.', skip: ['dachaeum.v3.lastBackup'], iter: 310000 };
+  bkKeys() { const out = {}, B = Component.BK;
+    for (let i = 0; i < localStorage.length; i++) { const k = localStorage.key(i); if (k && k.startsWith(B.prefix) && !B.skip.includes(k)) out[k] = localStorage.getItem(k); }
+    return out; }
+  static b64(buf) { const b = new Uint8Array(buf); let t = ''; for (let i = 0; i < b.length; i += 0x8000) t += String.fromCharCode.apply(null, b.subarray(i, i + 0x8000)); return btoa(t); }
+  static unb64(t) { const x = atob(String(t || '')); const b = new Uint8Array(x.length); for (let i = 0; i < x.length; i++) b[i] = x.charCodeAt(i); return b; }
+  async bkKey(pw, salt, iter) {
+    const km = await crypto.subtle.importKey('raw', new TextEncoder().encode(pw), 'PBKDF2', false, ['deriveKey']);
+    return crypto.subtle.deriveKey({ name: 'PBKDF2', salt, iterations: iter, hash: 'SHA-256' }, km, { name: 'AES-GCM', length: 256 }, false, ['encrypt', 'decrypt']); }
+  async bkSha(text) { return Component.b64(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text))); }
+  bkCounts(keys) {
+    const arr = k => { try { const v = JSON.parse(keys[k] || '[]'); return Array.isArray(v) ? v : null; } catch (e) { return null; } };
+    const c = arr('dachaeum.v3.contracts'), d = arr('dachaeum.v3.docs');
+    return { contracts: c ? c.length : -1, docs: d ? d.length : -1, refunded: c ? c.filter(x => x && (x.refund || x.refunded)).length : 0 }; }
+  async exportBackup(pw) {
+    const B = Component.BK, keys = this.bkKeys(), counts = this.bkCounts(keys);
+    const inner = JSON.stringify({ keys, counts, sha256: await this.bkSha(JSON.stringify(keys)) });
+    const salt = crypto.getRandomValues(new Uint8Array(16)), iv = crypto.getRandomValues(new Uint8Array(12));
+    const ct = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, await this.bkKey(pw, salt, B.iter), new TextEncoder().encode(inner));
+    const now = new Date(), hm = String(now.getHours()).padStart(2, '0') + String(now.getMinutes()).padStart(2, '0');
+    const file = { format: B.format, version: B.version, app: '다채움피부과 동의서', createdAt: now.toISOString(), counts,
+      kdf: { name: 'PBKDF2', hash: 'SHA-256', iterations: B.iter, salt: Component.b64(salt) }, cipher: { name: 'AES-GCM', iv: Component.b64(iv) }, data: Component.b64(ct) };
+    return { name: 'dachaeum-backup-' + Component.today().replace(/-/g, '') + '-' + hm + '.json', text: JSON.stringify(file), counts };
+  }
+  // 복원 전 검사: 형식·버전·암호·검증값·누락(건수)·중복(id)·연결(문서→계약). 하나라도 실패하면 기기 자료는 그대로
+  async readBackup(text, pw) {
+    const B = Component.BK; let f;
+    try { f = JSON.parse(text); } catch (e) { throw new Error('백업 파일 형식이 아닙니다'); }
+    if (!f || f.format !== B.format) throw new Error('다채움 동의서 백업 파일이 아닙니다');
+    if (f.version !== B.version) throw new Error('지원하지 않는 백업 버전입니다 (v' + f.version + ')');
+    if (!f.kdf || !f.cipher || !f.data || !f.kdf.salt || !f.cipher.iv) throw new Error('백업 파일에 필요한 항목이 빠져 있습니다');
+    let inner;
+    try { const key = await this.bkKey(pw, Component.unb64(f.kdf.salt), Number(f.kdf.iterations) || B.iter);
+      inner = JSON.parse(new TextDecoder().decode(await crypto.subtle.decrypt({ name: 'AES-GCM', iv: Component.unb64(f.cipher.iv) }, key, Component.unb64(f.data)))); }
+    catch (e) { throw new Error('비밀번호가 맞지 않거나 파일이 손상되었습니다'); }
+    const keys = inner && inner.keys;
+    if (!keys || typeof keys !== 'object') throw new Error('백업 내용이 비어 있습니다');
+    if (Object.keys(keys).some(k => !k.startsWith(B.prefix) || B.skip.includes(k) || typeof keys[k] !== 'string')) throw new Error('이 앱 자료가 아닌 항목이 있어 복원할 수 없습니다');
+    if (await this.bkSha(JSON.stringify(keys)) !== inner.sha256) throw new Error('백업 내용이 손상되었습니다 (검증값 불일치)');
+    const counts = this.bkCounts(keys);
+    if (counts.contracts < 0 || counts.docs < 0) throw new Error('계약 또는 문서 자료가 손상되었습니다');
+    if (!inner.counts || inner.counts.contracts !== counts.contracts || inner.counts.docs !== counts.docs) throw new Error('백업 내용 일부가 누락되었습니다');
+    const C = JSON.parse(keys['dachaeum.v3.contracts'] || '[]'), D = JSON.parse(keys['dachaeum.v3.docs'] || '[]');
+    const dup = a => { const ids = a.map(x => x && x.id).filter(Boolean); return ids.length !== new Set(ids).size; };
+    if (dup(C) || dup(D)) throw new Error('같은 번호의 계약 또는 문서가 중복되어 있습니다');
+    const ids = new Set(C.map(c => c && c.id)), orphan = D.filter(d => d && d.contractId && !ids.has(d.contractId)).length;
+    if (orphan) throw new Error('계약과 연결되지 않은 문서가 ' + orphan + '건 있습니다');
+    return { keys, counts, createdAt: f.createdAt || '' };
+  }
+  // 교체 복원: 이 앱 자료만 지우고 백업 자료로 바꿈. 쓰는 도중 실패하면 원래 자료로 되돌림
+  applyRestore(keys) {
+    const prev = this.bkKeys();
+    try { Object.keys(prev).forEach(k => localStorage.removeItem(k)); Object.entries(keys).forEach(([k, v]) => localStorage.setItem(k, v)); return true; }
+    catch (e) {
+      try { Object.keys(this.bkKeys()).forEach(k => localStorage.removeItem(k)); Object.entries(prev).forEach(([k, v]) => localStorage.setItem(k, v)); } catch (e2) {}
+      return false; }
+  }
+
   flash(t) { this.setState({ toast: t }); clearTimeout(this._t); this._t = setTimeout(() => this.setState({ toast: '' }), 1800); }
 
   attachSig = (el) => {
@@ -549,6 +610,19 @@ class Component extends DCLogic {
       ? a.name.replace(/\s*\d+\s*회/, '').replace(/\s*\(1부위\)/, '') + (a.needArea && s.addArea ? ' (' + s.addArea + ')' : '')
       : a.name;
     const isSvcItem = i => /염증주사|약\s?처방/.test(i.name || '');
+    // 정상가 확인 필요: 가격표에 환불용 1회 정상가가 없는 구성(예: 남성 턱밑라인 포함 제모, 얼굴 전체 CO₂ 제거 추가옵션)
+    // 총액을 횟수로 나누거나 다른 항목 가격으로 추정하지 않고, 계약 전에 직원이 직접 입력한 값을 계약에 저장
+    const fixKey = k => (cur ? cur.id : '') + '|' + k;
+    const fixVal = k => Number(String((s.unitFix || {})[fixKey(k)] || '').replace(/[^0-9]/g, '')) || 0;
+    const itemFixKey = i => 'i:' + (i.id || i.name);
+    const addFixKey = a => 'a:' + (a.id || a.name) + (a.svc ? ':sv' : '');
+    const itemNoUnit = i => !!cur && !cur.lesion && !isSvcItem(i) && i.settleType !== '정산 제외' && !Number(i.settleUnit || 0) && !Number(i.perPiece || 0)
+      && !Number(i.unitPrice || 0) && !(isManual && (i.unitFromTotal || !Number(i.unitPrice || 0)));
+    const addNoUnit = a => !!cur && !cur.lesion && a.settleType !== '정산 제외' && a.id !== RF.BS_ADD_ID && !a.needArea && !/capri-full/.test(a.id || '')
+      && !Number(a.settleUnit || 0) && !Number(a.unitPrice || 0);
+    const unitFixLines = !cur ? [] : (cur.items || []).filter(itemNoUnit).map(i => ({ key: itemFixKey(i), name: i.name }))
+      .concat(curAdds.filter(addNoUnit).map(a => ({ key: addFixKey(a), name: addName(a) + (a.svc ? ' (서비스)' : '') + ' · 추가옵션' })))
+      .filter((x, i, arr) => arr.findIndex(y => y.key === x.key) === i);
     const svcHidden = cur ? (cur.items || []).filter(isSvcItem) : [];
     const svcNote = !!cur && !cur.lesion && (cur.cat === '여드름' || svcHidden.length > 0);
     const svcWhat = !cur ? '' : (cur.cat === '여드름' || svcHidden.some(i => /염증주사/.test(i.name)))
@@ -560,6 +634,7 @@ class Component extends DCLogic {
           qtyText: i.kind === '서비스권' ? (i.qty ? i.qty + '회' : '실제 이용분')
             : i.qtyDash ? '-회' : (i.qtyBasis === '공통 총회차 상한' ? '회차별 선택' : (i.qty ? i.qty + (i.unit || '회') : '실제 이용분')),
           priceText: i.priceNote ? i.priceNote
+            : itemNoUnit(i) ? (fixVal(itemFixKey(i)) ? won(fixVal(itemFixKey(i))) : '1회 정상가 입력')
             : isManual && (i.unitFromTotal || !Number(i.unitPrice || 0)) ? (effUnit(i) ? won(effUnit(i)) : '1회 정상가 입력')
             : i.kind === '서비스권' && !i.unitPrice && !i.perPiece ? '실제 이용 기준'
             : (i.unitPrice ? won(i.unitPrice) : (i.perPiece ? won(i.perPiece) + '/개' : '미확정'))
@@ -567,7 +642,7 @@ class Component extends DCLogic {
           // 수량이 없으면 같은 계열 서비스(예: 얼굴 점 CO₂ 제거) 횟수를 따름 — 표시용, 금액 계산에는 사용 안 함
           const isLes = /흑자|병변/.test(addName(a)), q = a.qty || (/CO₂|CO2/.test(addName(a)) ? ((cur.items || []).find(i => /CO₂|CO2/.test(i.name || '')) || {}).qty : '');
           return { kind: a.svc ? '서비스' : '추가', svc: !!a.svc,
-          name: addName(a), isAdd: true, addPrice: Number(a.price || 0), addUnitNum: u,
+          name: addName(a) + (addNoUnit(a) && fixVal(addFixKey(a)) ? ' · 환불 기준 1회 ' + won(fixVal(addFixKey(a))) + '원' : ''), isAdd: true, addPrice: Number(a.price || 0), addUnitNum: u,
           addQtyText: isLes ? '-' : q ? q + '회' : '-',
           qtyText: isLes ? (a.qty || 1) + '개' : q ? q + '회' : '—',
           priceText: Number(a.price || 0) ? '+' + won(Number(a.price)) + '원' : '실제 이용 기준' }; }))
@@ -592,7 +667,7 @@ class Component extends DCLogic {
     const needAmount = !!cur && !cur.total && !isLesion;
 
     const listSumNum = cur
-      ? (cur.items || []).reduce((t, i) => t + (effUnit(i) * Number(i.qty || 0)), 0)
+      ? (cur.items || []).reduce((t, i) => t + ((effUnit(i) || (itemNoUnit(i) ? fixVal(itemFixKey(i)) : 0)) * Number(i.qty || 0)), 0)
         + curAdds.reduce((t, a) => t + Number(a.price || 0), 0)
       : 0;
     const listNum = cur ? (isLesion ? lesionTotal : ((Number(cur.total || 0) || manualAmt) + optAddSum)) : 0;
@@ -698,7 +773,8 @@ class Component extends DCLogic {
       thumb: React.createElement('div', { style: { width: 148, height: 209, overflow: 'hidden', background: '#ffffff', boxShadow: '0 1px 6px rgba(28,31,35,0.14)', pointerEvents: 'none', position: 'relative' } },
         d.html ? React.createElement('div', { style: { width: 740, transform: 'scale(0.2)', transformOrigin: '0 0', position: 'absolute', top: 0, left: 0 }, dangerouslySetInnerHTML: { __html: this.cleanHtml(d.html) } }) : null),
       canResign: !d.superseded && d.kind === '이용동의서' && s.cStatus === '등록완료',
-      open: () => this.setState({ pdfId: d.id }), del: () => this.setState({ delAsk: d.id }),
+      // 서명된 문서(동의서·환불 정산서)는 일반 삭제 대상이 아님 → 삭제 버튼 숨김
+      canDel: !d.signedAt, open: () => this.setState({ pdfId: d.id }), del: () => d.signedAt ? this.flash('서명된 문서는 삭제할 수 없습니다') : this.setState({ delAsk: d.id }),
       resign: () => sameAsContract() ? this.setState({ screen: 'sign', signFrom: 'resign', sig: false, sigOpen: false, sigImg: null, ckRefund: false }) : this.flash(RESIGN_MSG) }));
     const pdfDoc = s.pdfId ? (s.docs || []).find(d => d.id === s.pdfId) : null;
 
@@ -707,7 +783,7 @@ class Component extends DCLogic {
     const numOf = v => Number(String(v || '').replace(/[^0-9]/g, '')) || 0;
     const PAY = PR.payment({ totalNum, preBal: s.preBal, priorDep: s.priorDep, deposit: dep });
     const { preBal, priorDep, needNum, leftNum, depAmt } = PAY;
-    const payLabels = { label: dep ? '예약금 (10%)' : '당일 결제',
+    const payLabels = { label: dep ? '예약금' : '당일 결제',
       now: won(dep ? depAmt : needNum) + '원',
       rest: won(dep ? needNum - depAmt : 0) + '원' };
 
@@ -760,11 +836,12 @@ class Component extends DCLogic {
         actual: i.id === 'SERVICE_TONING_CO2' || undefined,
         name: i.kind === '서비스권' ? svcName(i.name) : i.name, swappedFrom: i.swappedFrom ? svcName(i.swappedFrom) : undefined,
         qty: i.qtyBasis === '공통 총회차 상한' ? null : (Number(i.qty) || null),
-        price: Number(i.settleUnit || 0) || effUnit(i) || Number(i.perPiece || 0), variants: i.variants || null,
+        price: Number(i.settleUnit || 0) || effUnit(i) || Number(i.perPiece || 0) || fixVal(itemFixKey(i)), variants: i.variants || null,
+        unitInput: itemNoUnit(i) || undefined,
         // 조건별 금액: 직원 입력 환불용 1회 정상가를 계약 당시 값으로 고정 (총 등록금액과 독립)
         manualUnit: isManual && (i.unitFromTotal || !Number(i.unitPrice || 0)) || undefined }))
         .concat(curAdds.filter(a => a.settleType !== '정산 제외').map(a => ({ kind: a.svc ? '서비스' : '추가', settleType: a.svc ? 'S/V' : (a.settleType || '유상'), name: addName(a),
-          qty: Number(a.qty) || 1, price: Number(a.settleUnit || 0) || addUnit(a),
+          qty: Number(a.qty) || 1, price: Number(a.settleUnit || 0) || addUnit(a) || (addNoUnit(a) ? fixVal(addFixKey(a)) : 0), unitInput: addNoUnit(a) || undefined,
           // 스페셜 토닝 흑자 추가옵션: 추가금 110,000원은 계약금액에만 포함. 환불은 실제 시술 병변별 크기별 정상가 합계 (서명 시점 가격 고정)
           actual: a.id === RF.BS_ADD_ID || undefined, tiers: a.id === RF.BS_ADD_ID ? RF.tiersOf(null, db) : undefined }))),
       // 서비스 이용 기록(염증주사·약처방·알러지케어) 정산단가: 서명 시점 가격 고정
@@ -801,7 +878,8 @@ class Component extends DCLogic {
           return { rfVar: { ...(st.rfVar || {}), [k]: cur0.includes(v) ? cur0.filter(x => x !== v) : cur0.concat([v]) } }; }) }; });
       return { hasVar: variants.length > 0, variants,
         kind: it.kind, name: it.name, reg: isAdd ? '실제 개수' : C.cap ? '회차별' : (it.qty ? it.qty + '회' : '실제 이용'),
-        used: u, price: act(it) ? '개별 정상가' : it.lesionUnit || isAdd ? '1개 ' + won(it.price) : (it.price ? won(it.price) : '—'), amt: won(act(it) ? lesAmt[k] : RF.amtOf(it, u)),
+        used: u, price: act(it) ? '개별 정상가' : RS.items[k].priceMissing ? '정상가 확인 필요' : (it.lesionUnit || isAdd ? '1개 ' + won(RS.items[k].price) : won(RS.items[k].price)) + (RS.items[k].priceFixed ? ' (보완)' : ''),
+        amt: won(act(it) ? lesAmt[k] : RF.amtOf(RS.items[k], u)),
         isLes: act(it) && u > 0, lesNote: isBS(it) ? '실제 시술 병변별 크기 선택 · ' + RF.tiersOf(it, db).map(t => t.short + ' ' + won(t.price)).join(' / ') : act(it) ? (Number(it.price) ? '1개 ' + won(it.price) + '원부터 · 병변별 정상가 입력' : '실제 시술 병변별 정상가 입력') : '',
         lesRows: act(it) ? lesOf(k).map((v, j) => { const bad = RF.lesionRowBad(it, v, db);
           const setL = x => updLes(k, a => { a[j] = x; return a; });
@@ -817,44 +895,67 @@ class Component extends DCLogic {
     });
     // 서비스 이용 기록: 모든 프로그램 공통 — 염증주사 · 약처방 · 알러지케어 (DB 정산단가)
     // 계약 당시 서비스 정산단가 우선 (svcPrices가 없는 이전 계약만 현재 가격표 사용)
+    // 계약 당시 서비스 단가가 없는 이전 계약: 현재 가격표 단가를 자동 적용하지 않음 (항목 이름만 사용, 단가는 '확인 필요').
+    // 실제 기록이 있으면 근거 확인 후 보완(priceFixes)하기 전까지 환불 확정 차단 (refund.js)
     const SP = C.svcPrices;
-    const acneRows = SP ? (SP.acne || []).map(r => ({ '서비스권 ID': r.id, '사용 범위/기간': r.range, '정상가': r.price })) : ((db && db.acneSvc) || []);
-    const allergy = SP ? (SP.allergy != null ? { id: 'ALLERGY', price: SP.allergy } : null) : ((db && db.careSvc) || []).find(c => c.id === 'ALLERGY');
+    const acneRows = SP ? (SP.acne || []).map(r => ({ '서비스권 ID': r.id, '사용 범위/기간': r.range, '정상가': r.price }))
+      : ((db && db.acneSvc) || []).map(r => ({ ...r, '정상가': null }));
+    const allergy = SP ? (SP.allergy != null ? { id: 'ALLERGY', price: SP.allergy } : null)
+      : (((db && db.careSvc) || []).some(c => c.id === 'ALLERGY') ? { id: 'ALLERGY', price: null } : null);
+    const svcP = v => v == null || v === '' ? null : Number(v);
     const visitSrc = (acneRows.length ? acneRows.map((r, i) => ({ v: String(i),
       label: (r['서비스권 ID'] === 'SERVICE_INFLAMMATION_INJ' ? '염증주사' : '약처방') + ' · ' + r['사용 범위/기간'],
-      price: Number(r['정상가'] || 0) })) : []).concat(allergy ? [{ v: 'allergy', label: '알러지케어', price: Number(allergy.price || 0) }] : []);
+      price: svcP(r['정상가']) })) : []).concat(allergy ? [{ v: 'allergy', label: '알러지케어', price: svcP(allergy.price) }] : []);
     // 서비스 이용 기록: 염증주사 · 약처방 · 알러지케어 개별 입력 (주차 · 범위 · 건수)
     const acne = acneRows;
     const GDEF = [
-      { key: 'inj', title: '염증주사', optLabel: '부위 수', opts: acne.filter(r => r['서비스권 ID'] === 'SERVICE_INFLAMMATION_INJ').map(r => ({ label: r['사용 범위/기간'], price: Number(r['정상가'] || 0) })) },
-      { key: 'rx', title: '약처방', optLabel: '처방 기간', opts: acne.filter(r => r['서비스권 ID'] === 'SERVICE_PRESCRIPTION').map(r => ({ label: r['사용 범위/기간'], price: Number(r['정상가'] || 0) })) },
-      { key: 'al', title: '알러지케어', optLabel: '', opts: allergy ? [{ label: '1회', price: Number(allergy.price || 0) }] : [] }
+      { key: 'inj', title: '염증주사', optLabel: '부위 수', opts: acne.filter(r => r['서비스권 ID'] === 'SERVICE_INFLAMMATION_INJ').map(r => ({ label: r['사용 범위/기간'], price: svcP(r['정상가']) })) },
+      { key: 'rx', title: '약처방', optLabel: '처방 기간', opts: acne.filter(r => r['서비스권 ID'] === 'SERVICE_PRESCRIPTION').map(r => ({ label: r['사용 범위/기간'], price: svcP(r['정상가']) })) },
+      { key: 'al', title: '알러지케어', optLabel: '', opts: allergy ? [{ label: '1회', price: svcP(allergy.price) }] : [] }
     ];
     const SG = s.svcG || {};
     const svcGroups = GDEF.filter(g => g.opts.length).map((g, gi) => { const st = SG[g.key] || {}, week = st.week || '1', pick = st.pick || '0', qty = st.qty || 1;
       const upd = o => this.setState(x => ({ svcG: { ...(x.svcG || {}), [g.key]: { ...((x.svcG || {})[g.key] || {}), ...o } } }));
       const opt = g.opts[Number(pick)] || g.opts[0];
+      const vKey = o => g.key + '|' + o.label;
+      const optText = o => o.price != null ? won(o.price) : (RF.fixOf(C, RF.svcKey({ key: vKey(o) })) != null ? won(RF.fixOf(C, RF.svcKey({ key: vKey(o) }))) + ' (보완)' : '단가 확인 필요');
       // 항목별 기록: 해당 행 바로 아래 작은 태그로 표시 (주차순)
       const recs = V.map((v, vi) => ({ v, vi })).filter(x => (x.v.label || '').split(' · ')[0] === g.title);
       return { sep: gi ? '1px solid #eef0f2' : '0', title: g.title, optLabel: g.optLabel, week, pick, qty,
-        hasRecs: recs.length > 0, recSum: won(recs.reduce((t, x) => t + x.v.price, 0)) + '원',
+        hasRecs: recs.length > 0, recSum: won(recs.reduce((t, x) => t + ((RS.visits[x.vi] || {}).price || 0), 0)) + '원',
         recs: recs.map(x => ({ week: x.v.week ? x.v.week + '주' : '', label: (x.v.label.split(' · ')[1] || '1회'),
           del: () => this.setState({ rfVisits: V.filter((_, j) => j !== x.vi) }) })), hasOpts: g.opts.length > 1, noOpts: g.opts.length <= 1,
-        single: g.opts[0] ? g.opts[0].label + ' · ' + won(g.opts[0].price) + '원' : '',
+        single: g.opts[0] ? g.opts[0].label + ' · ' + optText(g.opts[0]) + (g.opts[0].price != null ? '원' : '') : '',
         opts: g.opts.map((o, i) => { const on = String(i) === String(pick) || (g.opts.length === 1);
-          return { v: String(i), label: o.label, price: won(o.price), bd: on ? '#345b80' : '#c9ced4', dot: on ? '#345b80' : 'transparent', fg: on ? '#1c1f23' : '#5c636b',
+          return { v: String(i), label: o.label, price: optText(o), bd: on ? '#345b80' : '#c9ced4', dot: on ? '#345b80' : 'transparent', fg: on ? '#1c1f23' : '#5c636b',
             pick: () => upd({ pick: String(i) }) }; }),
         onWeek: e => upd({ week: e.target.value }), onPick: e => upd({ pick: e.target.value }),
         dec: () => upd({ qty: Math.max(1, qty - 1) }), inc: () => upd({ qty: Math.min(20, qty + 1) }),
-        add: () => { upd({ qty: 1 }); this.setState(x => ({ rfVisits: (x.rfVisits || V).concat(Array.from({ length: qty }, () => ({ label: g.title + (g.opts.length > 1 ? ' · ' + opt.label : ''), price: opt.price, week: Number(week) })))
+        add: () => { upd({ qty: 1 }); this.setState(x => ({ rfVisits: (x.rfVisits || V).concat(Array.from({ length: qty }, () => ({ label: g.title + (g.opts.length > 1 ? ' · ' + opt.label : ''), price: opt.price, key: vKey(opt), week: Number(week) })))
           .sort((a, b) => (a.week || 0) - (b.week || 0)) })); } }; });
     const vWeek = s.vWeek || '1';
-    const visitOpts = visitSrc.map(o => ({ v: o.v, label: o.label + ' · ' + won(o.price) + '원' }));
+    const visitOpts = visitSrc.map(o => ({ v: o.v, label: o.label + ' · ' + (o.price != null ? won(o.price) + '원' : '단가 확인 필요') }));
     const vPick = s.rfPick || (visitSrc[0] ? visitSrc[0].v : '');
-    const rVisits = V.map((v, i) => ({ label: v.label, amt: won(v.price), week: v.week ? v.week + '주차' : '',
+    const rVisits = V.map((v, i) => ({ label: v.label, amt: (RS.visits[i] || {}).priceMissing ? '단가 확인 필요' : won((RS.visits[i] || {}).price), week: v.week ? v.week + '주차' : '',
       del: () => this.setState({ rfVisits: V.filter((_, j) => j !== i) }) }));
     // 결제수단별 환불: 최종 환불금액은 고정. 직원이 카드 환불금액·선결제권 잔액 복구금액을 직접 입력 (검증은 refund.js)
     const rfReason = s.rfReason || '개인 사정';
+    // 정상가 보완: 당시 동의서·가격표 등 근거를 확인한 값만 입력. 원 계약 항목·서명 문서는 그대로 두고 별도 기록(근거·금액·일시)
+    const supplyPrices = () => {
+      if (C.refund) return;
+      const add = [];
+      for (const m of RS.missing) {
+        const v = window.prompt('‘' + m.label + '’ 1회 정상가(원)\n당시 동의서·가격표 등 근거를 확인한 금액만 입력하세요.', '');
+        if (v == null) break;
+        const price = Number(String(v).replace(/[^0-9]/g, '')) || 0;
+        if (!price) { this.flash('금액을 입력해 주세요'); break; }
+        const basis = window.prompt('확인 근거를 적어 주세요 (예: 2026-03-02 서명 동의서, 당시 가격표)', '');
+        if (!basis || !basis.trim()) { this.flash('확인 근거가 있어야 보완할 수 있습니다'); break; }
+        if (!confirm('‘' + m.label + '’ 1회 정상가 ' + won(price) + '원\n근거: ' + basis.trim() + '\n\n원래 서명 문서와 계약 항목은 바뀌지 않고, 보완 기록으로 따로 저장됩니다.')) break;
+        add.push({ key: m.key, label: m.label, price, basis: basis.trim(), at: new Date().toISOString() });
+      }
+      if (add.length) { this.saveContract({ ...C, priceFixes: (C.priceFixes || []).concat(add) }); this.flash('정상가 보완 기록이 저장되었습니다'); }
+    };
     const rfDraft = () => ({ used: s.rfUsed || null, visits: V, les: s.rfLes || null, vars: s.rfVar || null, alloc: s.rfAlloc || null, reason: rfReason });
     const reasons = ['개인 사정', '이사 · 거리', '건강상 사유', '시술 불만족'].map(r => {
       const on = r === rfReason; return { label: r, pick: () => this.setState({ rfReason: r }),
@@ -863,7 +964,7 @@ class Component extends DCLogic {
       used: r.used, price: r.price, amt: r.amt }))
       // 정산서: 서비스 기록을 항목별 1줄로 묶음 — 예) 염증주사 (4주차 2~5부위, 8주차 1부위)
       .concat((() => { const g = {}, order = [];
-        V.slice().sort((a, b) => (a.week || 0) - (b.week || 0)).forEach(v => { const [t, r] = (v.label || '').split(' · ');
+        RS.visits.slice().sort((a, b) => (a.week || 0) - (b.week || 0)).forEach(v => { const [t, r] = (v.label || '').split(' · ');
           if (!g[t]) { g[t] = { n: 0, sum: 0, parts: [], prices: new Set() }; order.push(t); }
           g[t].n++; g[t].sum += v.price; g[t].prices.add(v.price); g[t].parts.push((v.week ? v.week + '주차' : '') + (r ? ' ' + r : '')); });
         return order.map(t => ({ kind: '서비스', name: t + ' · ' + g[t].parts.join(', '), reg: '—', used: g[t].n,
@@ -884,7 +985,12 @@ class Component extends DCLogic {
       rfAllocMsg: allocMsg,
       rfAllocFg: allocOk ? '#2f6b45' : '#b4483f',
       rfUsedAmt: won(usedAmt), rfUsedBreak: '시술 ' + won(trtAmt) + ' + 서비스 ' + won(svcAmt),
-      rfRefund: won(refundNum), rfHero: refundNum > 0 ? won(refundNum) + '원을 환불할게요' : '환불할 금액이 없어요', rfStage: usedAmt > 0 ? '시술 시작 후 해지' : '시술 시작 전 해지',
+      rfMissing: RS.missing.length > 0, rfMissingText: RS.missing.map(m => m.label).join(', '), supplyPrices,
+      hasPriceFixes: !!(C.priceFixes && C.priceFixes.length),
+      priceFixText: (C.priceFixes || []).map(f => f.label + ' ' + won(f.price) + '원 (근거: ' + f.basis + ', ' + String(f.at || '').slice(0, 10) + ')').join(' · '),
+      // 정상가 확인 필요 항목이 있으면 금액을 확정 값처럼 보이지 않게 함 (0원 차감 금액을 최종 환불금액으로 표시하지 않음)
+      rfRefund: won(refundNum), rfRefundLine: RS.missing.length ? '확인 필요' : won(refundNum) + '원',
+      rfHero: RS.missing.length ? '정상가 확인 후 계산할 수 있어요' : refundNum > 0 ? won(refundNum) + '원을 환불할게요' : '환불할 금액이 없어요', rfStage: usedAmt > 0 ? '시술 시작 후 해지' : '시술 시작 전 해지',
       rfReason, reasons, rItems, rDocRows, rVisits,
       hasVisitSvc: true, hasAcneSel: visitSrc.length > 0, visitOpts, visitPick: vPick,
       onVisitPick: e => this.setState({ rfPick: e.target.value }),
@@ -900,9 +1006,9 @@ class Component extends DCLogic {
     // 새 동의서 작성 시작: 이전 작성분(할인·선결제권·기납부 예약금·결제수단·분할금액·구성 선택 등)이 다음 환자에게 남지 않도록 초기화
     const NEW_RESET = { prog: -1, progId: '', hairIds: [], method: '', mSel: [], split1: '', cashRcpt: '', pay: 'full', addArea: '', addSel: [], addSvc: [], addSvN: {},
       svcOff: [], svcSwap: {}, oGrp: '', disc: 'none', preTier: '', retPeriod: '', preBal: '', priorDep: '', amounts: {}, units: {}, lesions: null,
-      evFirst: '', forceFull: false, dupPick: '', dupOff: '', pvOn: false, sig: false, tried1: false, pendingSign: false, ckRefund: false };
+      unitFix: {}, tried3: false, evFirst: '', forceFull: false, dupPick: '', dupOff: '', pvOn: false, sig: false, tried1: false, pendingSign: false, ckRefund: false };
     const bars = {
-      list: { note: '기록은 이 기기에만 저장됩니다. 7일마다 백업하세요.', primary: '새 동의서 작성', secondary: '', onP: () => this.setState({ screen: 'new', step: 1, ...NEW_RESET, ...((this.props.testFill ?? false) ? { step: 2, patient: { name: '테스트', birth: '900101', phone: '010-1234-5678' } } : { patient: { name: '', birth: '', phone: '' } }) }), onS: () => this.flash('백업이 완료되었습니다') },
+      list: { note: '기록은 이 기기에만 저장됩니다. 7일마다 백업하세요.', primary: '새 동의서 작성', secondary: '백업 · 복원', onP: () => this.setState({ screen: 'new', step: 1, ...NEW_RESET, ...((this.props.testFill ?? false) ? { step: 2, patient: { name: '테스트', birth: '900101', phone: '010-1234-5678' } } : { patient: { name: '', birth: '', phone: '' } }) }), onS: () => this.setState({ bkOpen: true, bkMsg: '', bkPlan: null, bkPw: '', bkPw2: '', bkPwR: '' }) },
       new: { note: s.step === 3 ? '환자에게 iPad를 전달해 서명을 받습니다.' : '단계를 모두 채우면 환자 확인 화면으로 넘어갑니다.',
              primary: s.step === 3 ? '동의서 미리보기 · 서명' : '다음 단계', secondary: s.step === 1 ? '취소' : '이전',
              onP: () => {
@@ -911,6 +1017,7 @@ class Component extends DCLogic {
                  if (isSplit && (!a1 || a1 >= nowNum)) return this.flash('분할결제 금액을 입력해 주세요');
                  if (!totalNum) return this.flash('총 등록금액을 입력해 주세요');
                  if (isManual && !manualUnit) return this.flash('환불용 1회 정상가를 입력해 주세요');
+                 { const miss = unitFixLines.find(l => !fixVal(l.key)); if (miss) { this.setState({ tried3: true }); return this.flash('‘' + miss.name + '’의 환불용 1회 정상가를 입력해 주세요'); } }
                  return this.setState({ screen: 'sign', signFrom: 'new', sig: false, sigOpen: false, sigImg: null, ckRefund: false, pendingSign: false, pendingProg: cur ? progTitle(cur) : '', pendingTotal: won(totalNum) });
                }
                if (s.step === 2 && discKey === 'pre' && !preTier) return this.flash('선결제권 기준을 선택해 주세요');
@@ -961,6 +1068,9 @@ class Component extends DCLogic {
       needAmount, amountInput: (s.amounts && s.amounts[manualKey]) || '',
       onAmount: e => { const v = e.target.value.replace(/[^0-9]/g, '');
         this.setState(st => ({ amounts: { ...st.amounts, [manualKey]: v } })); },
+      hasUnitFix: unitFixLines.length > 0,
+      unitFixRows: unitFixLines.map(l => ({ name: l.name, value: fixVal(l.key) ? won(fixVal(l.key)) : '', bd: s.tried3 && !fixVal(l.key) ? '#d64545' : '#d5d9de',
+        onInput: e => { const v = e.target.value.replace(/[^0-9]/g, ''); this.setState(st => ({ unitFix: { ...(st.unitFix || {}), [fixKey(l.key)]: v } })); } })),
       unitInput: (s.units && s.units[manualKey]) ? Number(s.units[manualKey]).toLocaleString('ko-KR') : '',
       onUnit: e => { const v = e.target.value.replace(/[^0-9]/g, '');
         this.setState(st => ({ units: { ...st.units, [manualKey]: v } })); },
@@ -1073,7 +1183,7 @@ class Component extends DCLogic {
         if (RS.error) return this.flash(RS.error);
         if (!s.sigImg) return this.flash('서명이 필요합니다');
         this._saving = true; setTimeout(() => { this._saving = false; }, 1500);
-        const refund = { signedAt: todayStr, stage: usedAmt > 0 ? '시술 시작 후 해지' : '시술 시작 전 해지', ...rfDraft(),
+        const refund = { priceFixes: C.priceFixes || [], signedAt: todayStr, stage: usedAmt > 0 ? '시술 시작 후 해지' : '시술 시작 전 해지', ...rfDraft(),
           usedCounts: U, lesAmt, trtAmt, svcAmt, usedAmt, penNum, paidEff, refundNum,
           pays: rfPays.map((p, i) => ({ method: p.prepaid ? '선결제권 잔액 복원' : p.method, prepaid: !!p.prepaid, priorDep: !!p.priorDep, paid: Number(p.amount || 0), refund: RS.amounts[i] })) };
         const nc = { ...C, status: '환불완료', refunded: true, refundedAt: todayStr, refund, refundDraft: null };
@@ -1195,8 +1305,11 @@ class Component extends DCLogic {
       docList: docList.slice(docPg.start, docPg.start + docPg.size), docPg, hasDocs: docList.length > 0, noDocs: !docList.length,
       yes: true, delAsk: !!s.delAsk, stop: e => e.stopPropagation(),
       delMsg: s.delAsk && s.delAsk !== 'all' ? '이 문서가 삭제되며 되돌릴 수 없습니다.' : '이 환자의 계약 정보와 모든 문서가 삭제되며 되돌릴 수 없습니다.',
-      delStart: () => this.setState({ delAsk: 'all' }), delCancel: () => this.setState({ delAsk: false }),
+      // 환자 전체 삭제: 삭제 대상(계약·결제·이용기록·서명 문서)이 불명확해 차단. 보관기간·영구 삭제 정책은 별도 결정 전까지 사용하지 않음
+      delStart: () => this.flash('서명 기록 보호를 위해 환자 삭제는 사용할 수 없습니다'), delCancel: () => this.setState({ delAsk: false }),
       delConfirm: () => { const one = s.delAsk && s.delAsk !== 'all';
+        const target = one ? (s.docs || []).find(d => d.id === s.delAsk) : null;
+        if (!one || !target || target.signedAt) { this.setState({ delAsk: false }); return this.flash('서명 기록은 삭제할 수 없습니다'); }
         const docs = (s.docs || []).filter(d => one ? d.id !== s.delAsk : d.pk !== curPk);
         try { localStorage.setItem('dachaeum.v3.docs', JSON.stringify(docs)); } catch (e) {}
         this.setState(one ? { docs, delAsk: false, pdfId: null } : { docs, contract: null, delAsk: false, justSaved: null, pdfId: null, screen: 'list' }); this.flash('삭제되었습니다'); },
@@ -1210,7 +1323,54 @@ class Component extends DCLogic {
       pdfBtnLabel: s.pdfReady === true ? 'PDF 저장·공유·인쇄' : s.pdfReady === 'fail' ? 'PDF 생성 실패' : 'PDF 만드는 중…',
       pdfBtnOp: s.pdfReady === true ? 1 : 0.55,
       hasPrimary: !!bar.primary,
-      toast: s.toast
+      toast: s.toast,
+      ...(() => {
+        const last = (() => { try { return localStorage.getItem('dachaeum.v3.lastBackup') || ''; } catch (e) { return ''; } })();
+        const cur = { contracts: (s.contracts || []).filter(c => !c.sample).length, docs: (s.docs || []).length };
+        const msg = (t, err) => this.setState({ bkMsg: t, bkErr: !!err, bkBusy: false });
+        const plan = s.bkPlan;
+        return { bkOpen: !!s.bkOpen, bkClose: () => !s.bkBusy && this.setState({ bkOpen: false, bkPlan: null, bkPw: '', bkPw2: '', bkPwR: '' }),
+          bkLast: last ? '마지막 백업 ' + last.slice(0, 16).replace('T', ' ') : '아직 이 기기에서 백업한 기록이 없습니다',
+          bkCur: '현재 기기: 계약 ' + Math.max(0, cur.contracts) + '건 · 문서 ' + Math.max(0, cur.docs) + '건',
+          bkPw: s.bkPw || '', bkPw2: s.bkPw2 || '', bkPwR: s.bkPwR || '',
+          onBkPw: e => this.setState({ bkPw: e.target.value }), onBkPw2: e => this.setState({ bkPw2: e.target.value }), onBkPwR: e => this.setState({ bkPwR: e.target.value }),
+          hasBkMsg: !!s.bkMsg, bkMsg: s.bkMsg || '', bkMsgFg: s.bkErr ? '#b3261e' : '#2f6b45',
+          bkExport: async () => {
+            if (s.bkBusy) return;
+            if (String(s.bkPw || '').length < 6) return msg('비밀번호를 6자 이상 입력해 주세요', true);
+            if (s.bkPw !== s.bkPw2) return msg('비밀번호 확인이 일치하지 않습니다', true);
+            this.setState({ bkBusy: true, bkMsg: '백업 파일을 만드는 중입니다…', bkErr: false });
+            try {
+              const out = await this.exportBackup(s.bkPw);
+              const file = new File([out.text], out.name, { type: 'application/json' });
+              if (navigator.canShare && navigator.canShare({ files: [file] })) await navigator.share({ files: [file], title: out.name }).catch(() => {});
+              else { const url = URL.createObjectURL(file), a = document.createElement('a'); a.href = url; a.download = out.name; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(url), 60000); }
+              try { localStorage.setItem('dachaeum.v3.lastBackup', new Date().toISOString()); } catch (e) {}
+              this.setState({ bkPw: '', bkPw2: '' });
+              msg('백업 파일을 저장했습니다 (계약 ' + out.counts.contracts + '건 · 문서 ' + out.counts.docs + '건). 비밀번호를 잊으면 복원할 수 없습니다.');
+            } catch (e) { msg('백업 파일을 만들지 못했습니다', true); }
+          },
+          onBkFile: async e => {
+            const f = e.target.files && e.target.files[0]; e.target.value = '';
+            if (!f || s.bkBusy) return;
+            if (!s.bkPwR) return msg('백업 비밀번호를 먼저 입력해 주세요', true);
+            this.setState({ bkBusy: true, bkMsg: '백업 파일을 검사하는 중입니다…', bkErr: false, bkPlan: null });
+            try { const r = await this.readBackup(await f.text(), s.bkPwR); this.setState({ bkPlan: { ...r, fileName: f.name }, bkBusy: false, bkMsg: '' }); }
+            catch (err) { msg(err.message || '백업 파일을 읽지 못했습니다', true); }
+          },
+          hasBkPlan: !!plan,
+          bkPlanText: plan ? '백업 파일: 계약 ' + plan.counts.contracts + '건 · 문서 ' + plan.counts.docs + '건 (환불완료 ' + plan.counts.refunded + '건) · ' + String(plan.createdAt).slice(0, 16).replace('T', ' ') + ' 백업' : '',
+          bkPlanWarn: cur.contracts > 0 || cur.docs > 0
+            ? '복원하면 이 기기의 동의서 앱 자료(계약 ' + Math.max(0, cur.contracts) + '건 · 문서 ' + Math.max(0, cur.docs) + '건)가 백업 파일 자료로 교체됩니다. 두 자료는 합쳐지지 않으니, 필요하면 먼저 현재 자료를 백업해 두세요.'
+            : '이 기기에는 동의서 앱 자료가 없습니다. 백업 파일 자료를 그대로 복원합니다.',
+          bkCancelPlan: () => this.setState({ bkPlan: null, bkMsg: '' }),
+          bkRestore: () => {
+            if (!plan || s.bkBusy) return;
+            if (!confirm('백업 파일 자료로 복원합니다.\n' + (cur.contracts > 0 || cur.docs > 0 ? '현재 기기의 동의서 앱 자료는 교체됩니다 (합치지 않음).' : '') + '\n계속할까요?')) return;
+            if (!this.applyRestore(plan.keys)) return msg('복원에 실패했습니다. 기존 자료는 그대로 남아 있습니다.', true);
+            location.reload();
+          } };
+      })()
     };
   }
 }

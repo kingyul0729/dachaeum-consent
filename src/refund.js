@@ -61,21 +61,46 @@
       : allocDiff < 0 ? (-allocDiff).toLocaleString('ko-KR') + '원이 초과 배분되었습니다' : '';
     return { amounts, over, allocSum, allocOver, allocOk, allocDiff, allocMsg };
   }
+  // 정상가 누락: 계약 항목·서비스 기록에 1회 정상가가 없으면 0원으로 계산하지 않음.
+  // 실제 이용(수량 > 0)이 있는 경우에만 '정상가 확인 필요'로 환불 확정을 막고, 근거를 확인해 보완한 값(C.priceFixes)이 있으면 그 값을 사용
+  // 보완 기록은 계약 항목(원 서명 내용)을 바꾸지 않고 별도로 남김: { key, label, price, basis, at }
+  const fixOf = (C, key) => { const f = (C.priceFixes || []).filter(x => x.key === key).pop(); return f ? amt(f.price) : null; };
+  const itemKey = k => 'item:' + k;
+  const svcKey = v => 'svc:' + (v.key || v.label || '');
+  function resolvePrices(C, used, visits) {
+    const missing = [];
+    const items = C.items.map((it, k) => {
+      if (isActual(it) || amt(it.price) > 0) return it;
+      const f = fixOf(C, itemKey(k));
+      if (f != null) return { ...it, price: f, priceFixed: true };
+      if ((used || [])[k] > 0) missing.push({ key: itemKey(k), label: it.name });
+      return { ...it, price: 0, priceMissing: true };
+    });
+    const V = (visits || []).map(v => {
+      if (v.price != null && v.price !== '' && amt(v.price) > 0) return v;
+      const f = fixOf(C, svcKey(v));
+      if (f != null) return { ...v, price: f, priceFixed: true };
+      if (!missing.some(m => m.key === svcKey(v))) missing.push({ key: svcKey(v), label: v.label });
+      return { ...v, price: 0, priceMissing: true };
+    });
+    return { C2: { ...C, items }, V, missing };
+  }
   const MSG = { lesion: '시술한 병변의 정상가(흑자는 크기)를 모두 입력해 주세요', alloc: '결제수단별 환불금액 합계가 최종 환불금액과 일치해야 합니다',
-    over: '원결제 금액을 넘는 환불금액이 있습니다' };
-  const validate = ({ lesBad, allocOk, allocOver }) => lesBad ? MSG.lesion : allocOver ? MSG.over : !allocOk ? MSG.alloc : '';
+    over: '원결제 금액을 넘는 환불금액이 있습니다', price: '정상가 확인이 필요한 이용 항목이 있어 환불을 확정할 수 없습니다' };
+  const validate = ({ lesBad, allocOk, allocOver, missing }) => (missing && missing.length) ? MSG.price : lesBad ? MSG.lesion : allocOver ? MSG.over : !allocOk ? MSG.alloc : '';
 
   // 한 번에 계산: 동의서 v3 환불 화면은 이 결과만 사용
-  function settle(C, { used, visits, extraPaid, rfLes, alloc } = {}, db) {
-    const V = visits || [];
-    const { lesAmt, lesBad } = lesions(C, rfLes, db);
-    const U = usedCounts(C, used, rfLes);
+  function settle(C0, { used, visits, extraPaid, rfLes, alloc } = {}, db) {
+    const { lesAmt, lesBad } = lesions(C0, rfLes, db);
+    const U = usedCounts(C0, used, rfLes);
+    const { C2: C, V, missing } = resolvePrices(C0, U, visits);
     const R = refund(C, U, V, extraPaid || 0, lesAmt);
     const pays = refundPays(C);
     const A = checkAlloc(pays, alloc, R.refundNum);
-    return { ...R, U, lesAmt, lesBad, pays, ...A, error: validate({ lesBad, allocOk: A.allocOk, allocOver: A.allocOver }) };
+    return { ...R, U, lesAmt, lesBad, pays, ...A, items: C.items, visits: V, missing,
+      error: validate({ lesBad, allocOk: A.allocOk, allocOver: A.allocOver, missing }) };
   }
 
-  g.DachaeumRefund = { PENALTY_RATE, BS_ADD_ID, num, amt, isBlackspotAdd, isActual, tiersOf, tierPrice, lesionValue, lesionRowBad, lesions, usedCounts,
+  g.DachaeumRefund = { PENALTY_RATE, BS_ADD_ID, num, amt, fixOf, itemKey, svcKey, resolvePrices, isBlackspotAdd, isActual, tiersOf, tierPrice, lesionValue, lesionRowBad, lesions, usedCounts,
     amtOf, refund, refundPays, allocDefault, checkAlloc, validate, MSG, settle };
 })(typeof window !== 'undefined' ? window : globalThis);

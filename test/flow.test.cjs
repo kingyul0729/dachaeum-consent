@@ -10,12 +10,14 @@ let browser;
 test.before(async () => { browser = await chromium.launch(process.env.CHROMIUM_PATH ? { executablePath: process.env.CHROMIUM_PATH } : {}); });
 test.after(async () => { await browser.close(); });
 
-async function open(seed) {
-  const ctx = await browser.newContext({ viewport: { width: 820, height: 1180 } });
+async function open(seed, opt = {}) {
+  const ctx = await browser.newContext({ viewport: { width: 820, height: 1180 }, acceptDownloads: true });
   const p = await ctx.newPage();
-  p.errors = []; p.on('pageerror', e => p.errors.push(e.message)); p.on('dialog', d => d.accept());
+  p.errors = []; p.dialogs = []; p.on('pageerror', e => p.errors.push(e.message));
+  p.on('dialog', d => { p.dialogs.push(d.message()); d.accept(opt.answer ? opt.answer(d) : undefined); });
   await p.goto(URL);
-  await p.evaluate(c => { localStorage.clear(); if (c) localStorage.setItem('dachaeum.v3.contracts', JSON.stringify(c)); }, seed || null);
+  await p.evaluate(([c, extra]) => { localStorage.clear(); if (c) localStorage.setItem('dachaeum.v3.contracts', JSON.stringify(c));
+    Object.entries(extra || {}).forEach(([k, v]) => localStorage.setItem(k, v)); }, [seed || null, opt.storage || null]);
   await p.reload(); await p.waitForTimeout(2000);
   return p;
 }
@@ -164,4 +166,158 @@ test('환불 정산 입력 직후 바로 새로고침해도 작성 중 값 유�
   await p.getByText('+', { exact: true }).nth(0).click();
   await p.reload(); await p.waitForTimeout(2000);
   assert.deepEqual((await contracts(p))[0].refundDraft.used, [1, 0]);
+});
+
+const pickProgram = async (p, id, label) => {
+  await click(p, '새 동의서 작성'); const ins = p.locator('input');
+  await ins.nth(0).fill('정상가테스트'); await ins.nth(1).fill('880101'); await ins.nth(2).fill('01011112222');
+  await click(p, '다음 단계'); await click(p, '전체');
+  await p.locator('input[placeholder*="검색"]').fill(id); await p.waitForTimeout(300);
+  await click(p, label); await click(p, '다음 단계'); await click(p, '카드');
+};
+const signAndSave = async p => {
+  await click(p, '동의서 미리보기 · 서명'); await p.getByText(/위 환불 규정/).last().click(); await sign(p);
+  await click(p, '동의하고 저장'); await p.waitForTimeout(700);
+};
+
+test('PGM-0037 남성 턱밑라인: 환불용 1회 정상가 입력 전 서명 불가 → 입력값 계약 저장 → 환불 차감', async () => {
+  const p = await open();
+  await pickProgram(p, 'PGM-0037', '남성 턱밑라인 포함');
+  assert.match(await body(p), /환불용 1회 정상가 확인 필요/);
+  await click(p, '동의서 미리보기 · 서명');
+  assert.match(await body(p), /환불용 1회 정상가를 입력해 주세요/);
+  assert.doesNotMatch(await body(p), /터치하여 서명/);
+  await p.locator('input[placeholder="1회 정상가"]').fill('132000');          // 테스트용 임의 값
+  await signAndSave(p);
+  const [c] = await contracts(p);
+  assert.equal(c.total, 660000);
+  assert.deepEqual(c.items.map(i => [i.name, i.qty, i.price, !!i.unitInput]), [['남성 턱밑라인 포함 제모', 5, 132000, true]]);
+  await p.goto(URL); await p.waitForTimeout(1500);
+  await click(p, '남성 턱밑라인 포함 제모 5회'); await click(p, '환불 정산');
+  await p.getByText('+', { exact: true }).nth(0).click(); await p.getByText('+', { exact: true }).nth(0).click(); await p.waitForTimeout(200);
+  assert.equal(await finalRefund(p), '330,000');                               // 660,000 − 66,000 − 2 × 132,000
+  assert.deepEqual(p.errors, []);
+});
+
+test('얼굴 전체 CO₂ 제거 추가옵션: 1회 정상가 입력·저장, 점 CO₂(병변별)와 별도로 차감', async () => {
+  const p = await open();
+  await pickProgram(p, 'PGM-0004', '스페셜 토닝 3');
+  assert.match(await body(p), /얼굴 전체 CO₂ 제거 · 추가옵션/);
+  await p.locator('input[placeholder="1회 정상가"]').fill('99000');            // 테스트용 임의 값
+  await signAndSave(p);
+  const [c] = await contracts(p);
+  const k = c.items.findIndex(i => i.name === '얼굴 전체 CO₂ 제거');
+  assert.deepEqual([c.items[k].kind, c.items[k].price, !!c.items[k].unitInput, !!c.items[k].actual], ['추가', 99000, true, false]);
+  assert.ok(c.items.some(i => i.name === '얼굴 점 CO₂ 제거' && i.actual), '점 CO₂는 병변별 입력 항목으로 유지');
+  await p.goto(URL); await p.waitForTimeout(1500);
+  await click(p, '스페셜 토닝 3'); await click(p, '환불 정산');
+  assert.equal(await finalRefund(p), '1,485,000');
+  await p.getByText('+', { exact: true }).nth(k).click(); await p.waitForTimeout(200);
+  assert.equal(await finalRefund(p), '1,386,000');
+});
+
+test('기존 계약 정상가 누락: 이용 기록이 있을 때만 확정 차단, 근거 보완 시 별도 기록·원 항목 유지', async () => {
+  const seed = [mk('CT1', '턱밑 계약', { total: 660000, paid: 660000, priorDep: 0, payments: [{ method: '카드', amount: 660000 }],
+    items: [{ kind: '시술', name: '남성 턱밑라인 포함 제모', qty: 5, price: 0 }] })];
+  const p = await open(seed, { answer: d => d.type() !== 'prompt' ? undefined : /근거/.test(d.message()) && !/정상가\(원\)/.test(d.message()) ? '2026-03-02 서명 동의서' : '132000' });
+  await click(p, '턱밑 계약'); await click(p, '환불 정산');
+  assert.doesNotMatch(await body(p), /정상가 확인 필요 · 환불 확정 불가/, '이용 전에는 차단 안 함');
+  await p.getByText('+', { exact: true }).nth(0).click(); await p.waitForTimeout(200);
+  assert.match(await body(p), /정상가 확인 필요 · 환불 확정 불가/);
+  assert.doesNotMatch(await body(p), /594,000/, '0원 차감 금액을 최종 환불금액으로 보여주지 않음');
+  assert.match(await body(p), /정상가 확인 후 계산할 수 있어요/);
+  await click(p, '정산서 생성 · 환자 서명');
+  assert.doesNotMatch(await body(p), /터치하여 서명/, '확정(서명) 단계로 넘어가지 않음');
+  await click(p, '근거 확인 후 보완'); await p.waitForTimeout(400);
+  const [c] = await contracts(p);
+  assert.equal(c.items[0].price, 0, '원 계약 항목은 바뀌지 않음');
+  assert.deepEqual(c.priceFixes.map(f => [f.key, f.price, f.basis]), [['item:0', 132000, '2026-03-02 서명 동의서']]);
+  assert.ok(c.priceFixes[0].at);
+  assert.equal(await finalRefund(p), '462,000');                               // 660,000 − 66,000 − 132,000
+  assert.match(await body(p), /정상가 보완 기록/);
+});
+
+test('이전 계약(계약 당시 서비스 단가 없음): 현재 가격표 자동 적용 안 함, 기록하면 확정 차단', async () => {
+  const p = await open([mk('CT1', '이전 계약')]);                             // svcPrices 없음
+  await click(p, '이전 계약'); await click(p, '환불 정산');
+  assert.match(await body(p), /단가 확인 필요/);
+  assert.doesNotMatch(await body(p), /14일 미만\s*15,000/);
+  assert.doesNotMatch(await body(p), /정상가 확인 필요 · 환불 확정 불가/, '기록 전에는 차단 없음');
+  await p.locator('[title="기록 추가"]').nth(1).click(); await p.waitForTimeout(300);   // 약처방 기록 1건
+  assert.match(await body(p), /정상가 확인 필요 · 환불 확정 불가/);
+  assert.match(await body(p), /정상가 확인 후 계산할 수 있어요/);
+  await click(p, '정산서 생성 · 환자 서명');
+  assert.doesNotMatch(await body(p), /터치하여 서명/);
+});
+
+test('서명 기록 삭제 차단: 문서 삭제 버튼·환자 삭제 버튼 없음', async () => {
+  const p = await open();
+  await pickProgram(p, 'PGM-0037', '남성 턱밑라인 포함');
+  await p.locator('input[placeholder="1회 정상가"]').fill('132000');
+  await signAndSave(p);
+  assert.equal(await p.locator('[title="문서 삭제"]').count(), 0);
+  await click(p, '계약 정보');
+  assert.equal(await p.getByText('삭제', { exact: true }).count(), 0);
+  assert.equal((await docs(p)).length, 1);
+});
+
+test('예약금 결제 표시: (10%) 문구 없음, 계산은 그대로', async () => {
+  const p = await open();
+  await pickProgram(p, 'PGM-0037', '남성 턱밑라인 포함');
+  await click(p, '예약금 결제');
+  const t = await body(p);
+  assert.doesNotMatch(t, /예약금 결제 \(10%\)|예약금 \(10%\)/);
+  assert.match(t, /66,000원을 결제할게요/);
+});
+
+test('백업·복원: 암호화 파일 → 다른 기기(새 환경)에서 복원 후 계약·문서·금액·상태 동일, 다른 앱 자료 유지', async () => {
+  const fs = require('node:fs');
+  const seed = [mk('CT1', '프로그램 A', { status: '환불완료', refunded: true, refund: { refundNum: 700000, penNum: 100000, usedAmt: 200000, pays: [{ method: '카드', refund: 400000 }] } }),
+    mk('CT2', '프로그램 B', { refundDraft: { used: [1, 0], alloc: { 0: '400,000' } }, priceFixes: [{ key: 'item:0', price: 1000, basis: 't' }] })];
+  const src = await open(seed, { storage: { 'dachaeum.v3.docs': JSON.stringify([{ id: 'D1', contractId: 'CT1', kind: '이용동의서', version: 1, signedAt: '2026-09-01', html: '<div>서명 문서</div>' }]),
+    'dachaeum.priceOverride': JSON.stringify({ programs: { 'PGM-0001': { total: '1' } } }), 'inventory-system:v1': 'SRC-INVENTORY' } });
+  const original = await src.evaluate(() => Object.fromEntries(Object.keys(localStorage).filter(k => k.startsWith('dachaeum.') && k !== 'dachaeum.v3.lastBackup').map(k => [k, localStorage.getItem(k)])));
+  await click(src, '백업 · 복원');
+  await src.locator('input[placeholder="비밀번호 (6자 이상)"]').fill('test-pass-1');
+  await src.locator('input[placeholder="비밀번호 확인"]').fill('test-pass-1');
+  const [dl] = await Promise.all([src.waitForEvent('download'), src.getByText('백업 파일 저장', { exact: true }).last().click()]);
+  const text = fs.readFileSync(await dl.path(), 'utf8');
+  assert.doesNotMatch(text, /김테스트|서명 문서|프로그램 A/, '파일 안에 환자정보·문서가 평문으로 없음');
+  const file = JSON.parse(text);
+  assert.equal(file.format, 'dachaeum-consent-backup'); assert.equal(file.counts.contracts, 2);
+
+  // 새 환경: 이미 다른 자료가 있는 기기 + 재고관리 자료
+  const dst = await open([mk('X9', '기존 기기 계약')], { storage: { 'inventory-system:v1': 'DST-INVENTORY' }, answer: () => undefined });
+  const restoreWith = async (pw, buf) => {
+    await click(dst, '백업 · 복원');
+    await dst.locator('input[placeholder="백업할 때 정한 비밀번호"]').fill(pw);
+    await dst.locator('input[type=file]').setInputFiles({ name: 'backup.json', mimeType: 'application/json', buffer: Buffer.from(buf) });
+    await dst.waitForTimeout(2500);
+  };
+  await restoreWith('wrong-pass', text);
+  assert.match(await body(dst), /비밀번호가 맞지 않거나 파일이 손상되었습니다/);
+  assert.equal((await contracts(dst))[0].id, 'X9', '실패 시 기존 자료 그대로');
+  const tampered = JSON.stringify({ ...file, data: file.data.slice(0, -8) + 'AAAAAAAA' });
+  await dst.locator('input[placeholder="백업할 때 정한 비밀번호"]').fill('test-pass-1');
+  await dst.locator('input[type=file]').setInputFiles({ name: 'b.json', mimeType: 'application/json', buffer: Buffer.from(tampered) });
+  await dst.waitForTimeout(2500);
+  assert.match(await body(dst), /비밀번호가 맞지 않거나 파일이 손상되었습니다/);
+  await dst.locator('input[type=file]').setInputFiles({ name: 'b.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify({ format: 'other' })) });
+  await dst.waitForTimeout(800);
+  assert.match(await body(dst), /다채움 동의서 백업 파일이 아닙니다/);
+  await dst.locator('input[type=file]').setInputFiles({ name: 'backup.json', mimeType: 'application/json', buffer: Buffer.from(text) });
+  await dst.waitForTimeout(2500);
+  const t = await body(dst);
+  assert.match(t, /계약 2건 · 문서 1건 \(환불완료 1건\)/);
+  assert.match(t, /교체됩니다.*합쳐지지 않으니/s, '기존 자료가 있으면 교체·비합침 안내');
+  assert.equal((await contracts(dst))[0].id, 'X9', '확인 전에는 바뀌지 않음');
+  await Promise.all([dst.waitForEvent('load'), click(dst, '이 백업으로 복원')]); await dst.waitForTimeout(2000);
+  const restored = await dst.evaluate(() => Object.fromEntries(Object.keys(localStorage).filter(k => k.startsWith('dachaeum.') && k !== 'dachaeum.v3.lastBackup').map(k => [k, localStorage.getItem(k)])));
+  assert.deepEqual(restored, original, '복원 후 이 앱 자료 전체가 원본과 동일');
+  assert.equal(await dst.evaluate(() => localStorage.getItem('inventory-system:v1')), 'DST-INVENTORY', '재고관리 자료는 건드리지 않음');
+  assert.ok(dst.dialogs.some(m => /교체/.test(m)), '복원 전 확인창');
+  assert.equal(((await body(dst)).match(/환불완료/g) || []).length, 1);
+  await click(dst, '프로그램 B'); await click(dst, '환불 정산');
+  assert.equal(await allocInputs(dst).nth(0).inputValue(), '400,000', '작성 중 환불 정산도 복원');
+  assert.deepEqual(src.errors.concat(dst.errors), []);
 });

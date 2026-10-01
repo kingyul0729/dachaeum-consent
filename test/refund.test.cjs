@@ -103,3 +103,29 @@ test('금액이 빠졌거나 문자열이어도 NaN·문자열 이어붙이기 �
   const missing = RF.settle({ total: 1000000, items: [{ kind: '시술', name: 'A', qty: 5, price: 200000 }] }, { used: [1] });
   assert.ok(Number.isFinite(missing.refundNum)); assert.equal(missing.refundNum, 0);
 });
+
+test('정상가 누락: 이용한 항목은 0원 계산 대신 환불 확정 차단, 이용하지 않았으면 차단 없음', () => {
+  const C = { total: 660000, paid: 660000, items: [{ kind: '시술', name: '남성 턱밑라인 포함 제모', qty: 5, price: 0 }, { kind: '서비스', name: '진정관리', qty: 2, price: 50000 }] };
+  const unused = RF.settle(C, { used: [0, 1] });
+  assert.equal(unused.error, ''); assert.deepEqual(unused.missing, []);
+  const used = RF.settle(C, { used: [5, 0] });
+  assert.equal(used.missing.length, 1); assert.equal(used.missing[0].label, '남성 턱밑라인 포함 제모');
+  assert.match(used.error, /정상가 확인/);
+});
+
+test('정상가 보완 기록(priceFixes)이 있으면 그 값으로 차감, 원 계약 항목은 그대로', () => {
+  const C = { total: 660000, paid: 660000, items: [{ kind: '시술', name: '턱밑', qty: 5, price: 0 }],
+    priceFixes: [{ key: 'item:0', label: '턱밑', price: 132000, basis: '테스트 근거', at: '2026-10-01T00:00:00Z' }] };
+  const r = RF.settle(C, { used: [2] });
+  assert.equal(r.error, ''); assert.equal(r.usedAmt, 264000); assert.equal(r.refundNum, 660000 - 66000 - 264000);
+  assert.equal(C.items[0].price, 0);
+});
+
+test('서비스 기록 단가 없음(이전 계약): 0원 처리하지 않고 차단, 보완 후 반영', () => {
+  const base = { total: 500000, paid: 500000, items: [] };
+  const v = [{ label: '약처방 · 14일 미만', price: null, key: 'rx|14일 미만' }];
+  assert.match(RF.settle(base, { visits: v }).error, /정상가 확인/);
+  const fixed = RF.settle({ ...base, priceFixes: [{ key: 'svc:rx|14일 미만', price: 15000, basis: '당시 가격표' }] }, { visits: v });
+  assert.equal(fixed.error, ''); assert.equal(fixed.svcAmt, 15000);
+  assert.equal(RF.settle(base, { visits: [] }).error, '', '기록이 없으면 차단 없음');
+});

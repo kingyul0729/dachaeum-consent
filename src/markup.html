@@ -434,6 +434,21 @@ body,body *{word-break:keep-all;overflow-wrap:break-word;line-break:strict}
             </div>
           </div>
           </sc-if>
+          <sc-if value="{{ hasUnitFix }}" hint-placeholder-val="{{ false }}">
+          <div style="display:flex;flex-direction:column;gap:8px;padding:14px 16px;border-bottom:1px solid #eef0f2;background:#fffaf0">
+            <div style="font-size:13px;font-weight:600;color:#7a5115">환불용 1회 정상가 확인 필요</div>
+            <div style="font-size:12px;color:#6d747c;line-height:1.5">가격표에 1회 정상가가 없는 구성입니다. 확인한 1회 정상가를 입력해야 서명할 수 있으며, 이 값이 계약에 저장되어 환불 시 이용금액 기준이 됩니다.</div>
+            <sc-for list="{{ unitFixRows }}" as="u" hint-placeholder-count="1">
+              <label style="display:flex;align-items:center;gap:10px;min-width:0">
+                <span style="flex:1;min-width:0;font-size:13px;color:#2b3036">{{ u.name }}</span>
+                <span style="display:flex;align-items:center;gap:6px;width:180px;flex:none;height:40px;box-sizing:border-box;border:1px solid {{ u.bd }};border-radius:8px;padding:0 12px;background:#ffffff">
+                  <input type="text" sc-camel-input-mode="numeric" placeholder="1회 정상가" value="{{ u.value }}" sc-camel-on-input="{{ u.onInput }}" style="flex:1;min-width:0;height:100%;border:0;outline:0;padding:0;background:transparent;font-family:inherit;font-size:14px;text-align:right;color:#1c1f23;font-variant-numeric:tabular-nums">
+                  <span style="font-size:13px;color:#8a9199">원</span>
+                </span>
+              </label>
+            </sc-for>
+          </div>
+          </sc-if>
           <div style="padding:14px 16px">
             <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;max-width:420px">
             <sc-if value="{{ canUseBal }}" hint-placeholder-val="{{ false }}">
@@ -460,7 +475,7 @@ body,body *{word-break:keep-all;overflow-wrap:break-word;line-break:strict}
             <div style="font-size:13px;font-weight:600;color:#4a5158">결제 방식</div>
             <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px">
               <div sc-camel-on-click="{{ pickFull }}" style="box-sizing:border-box;border-radius:12px;padding:12px 14px;display:flex;flex-direction:column;gap:4px;cursor:pointer;border:1.5px solid {{ fullBd }};background:{{ fullBg }}"><span style="font-size:15px;font-weight:600;color:{{ fullFg }}">완납 결제</span><span style="font-size:13px;color:#6d747c;font-variant-numeric:tabular-nums">{{ fullText }}</span></div>
-              <div sc-camel-on-click="{{ pickDeposit }}" style="box-sizing:border-box;border-radius:12px;padding:12px 14px;display:flex;flex-direction:column;gap:4px;cursor:pointer;border:1.5px solid {{ depBd }};background:{{ depBg }}"><span style="font-size:15px;font-weight:600;color:{{ depFg }}">예약금 결제 (10%)</span><span style="font-size:13px;color:#6d747c;font-variant-numeric:tabular-nums">{{ depText }}</span></div>
+              <div sc-camel-on-click="{{ pickDeposit }}" style="box-sizing:border-box;border-radius:12px;padding:12px 14px;display:flex;flex-direction:column;gap:4px;cursor:pointer;border:1.5px solid {{ depBd }};background:{{ depBg }}"><span style="font-size:15px;font-weight:600;color:{{ depFg }}">예약금 결제</span><span style="font-size:13px;color:#6d747c;font-variant-numeric:tabular-nums">{{ depText }}</span></div>
             </div>
           </div>
           <div style="display:flex;flex-direction:column;gap:8px;padding:14px 16px">
@@ -917,9 +932,6 @@ body,body *{word-break:keep-all;overflow-wrap:break-word;line-break:strict}
       </div>
       <div style="font-size:12.5px;color:#7b828a;margin-top:4px">{{ rfPhone }} · {{ rfBirth }}</div>
     </div>
-    <sc-if value="{{ yes }}" hint-placeholder-val="{{ true }}">
-      <div sc-camel-on-click="{{ delStart }}" style="height:30px;padding:0 10px;box-sizing:border-box;border:1px solid #e3c4c1;border-radius:6px;display:flex;align-items:center;font-size:12.5px;font-weight:600;color:#b3261e;cursor:pointer;flex:none" style-hover="background:rgba(179,38,30,0.05)">삭제</div>
-    </sc-if>
   </div>
 
   <div style="display:flex;gap:2px;margin-top:20px;border-bottom:1px solid #e3e6ea">
@@ -1075,7 +1087,7 @@ body,body *{word-break:keep-all;overflow-wrap:break-word;line-break:strict}
             <div style="border:1px solid #e3e6ea;border-radius:11px;overflow:hidden;background:#ffffff;display:flex;flex-direction:column">
               <div style="position:relative;height:244px;background:#f5f6f8;border-bottom:1px solid #e3e6ea;display:flex;align-items:center;justify-content:center;opacity:{{ d.thumbOp }}">
                 <div sc-camel-on-click="{{ d.open }}" style="cursor:pointer;display:flex" style-hover="opacity:0.85">{{ d.thumb }}</div>
-                <div sc-camel-on-click="{{ d.del }}" title="문서 삭제" style="position:absolute;top:8px;right:8px;width:30px;height:30px;border-radius:6px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:#a4abb3;background:rgba(255,255,255,0.9)" style-hover="color:#b3261e;background:#ffffff"><svg width="15" height="15" sc-camel-view-box="0 0 24 24" fill="none" stroke="currentColor" sc-camel-stroke-width="2" sc-camel-stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"></path></svg></div>
+                <sc-if value="{{ d.canDel }}" hint-placeholder-val="{{ false }}"><div sc-camel-on-click="{{ d.del }}" title="문서 삭제" style="position:absolute;top:8px;right:8px;width:30px;height:30px;border-radius:6px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:#a4abb3;background:rgba(255,255,255,0.9)" style-hover="color:#b3261e;background:#ffffff"><svg width="15" height="15" sc-camel-view-box="0 0 24 24" fill="none" stroke="currentColor" sc-camel-stroke-width="2" sc-camel-stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"></path></svg></div></sc-if>
               </div>
               <div style="padding:14px 16px 16px;display:flex;flex-direction:column;gap:4px;flex:1">
                 <div style="display:flex;align-items:center;gap:7px;flex-wrap:wrap"><div style="font-size:14.5px;font-weight:600;color:{{ d.titleFg }}">{{ d.title }}</div><span style="padding:2px 8px;border-radius:10px;font-size:11px;font-weight:600;background:{{ d.verBg }};color:{{ d.verFg }}">{{ d.verLabel }}</span></div>
@@ -1122,6 +1134,19 @@ body,body *{word-break:keep-all;overflow-wrap:break-word;line-break:strict}
 <!-- ================= 환불 정산 계산 ================= -->
 <sc-if value="{{ isRefund }}" hint-placeholder-val="{{ true }}">
 <div style="flex:1;min-height:0;overflow-x:hidden;overflow-y:auto;-webkit-overflow-scrolling:touch;touch-action:pan-y;padding:22px 28px 24px;display:flex;flex-direction:column;gap:16px">
+
+  <sc-if value="{{ rfMissing }}" hint-placeholder-val="{{ false }}">
+    <div style="flex:none;display:flex;align-items:center;gap:12px;padding:14px 18px;border:1px solid #f0d9a8;border-radius:12px;background:#fffaf0">
+      <div style="flex:1;min-width:0">
+        <div style="font-size:14px;font-weight:600;color:#7a5115">정상가 확인 필요 · 환불 확정 불가</div>
+        <div style="font-size:12.5px;color:#5c636b;margin-top:3px;line-height:1.5">{{ rfMissingText }} — 계약 당시 1회 정상가가 저장되어 있지 않습니다. 당시 동의서·가격표 등 근거를 확인한 뒤 보완해 주세요. 0원으로 계산하지 않습니다.</div>
+      </div>
+      <div sc-camel-on-click="{{ supplyPrices }}" style="height:40px;padding:0 14px;border-radius:8px;display:flex;align-items:center;font-size:13.5px;font-weight:600;color:#7a5115;border:1px solid #e3c88f;background:#ffffff;cursor:pointer;white-space:nowrap;flex:none">근거 확인 후 보완</div>
+    </div>
+  </sc-if>
+  <sc-if value="{{ hasPriceFixes }}" hint-placeholder-val="{{ false }}">
+    <div style="flex:none;padding:10px 16px;border:1px solid #e3e6ea;border-radius:12px;background:#f7f8f9;font-size:12.5px;color:#5c636b;line-height:1.5">정상가 보완 기록 · {{ priceFixText }}</div>
+  </sc-if>
 
   <div style="border:1px solid #e9ebee;border-radius:16px;overflow:hidden;background:#ffffff;flex:none">
     <div style="padding:14px 18px;background:#f7f8f9;border-bottom:1px solid #e3e6ea;display:flex;justify-content:space-between;align-items:baseline">
@@ -1279,7 +1304,7 @@ body,body *{word-break:keep-all;overflow-wrap:break-word;line-break:strict}
         <div style="display:flex;justify-content:space-between"><span style="color:#5c636b">위약금 (총 계약금액 × 10%)</span><span style="font-variant-numeric:tabular-nums;color:#b4483f">− {{ rfPen }}원</span></div>
         <div style="display:flex;justify-content:space-between"><span style="color:#5c636b">이용금액 (정상가)</span><span style="font-variant-numeric:tabular-nums;color:#b4483f">− {{ rfUsedAmt }}원</span></div>
         <div style="height:1px;background:#d9e2ea"></div>
-        <div style="display:flex;justify-content:space-between;align-items:baseline"><span style="font-size:14px;font-weight:600">= 최종 환불금액</span><span style="font-size:17px;font-weight:700;font-variant-numeric:tabular-nums;color:#345b80">{{ rfRefund }}원</span></div>
+        <div style="display:flex;justify-content:space-between;align-items:baseline"><span style="font-size:14px;font-weight:600">= 최종 환불금액</span><span style="font-size:17px;font-weight:700;font-variant-numeric:tabular-nums;color:#345b80">{{ rfRefundLine }}</span></div>
       </div>
       <sc-if value="{{ rfMulti }}" hint-placeholder-val="{{ false }}"><div style="margin-top:16px;padding-top:14px;border-top:1px solid #d9e2ea;display:flex;flex-direction:column;gap:10px">
         <div style="font-size:13px;font-weight:600;color:#345b80">결제수단별 환불</div>
@@ -1438,6 +1463,42 @@ body,body *{word-break:keep-all;overflow-wrap:break-word;line-break:strict}
 </div>
 </sc-if>
 
+
+<!-- ================= 백업 · 복원 ================= -->
+<sc-if value="{{ bkOpen }}" hint-placeholder-val="{{ false }}">
+<div sc-camel-on-click="{{ bkClose }}" style="position:fixed;inset:0;z-index:70;background:rgba(28,31,35,0.38);display:flex;align-items:center;justify-content:center;padding:24px">
+  <div sc-camel-on-click="{{ stop }}" style="width:460px;max-width:100%;max-height:100%;overflow-y:auto;background:#ffffff;border-radius:14px;padding:22px 24px 18px;box-shadow:0 12px 40px rgba(28,31,35,0.2);display:flex;flex-direction:column;gap:14px">
+    <div style="display:flex;align-items:baseline;justify-content:space-between;gap:8px">
+      <div style="font-size:17px;font-weight:600;color:#1c1f23">백업 · 복원</div>
+      <div style="font-size:12px;color:#8d949b">{{ bkCur }}</div>
+    </div>
+    <div style="font-size:12.5px;color:#5c636b;line-height:1.55">이 기기에 저장된 동의서 앱 자료(계약·결제·이용기록·환불 정산·서명 문서·가격 관리 설정)를 비밀번호로 암호화한 파일로 저장하고, 필요할 때 되살립니다. {{ bkLast }}</div>
+    <div style="display:flex;flex-direction:column;gap:8px;padding:14px;border:1px solid #e9ebee;border-radius:12px">
+      <div style="font-size:13.5px;font-weight:600;color:#1c1f23">백업 파일 저장</div>
+      <input type="password" placeholder="비밀번호 (6자 이상)" value="{{ bkPw }}" sc-camel-on-input="{{ onBkPw }}" style="height:42px;box-sizing:border-box;border:1px solid #d5d9de;border-radius:8px;padding:0 12px;font-family:inherit;font-size:14px">
+      <input type="password" placeholder="비밀번호 확인" value="{{ bkPw2 }}" sc-camel-on-input="{{ onBkPw2 }}" style="height:42px;box-sizing:border-box;border:1px solid #d5d9de;border-radius:8px;padding:0 12px;font-family:inherit;font-size:14px">
+      <div sc-camel-on-click="{{ bkExport }}" style="height:42px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:600;color:#ffffff;background:#345b80;cursor:pointer">백업 파일 저장</div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:8px;padding:14px;border:1px solid #e9ebee;border-radius:12px">
+      <div style="font-size:13.5px;font-weight:600;color:#1c1f23">백업 파일에서 복원</div>
+      <input type="password" placeholder="백업할 때 정한 비밀번호" value="{{ bkPwR }}" sc-camel-on-input="{{ onBkPwR }}" style="height:42px;box-sizing:border-box;border:1px solid #d5d9de;border-radius:8px;padding:0 12px;font-family:inherit;font-size:14px">
+      <label style="height:42px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:600;color:#345b80;border:1px solid #c9d3de;background:#ffffff;cursor:pointer">백업 파일 선택<input type="file" accept=".json,application/json" sc-camel-on-change="{{ onBkFile }}" style="display:none"></label>
+      <sc-if value="{{ hasBkPlan }}" hint-placeholder-val="{{ false }}">
+        <div style="display:flex;flex-direction:column;gap:8px;padding:12px;border-radius:10px;background:#fffaf0;border:1px solid #f0d9a8">
+          <div style="font-size:13px;color:#2b3036;font-variant-numeric:tabular-nums">{{ bkPlanText }}</div>
+          <div style="font-size:12.5px;color:#7a5115;line-height:1.5">{{ bkPlanWarn }}</div>
+          <div style="display:flex;justify-content:flex-end;gap:8px">
+            <div sc-camel-on-click="{{ bkCancelPlan }}" style="height:40px;padding:0 16px;border-radius:8px;display:flex;align-items:center;font-size:14px;font-weight:600;color:#5c636b;cursor:pointer">취소</div>
+            <div sc-camel-on-click="{{ bkRestore }}" style="height:40px;padding:0 16px;border-radius:8px;display:flex;align-items:center;font-size:14px;font-weight:600;color:#ffffff;background:#b3261e;cursor:pointer">이 백업으로 복원</div>
+          </div>
+        </div>
+      </sc-if>
+    </div>
+    <sc-if value="{{ hasBkMsg }}" hint-placeholder-val="{{ false }}"><div style="font-size:13px;line-height:1.5;color:{{ bkMsgFg }}">{{ bkMsg }}</div></sc-if>
+    <div style="display:flex;justify-content:flex-end"><div sc-camel-on-click="{{ bkClose }}" style="height:40px;padding:0 18px;border-radius:8px;display:flex;align-items:center;font-size:14px;font-weight:600;color:#5c636b;cursor:pointer">닫기</div></div>
+  </div>
+</div>
+</sc-if>
 
 <!-- ================= 저장 완료 토스트 ================= -->
 <sc-if value="{{ toast }}" hint-placeholder-val="{{ false }}">
