@@ -197,3 +197,22 @@ test('1회 정상가 기록: 총 등록금액 기록과 별도, 해당 시술만
   assert.equal(CT.applyUnits(base, uo2).programs[0].items[0].settleUnit, '100');
   assert.match(d.version, /정상가 변경 2026-10-01 11:00/);
 });
+
+test('공통 시술 판정: 시술 ID가 시술 DB에 있고 모든 프로그램의 1회 정상가가 같을 때만 공통, 기준이 다르거나 정상가 없는 항목은 제외', () => {
+  const CT = globalThis.DachaeumCatalog, d = require('../data/programs.json');
+  const c = CT.commonUnits(d);
+  assert.deepEqual(c['pig-revlite'], { price: 198000, programs: 11 });
+  assert.equal(c['scar-picofraxel-regen-full'], undefined, '시술 DB 440,000 ≠ 프로그램 275,000');
+  assert.equal(c['hair-m-chinline'], undefined, '정상가 확인 필요');
+  assert.equal(c['PART_LT_PT'], undefined, '조건별 금액');
+  assert.equal(c['scar-simple-calm'], undefined, '시술 DB에 없는 ID');
+  const uo = CT.setProcUnit(null, 'pig-revlite', 250000);
+  const out = CT.applyUnits(d, uo);
+  const rev = out.programs.flatMap(p => p.items.filter(i => i.id === 'pig-revlite'));
+  assert.equal(rev.length, 11); assert.ok(rev.every(i => i.settleUnit === '250000' && i.unitPrice === '250000'));
+  assert.deepEqual(out.programs.map(p => p.total), d.programs.map(p => p.total), '총 등록금액은 그대로');
+  // 공통 시술은 프로그램별 키로 바꿀 수 없고, 프로그램별 항목은 공통 키로 바뀌지 않음
+  assert.equal(CT.applyUnits(d, CT.setUnit(null, 'PGM-0001', 'pig-revlite', 1)).programs.find(p => p.id === 'PGM-0001').items[1].settleUnit, '198000');
+  assert.ok(CT.applyUnits(d, CT.setProcUnit(null, 'scar-picofraxel-regen-full', 1)).programs.filter(p => p.items.some(i => i.id === 'scar-picofraxel-regen-full'))
+    .every(p => p.items.find(i => i.id === 'scar-picofraxel-regen-full').settleUnit === '275000'));
+});

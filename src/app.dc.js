@@ -1416,28 +1416,36 @@ class Component extends DCLogic {
           if (!/^[0-9][0-9,\s]*원?$/.test(raw)) { msg('금액은 숫자로만 입력해 주세요 (예: 330,000)', true); return 0; }
           const price = Number(raw.replace(/[^0-9]/g, '')); if (!(price > 0)) { msg('0원은 저장할 수 없습니다', true); return 0; } return price; };
         // 시술별 환불용 1회 정상가: 기본값(가격 데이터) 있는 시술 항목만 수정. 정상가 확인 필요·개당 정산·서비스·조건별 금액은 수정 칸 없음
+        // 공통 시술(시술 ID + 가격 기준이 모든 프로그램에서 같은 경우)은 한 번 수정하면 그 시술을 쓰는 모든 프로그램에 적용, 나머지는 프로그램별
+        const stamp = () => { const d = new Date(), z = n => String(n).padStart(2, '0');
+          return d.getFullYear() + '-' + z(d.getMonth() + 1) + '-' + z(d.getDate()) + ' ' + z(d.getHours()) + ':' + z(d.getMinutes()); };
+        const common = CT.commonUnits(base);
+        const procName = id => ((base.procs || []).find(x => x.id === id) || {}).name || id;
         const unitRows = (p, b) => (p.items || []).map((i, k) => {
           const bi = b && (b.items || []).find(x => x.id === i.id);
-          const baseU = bi ? Number(bi.settleUnit || 0) || Number(bi.unitPrice || 0) : 0;
+          const cm = common[i.id];
+          const baseU = cm ? cm.price : bi ? Number(bi.settleUnit || 0) || Number(bi.unitPrice || 0) : 0;
           const curU = Number(i.settleUnit || 0) || Number(i.unitPrice || 0);
-          const uk = CT.unitKey(p.id, i.id), changed = !!(uo && uo.items && uo.items[uk]);
+          const uk = cm ? CT.procKey(i.id) : CT.unitKey(p.id, i.id), changed = !!(uo && uo.items && uo.items[uk]);
           const svc = i.kind === '서비스권' || i.kind === '서비스';
           const ok = !svc && !p.lesion && !i.unitFromTotal && !Number(i.perPiece || 0) && baseU > 0 && (p.items || []).findIndex(x => x.id === i.id) === k;
           const note = svc ? '' : p.lesion ? '' : Number(i.perPiece || 0) ? '개당 정산 항목' : !baseU ? (i.priceState || '정상가 확인 필요') + ' · 등록 시 입력' : '';
           if (!ok && !note) return null;
+          const scope = cm ? '공통 시술 · ' + cm.programs + '개 프로그램에 함께 적용' : '이 프로그램에만 적용';
+          const where = cm ? '시술 「' + procName(i.id) + '」 (' + cm.programs + '개 프로그램 공통)' : '[' + p.id + '] ' + p.name + ' · ' + i.name;
           const val = (s.pmEditU || {})[uk] ?? '';
+          const setU = price => cm ? CT.setProcUnit(uo, i.id, price, stamp()) : CT.setUnit(uo, p.id, i.id, price, stamp());
+          const clearU = () => cm ? CT.clearProcUnit(uo, i.id, stamp()) : CT.clearUnit(uo, p.id, i.id, stamp());
           const save = () => { const price = parse(val); if (!price) return;
             if (price === curU) return msg('현재 적용 중인 1회 정상가와 같습니다', true);
-            if (!confirm('[' + p.id + '] ' + p.name + '\n' + i.name + ' 환불용 1회 정상가 ' + won(curU) + '원 → ' + won(price) + '원\n\n총 등록금액은 바뀌지 않습니다. 새 계약부터 적용되고, 이미 저장된 계약의 1회 정상가는 바뀌지 않습니다.')) return;
-            write(price === baseU ? CT.clearUnit(uo, p.id, i.id, stamp()) : CT.setUnit(uo, p.id, i.id, price, stamp()),
-              { uk, text: i.name + ' 1회 정상가를 ' + won(price) + '원으로 저장했습니다 (새 계약부터 적용)' }, CT.UNIT_KEY); };
-          const reset = () => { if (!confirm('[' + p.id + '] ' + p.name + '\n' + i.name + ' 1회 정상가 변경(' + won(curU) + '원)을 지우고 기본 ' + won(baseU) + '원으로 되돌립니다.\n이미 저장된 계약은 바뀌지 않습니다.')) return;
-            write(CT.clearUnit(uo, p.id, i.id, stamp()), { uk, text: i.name + ' 1회 정상가를 기본 ' + won(baseU) + '원으로 되돌렸습니다' }, CT.UNIT_KEY); };
+            if (!confirm(where + '\n환불용 1회 정상가 ' + won(curU) + '원 → ' + won(price) + '원\n\n총 등록금액은 바뀌지 않습니다. 새 계약부터 적용되고, 이미 저장된 계약의 1회 정상가는 바뀌지 않습니다.')) return;
+            write(price === baseU ? clearU() : setU(price), { uk, text: i.name + ' 1회 정상가를 ' + won(price) + '원으로 저장했습니다 (' + (cm ? cm.programs + '개 프로그램 · ' : '') + '새 계약부터 적용)' }, CT.UNIT_KEY); };
+          const reset = () => { if (!confirm(where + '\n1회 정상가 변경(' + won(curU) + '원)을 지우고 기본 ' + won(baseU) + '원으로 되돌립니다.\n이미 저장된 계약은 바뀌지 않습니다.')) return;
+            write(clearU(), { uk, text: i.name + ' 1회 정상가를 기본 ' + won(baseU) + '원으로 되돌렸습니다' }, CT.UNIT_KEY); };
           return { name: i.name, qty: i.qty ? i.qty + (i.unit || '회') : '', curText: curU ? won(curU) + '원' : '—', baseText: baseU ? '기본 ' + won(baseU) + '원' : '',
-            changed: changed && ok, editable: ok, notEditable: !ok, note, val, onVal: e => this.setState({ pmEditU: { ...(s.pmEditU || {}), [uk]: e.target.value } }), save, reset };
+            scopeText: ok ? scope : '', ukey: uk, changed: changed && ok, editable: ok, notEditable: !ok, note, val,
+            onVal: e => this.setState({ pmEditU: { ...(s.pmEditU || {}), [uk]: e.target.value } }), save, reset };
         }).filter(Boolean);
-        const stamp = () => { const d = new Date(), z = n => String(n).padStart(2, '0');
-          return d.getFullYear() + '-' + z(d.getMonth() + 1) + '-' + z(d.getDate()) + ' ' + z(d.getHours()) + ':' + z(d.getMinutes()); };
         const row = p => {
           const b = baseOf[p.id], ovT = ov && ov.programs && ov.programs[p.id] && Object.prototype.hasOwnProperty.call(ov.programs[p.id], 'total');
           const editable = !!b && !added.has(p.id) && !p.lesion && !!Number(b.total || 0);
@@ -1473,12 +1481,14 @@ class Component extends DCLogic {
             text: (hasT ? '총 등록금액 ' + (b && Number(b.total || 0) ? won(b.total) + '원 → ' : '') + won(ovp[id].total) + '원' : '') + (others.length ? (hasT ? ' · ' : '') + '기타 변경 ' + others.join(', ') : ''),
             canReset: !!(r && r.changed), reset: r ? r.reset : () => {} }; });
         const um = (uo && uo.items) || {};
-        Object.keys(um).forEach(k => { const [pid, iid] = k.split('|'); const p = (cur.programs || []).find(x => x.id === pid), b = baseOf[pid];
-          const it = p && (p.items || []).find(x => x.id === iid), bi = b && (b.items || []).find(x => x.id === iid);
-          const baseU = bi ? Number(bi.settleUnit || 0) || Number(bi.unitPrice || 0) : 0;
-          const r = p && it ? unitRows(p, b).find(u => u.name === it.name) : null;
-          out.pmChanged.push({ id: pid, name: (p || b || {}).name || pid,
-            text: '1회 정상가 · ' + ((it || bi || {}).name || iid) + ' ' + (baseU ? won(baseU) + '원 → ' : '') + won(um[k].price) + '원',
+        Object.keys(um).forEach(k => {
+          const isProc = k.startsWith('proc:'), iid = isProc ? k.slice(5) : k.split('|')[1], pid = isProc ? '' : k.split('|')[0];
+          const p = (cur.programs || []).find(x => isProc ? (x.items || []).some(i => i.id === iid) && !x.lesion : x.id === pid);
+          const r = p ? unitRows(p, baseOf[p.id]).find(u => u.ukey === k) : null;
+          const baseU = isProc ? (common[iid] || {}).price : (() => { const bi = baseOf[pid] && (baseOf[pid].items || []).find(x => x.id === iid); return bi ? Number(bi.settleUnit || 0) || Number(bi.unitPrice || 0) : 0; })();
+          out.pmChanged.push({ id: isProc ? '공통 시술 · ' + ((common[iid] || {}).programs || 0) + '개 프로그램' : pid,
+            name: isProc ? procName(iid) : ((p || baseOf[pid] || {}).name || pid),
+            text: '1회 정상가' + (isProc ? '' : ' · ' + (r ? r.name : iid)) + ' ' + (baseU ? won(baseU) + '원 → ' : '') + won(um[k].price) + '원',
             canReset: !!(r && r.changed), reset: r ? r.reset : () => {} }); });
         out.pmHasChanged = out.pmChanged.length > 0;
         const oth = [ov && ov.added && ov.added.length ? '추가 ' + ov.added.length + '건' : '', ov && ov.deleted && ov.deleted.length ? '숨김 ' + ov.deleted.length + '건' : '',

@@ -496,17 +496,18 @@ test('1회 정상가 변경: 총 등록금액과 별도 저장 → 새 계약에
   assert.match(b, /시술별 환불용 1회 정상가/);
   assert.match(b, /레블라이트 SI \+ 비타민관리 5회\s*198,000원/);
   assert.equal(await unitIn.count(), 3, '스타룩스·레블라이트·피코 (약처방 서비스는 수정 칸 없음)');
+  assert.match(b, /레블라이트 SI \+ 비타민관리 5회\s*198,000원\s*공통 시술 · 11개 프로그램에 함께 적용/);
   // 1회 정상가 수정 (레블라이트 198,000 → 250,000)
   await unitIn.nth(1).fill('250,000'); await p.getByText('정상가 저장', { exact: true }).nth(1).click(); await p.waitForTimeout(400);
   assert.match(await body(p), /레블라이트 SI \+ 비타민관리 1회 정상가를 250,000원으로 저장/);
-  assert.deepEqual((await ls('dachaeum.unitOverride')).items, { 'PGM-0001|pig-revlite': { price: '250000' } });
+  assert.deepEqual((await ls('dachaeum.unitOverride')).items, { 'proc:pig-revlite': { price: '250000' } }, '공통 시술 단위로 저장');
   assert.deepEqual(await ls('dachaeum.priceOverride'), oldOv, '총 등록금액 기록은 그대로');
   assert.match(await body(p), /스페셜 토닝 1 PGM-0001 · 색소\s*1,320,000원/, '1회 정상가를 바꿔도 총 등록금액 그대로');
   assert.match(await body(p), /변경된 1회 정상가 적용 중 · 기본 198,000원/);
   // 총 등록금액 수정 → 1회 정상가 기록에 영향 없음
   await p.locator('input[placeholder="수정 가격 (원)"]').first().fill('1400000'); await p.getByText('저장', { exact: true }).first().click(); await p.waitForTimeout(400);
   assert.equal((await ls('dachaeum.priceOverride')).programs['PGM-0001'].total, '1400000');
-  assert.deepEqual((await ls('dachaeum.unitOverride')).items, { 'PGM-0001|pig-revlite': { price: '250000' } }, '총 등록금액 변경이 1회 정상가에 영향 없음');
+  assert.deepEqual((await ls('dachaeum.unitOverride')).items, { 'proc:pig-revlite': { price: '250000' } }, '총 등록금액 변경이 1회 정상가에 영향 없음');
   assert.match(await body(p), /레블라이트 SI \+ 비타민관리 5회\s*250,000원/);
   // 새로고침 후 새 계약: 총 등록금액 1,400,000 / 레블라이트 250,000 / 나머지 기본값
   await p.reload(); await p.waitForTimeout(2000);
@@ -554,4 +555,91 @@ test('1회 정상가 변경: 정상가 확인 필요 항목(PGM-0037)은 수정 
   await p.getByText('닫기', { exact: true }).last().click(); await p.waitForTimeout(300);
   await pickProgram(p, 'PGM-0037', '남성 턱밑라인 포함');
   assert.match(await body(p), /환불용 1회 정상가 확인 필요/, '계약 작성 시 직접 입력 요구 그대로');
+});
+
+test('공통 시술 1회 정상가: 한 번 수정하면 같은 시술을 쓰는 다른 프로그램 새 계약에도 적용, 가격 기준이 다른 항목은 프로그램별', async () => {
+  const p = await open();
+  const ls = k => p.evaluate(k => JSON.parse(localStorage.getItem(k) || 'null'), k);
+  await p.locator('[title="가격 관리"]').click(); await p.waitForTimeout(400);
+  const q = p.locator('input[placeholder^="프로그램·시술 검색"]');
+  // 흉터 피코프락셀: 같은 시술 ID라도 시술 DB(440,000)와 프로그램 단가(275,000)가 달라 프로그램별 관리
+  await q.fill('PGM-0022'); await p.waitForTimeout(300);
+  assert.match(await body(p), /피코프락셀 1회\s*275,000원\s*이 프로그램에만 적용/);
+  await p.locator('input[placeholder="수정 1회 정상가 (원)"]').first().fill('300000');
+  await p.getByText('정상가 저장', { exact: true }).first().click(); await p.waitForTimeout(400);
+  // 레블라이트(공통 시술): PGM-0001 화면에서 수정
+  await q.fill('PGM-0001'); await p.waitForTimeout(300);
+  await p.locator('input[placeholder="수정 1회 정상가 (원)"]').nth(1).fill('250000');
+  await p.getByText('정상가 저장', { exact: true }).nth(1).click(); await p.waitForTimeout(400);
+  assert.deepEqual((await ls('dachaeum.unitOverride')).items, { 'PGM-0022|scar-picofraxel-regen-full': { price: '300000' }, 'proc:pig-revlite': { price: '250000' } });
+  await q.fill('PGM-0002'); await p.waitForTimeout(300);
+  assert.match(await body(p), /레블라이트 SI \+ 비타민관리 4회\s*250,000원/, '다른 프로그램에도 같은 값 표시');
+  await q.fill('PGM-0023'); await p.waitForTimeout(300);
+  assert.match(await body(p), /피코프락셀 3회\s*275,000원/, '프로그램별 항목은 다른 프로그램에 영향 없음');
+  await p.getByText('닫기', { exact: true }).last().click(); await p.waitForTimeout(300);
+  await pickProgram(p, 'PGM-0002', '스페셜 토닝 2'); await signAndSave(p);
+  const [c] = await contracts(p);
+  assert.equal(c.total, 1430000, '총 등록금액은 그대로');
+  assert.equal(c.items.find(i => /레블라이트/.test(i.name)).price, 250000, '다른 프로그램 새 계약에도 공통 정상가 적용');
+  assert.equal(c.items.find(i => /피코 PLUS/.test(i.name)).price, 198000);
+  assert.deepEqual(p.errors, []);
+});
+
+test('백업·복원: 1회 정상가 변경(unitOverride)·총 등록금액 변경이 깨끗한 기기로 그대로 복원, 복원 후 새 계약에 적용, 실패 시 기존 기록 보존', async () => {
+  const fs = require('node:fs');
+  const ovT = { programs: { 'PGM-0002': { total: '1450000' } }, added: [], deleted: [], events: {}, at: '2026-09-01 10:00' };
+  const src = await open([mk('CT1', '백업 원본 계약')], { storage: { 'dachaeum.priceOverride': JSON.stringify(ovT) } });
+  await src.locator('[title="가격 관리"]').click(); await src.waitForTimeout(400);
+  await src.locator('input[placeholder^="프로그램·시술 검색"]').fill('PGM-0001'); await src.waitForTimeout(300);
+  await src.locator('input[placeholder="수정 1회 정상가 (원)"]').nth(1).fill('250000');
+  await src.getByText('정상가 저장', { exact: true }).nth(1).click(); await src.waitForTimeout(400);
+  await src.getByText('닫기', { exact: true }).last().click(); await src.waitForTimeout(300);
+  const srcUo = await src.evaluate(() => localStorage.getItem('dachaeum.unitOverride'));
+  assert.deepEqual(JSON.parse(srcUo).items, { 'proc:pig-revlite': { price: '250000' } });
+  await click(src, '백업 · 복원');
+  await src.locator('input[placeholder="비밀번호 (6자 이상)"]').fill('test-pass-1');
+  await src.locator('input[placeholder="비밀번호 확인"]').fill('test-pass-1');
+  await click(src, '백업 파일 만들기'); await src.waitForTimeout(2000);
+  const [dl] = await Promise.all([src.waitForEvent('download'), src.getByText(/^파일 저장 · /).click()]);
+  const text = fs.readFileSync(await dl.path(), 'utf8');
+  assert.doesNotMatch(text, /pig-revlite|250000/, '백업 파일 안은 암호화');
+
+  // 실패 시 기존 unitOverride 보존: 기존 기록이 있는 기기에서 잘못된 비밀번호·손상 파일·저장 실패
+  const keepUo = JSON.stringify({ items: { 'proc:pig-xd': { price: '400000' } }, at: '2026-09-30 09:00' });
+  const bad = await open([mk('KEEP', '기기 원래 계약')], { storage: { 'dachaeum.unitOverride': keepUo, 'dachaeum.priceOverride': '{"keep":1}' } });
+  const snap = () => bad.evaluate(() => Object.fromEntries(Object.keys(localStorage).filter(k => k.startsWith('dachaeum.')).map(k => [k, localStorage.getItem(k)])));
+  const before = await snap();
+  await click(bad, '백업 · 복원');
+  const pw = bad.locator('input[placeholder="백업할 때 정한 비밀번호"]'), fileIn = bad.locator('input[type=file]');
+  await pw.fill('wrong-pass'); await fileIn.setInputFiles({ name: 'b.json', mimeType: 'application/json', buffer: Buffer.from(text) }); await bad.waitForTimeout(2500);
+  assert.match(await body(bad), /비밀번호가 맞지 않거나 파일이 손상되었습니다/);
+  const file = JSON.parse(text);
+  await pw.fill('test-pass-1');
+  await fileIn.setInputFiles({ name: 'b.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify({ ...file, data: file.data.slice(0, -8) + 'AAAAAAAA' })) }); await bad.waitForTimeout(2500);
+  assert.match(await body(bad), /비밀번호가 맞지 않거나 파일이 손상되었습니다/);
+  assert.deepEqual(await snap(), before);
+  await fileIn.setInputFiles({ name: 'b.json', mimeType: 'application/json', buffer: Buffer.from(text) }); await bad.waitForTimeout(2500);
+  await bad.evaluate(() => { const orig = Storage.prototype.setItem;
+    Storage.prototype.setItem = function (k, v) { if (k === 'dachaeum.unitOverride' && String(v).includes('pig-revlite')) throw new DOMException('quota', 'QuotaExceededError'); return orig.call(this, k, v); }; });
+  await click(bad, '이 백업으로 복원'); await bad.waitForTimeout(500);
+  assert.match(await body(bad), /복원에 실패했습니다. 기존 자료는 그대로 남아 있습니다/);
+  assert.deepEqual(await snap(), before, '복원 실패 후 기존 unitOverride·priceOverride·계약 그대로');
+
+  // 깨끗한 기기에 복원
+  const dst = await open();
+  await click(dst, '백업 · 복원');
+  await dst.locator('input[placeholder="백업할 때 정한 비밀번호"]').fill('test-pass-1');
+  await dst.locator('input[type=file]').setInputFiles({ name: 'b.json', mimeType: 'application/json', buffer: Buffer.from(text) }); await dst.waitForTimeout(2500);
+  await Promise.all([dst.waitForEvent('load'), click(dst, '이 백업으로 복원')]); await dst.waitForTimeout(2000);
+  assert.equal(await dst.evaluate(() => localStorage.getItem('dachaeum.unitOverride')), srcUo, '1회 정상가 변경 기록 동일하게 복원');
+  assert.deepEqual(JSON.parse(await dst.evaluate(() => localStorage.getItem('dachaeum.priceOverride'))), ovT, '총 등록금액 변경 기록도 복원');
+  await dst.locator('[title="가격 관리"]').click(); await dst.waitForTimeout(400);
+  assert.match(await body(dst), /레블라이트 SI \+ 비타민관리 공통 시술 · 11개 프로그램\s*1회 정상가 198,000원 → 250,000원/);
+  assert.match(await body(dst), /총 등록금액 1,430,000원 → 1,450,000원/);
+  await dst.getByText('닫기', { exact: true }).last().click(); await dst.waitForTimeout(300);
+  await pickProgram(dst, 'PGM-0002', '스페셜 토닝 2'); await signAndSave(dst);
+  const c = (await contracts(dst)).find(x => x.id !== 'CT1');
+  assert.equal(c.total, 1450000, '복원된 총 등록금액 적용');
+  assert.equal(c.items.find(i => /레블라이트/.test(i.name)).price, 250000, '복원된 1회 정상가가 새 계약에 저장');
+  assert.deepEqual(src.errors.concat(dst.errors, bad.errors), []);
 });

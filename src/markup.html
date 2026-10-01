@@ -1553,6 +1553,7 @@ body,body *{word-break:keep-all;overflow-wrap:break-word;line-break:strict}
                   <div style="flex:1;min-width:0;color:#2b3036">{{ u.name }} <span style="color:#8d949b">{{ u.qty }}</span></div>
                   <div style="font-weight:600;font-variant-numeric:tabular-nums;flex:none">{{ u.curText }}</div>
                 </div>
+                <sc-if value="{{ u.editable }}" hint-placeholder-val="{{ true }}"><div style="font-size:12px;color:#8d949b">{{ u.scopeText }}</div></sc-if>
                 <sc-if value="{{ u.changed }}" hint-placeholder-val="{{ false }}"><div style="font-size:12px;color:#7a5115">변경된 1회 정상가 적용 중 · {{ u.baseText }}</div></sc-if>
                 <sc-if value="{{ u.notEditable }}" hint-placeholder-val="{{ false }}"><div style="font-size:12px;color:#8d949b">{{ u.note }}</div></sc-if>
                 <sc-if value="{{ u.editable }}" hint-placeholder-val="{{ true }}">
