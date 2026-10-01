@@ -1,0 +1,1202 @@
+
+class Component extends DCLogic {
+  state = { screen: 'list', step: 1, tab: 'status', pay: 'full', prog: -1, method: '',
+            filter: '전체', db: null, pq: '', pcat: '색소', psub: '', paxis: {}, addArea: '', progId: '', amounts: {},
+            sig: false, sigOpen: false, sigImg: null, savedSig: null, signedAt: null,
+            refundDone: false, backup: true, toast: '',
+            patient: { name: '', birth: '', phone: '' }, tried1: false, docs: [], cStatus: '등록완료', lq: '' };
+
+  openSigPad = () => this.setState({ sigOpen: true });
+  closeSigPad = () => this.setState({ sigOpen: false });
+  confirmSigPad = () => {
+    if (!this.state.sig) return this.flash('서명이 필요합니다');
+    let img = null;
+    try { img = this._canvas ? this._canvas.toDataURL('image/png') : null; } catch (e) {}
+    this.setState({ sigOpen: false, sigImg: img });
+  };
+
+  // 오늘 날짜: 기기 현지 시간 기준 (toISOString은 UTC라 한국 오전 9시 이전에는 전날로 기록됨)
+  static today() { const d = new Date(); return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 10); }
+  // 계약 상태: 등록완료 / 환불완료 두 가지. 환불 정산서 서명이 저장된 계약만 환불완료 (이전 버전의 중간 상태 값도 이 기준으로 정리)
+  statusOf(c) { return c && (c.refunded || c.refund || c.status === '환불완료' || c.status === '환불처리대기') ? '환불완료' : '등록완료'; }
+  // 환불 입력값(이용 수량·서비스 기록·병변·배분)은 계약별로 보관 → 계약을 바꾸면 그 계약의 값으로 교체 (다른 계약 기록 섞임 방지)
+  rfStateOf(c) { const r = (c && (c.refund || c.refundDraft)) || {};
+    return { rfUsed: r.used || null, rfVisits: r.visits || null, rfLes: r.les || null, rfVar: r.vars || null, rfAlloc: r.alloc || null, rfReason: r.reason || '', rfExtra: '', balMethod: '', balAmt: '', balDate: '', balRcpt: '' }; }
+  // 계약 저장: 계약 id 기준으로 교체 후 기기에 기록 (기존 계약 데이터는 유지하고 바뀐 필드만 덮어씀)
+  saveContract(c, extra) {
+    this.setState(st => {
+      const contracts = (st.contracts || []).map(x => x.id && x.id === c.id ? c : x);
+      try { localStorage.setItem('dachaeum.v3.contracts', JSON.stringify(contracts.filter(x => !x.sample))); } catch (e) { setTimeout(() => this.flash('기기 저장 공간이 부족합니다')); }
+      return { contracts, ...(st.contract && st.contract.id === c.id ? { contract: c, cStatus: this.statusOf(c) } : {}), ...(extra || {}) };
+    });
+  }
+  // 작성 중 환불 정산 입력값을 계약에 자동 저장 → 화면을 나갔다 다시 들어와도 이어서 입력 (계약 상태는 바꾸지 않음)
+  saveDraft() {
+    const s = this.state, c = s.contract; if (!c || !c.id || c.refund) return;
+    this.saveContract({ ...c, refundDraft: { used: s.rfUsed || null, visits: s.rfVisits || null, les: s.rfLes || null, vars: s.rfVar || null, alloc: s.rfAlloc || null, reason: s.rfReason || '' } });
+  }
+
+  flash(t) { this.setState({ toast: t }); clearTimeout(this._t); this._t = setTimeout(() => this.setState({ toast: '' }), 1800); }
+
+  attachSig = (el) => {
+    this._canvas = el;
+    if (el && !this.state.sig) { const c = el.getContext('2d'); c.clearRect(0, 0, el.width, el.height); }
+  };
+  pt(e) { const c = e.currentTarget, r = c.getBoundingClientRect(); return [(e.clientX - r.left) * (c.width / r.width), (e.clientY - r.top) * (c.height / r.height)]; }
+  down = (e) => {
+    const c = e.currentTarget; c.setPointerCapture(e.pointerId);
+    const x = c.getContext('2d'); x.lineWidth = 2.6; x.lineCap = 'round'; x.lineJoin = 'round'; x.strokeStyle = '#1c1f23';
+    const [a, b] = this.pt(e); x.beginPath(); x.moveTo(a, b); this._drawing = true;
+    if (!this.state.sig) this.setState({ sig: true });
+  };
+  move = (e) => { if (!this._drawing) return; const x = e.currentTarget.getContext('2d'); const [a, b] = this.pt(e); x.lineTo(a, b); x.stroke(); };
+  up = () => { this._drawing = false; };
+  clear = () => { const el = this._canvas; if (el) el.getContext('2d').clearRect(0, 0, el.width, el.height); this.setState({ sig: false }); };
+
+  // 상태 태그: 직원 후속 처리가 필요한 상태만 테두리·진한 글자로 강조, 나머지는 연한 Non-border
+  chip(s) {
+    if (s === '등록완료') return ['rgba(52,91,128,0.08)', '#2a4b6b', 'transparent'];
+    if (s === '환불완료') return ['#f2f3f5', '#8d949b', 'transparent'];
+    return ['#eef1f4', '#4a5158', 'transparent'];
+  }
+  _setT(el, t) { const s = el.style; s.setProperty('--tx', t.tx + 'px'); s.setProperty('--lh', String(t.lh)); s.setProperty('--sg', t.sg + 'px'); s.setProperty('--bg', t.bg + 'px'); s.setProperty('--tt', t.tt + 'px'); s.setProperty('--tb', t.tb + 'px'); s.setProperty('--tbl', t.tbl + 'px'); s.setProperty('--cp', t.cp); }
+  // 서명 완료 시점의 문서를 인쇄용(A4 1장 단계)으로 고정해 HTML 최종본으로 보관
+  snapshotDoc() {
+    const wrap = (this._els || {}).sgH; const src = wrap && wrap.firstElementChild; if (!src || typeof document === 'undefined') return '';
+    const c = src.cloneNode(true);
+    c.style.zoom = ''; c.style.fontFamily = "'Noto Serif KR', serif"; c.style.color = '#1c1f23'; c.style.width = '740px'; c.style.maxWidth = '740px'; c.style.minHeight = '0px';
+    const box = document.createElement('div'); box.style.cssText = 'position:fixed;left:-10000px;top:0;width:740px;visibility:hidden';
+    box.appendChild(c); document.body.appendChild(box);
+    const T = Component.TIERS; let t = T[T.length - 1];
+    for (let i = 1; i < T.length; i++) { this._setT(c, T[i]); if (c.offsetHeight <= 1046) { t = T[i]; break; } }
+    this._setT(c, t);
+    // 단일 프로그램(당일 1건)은 무조건 A4 1장: 남는 초과분은 축소해서 맞춤
+    const nProg = ((this.state.contract || {}).programs || []).length || 1;
+    const hh = c.offsetHeight;
+    // 잘림 방지: 원본 높이 그대로 보관. 1장 맞춤은 인쇄 시 전체 축소로 처리
+    c.style.minHeight = hh > 1046 ? '' : '1046px';
+    c.setAttribute('data-onepage', hh <= 1046 || nProg <= 1 ? '1' : '0');
+    const html = c.outerHTML; box.remove(); return html;
+  }
+  addDoc(kind, title, C) {
+    const html = this.snapshotDoc();
+    const today = Component.today();
+    const docs0 = this.state.docs || [];
+    const p = C.patient || {}, pk = (p.name || '') + '|' + (p.birth || '');
+    // 버전은 같은 계약(id)의 같은 종류 문서끼리만 관리 (같은 환자·같은 프로그램의 다른 계약 문서를 대체 처리하지 않음)
+    const mine = d => d.kind === kind && (C.id ? d.contractId === C.id : (d.pk === pk && d.program === C.program));
+    const same = docs0.filter(mine);
+    const version = same.length + 1;
+    const fileName = [p.name || '환자', (p.birth || '').replace(/-/g, ''), today.replace(/-/g, ''), kind + (version > 1 ? '_v' + version : '')].filter(Boolean).join('_') + '.pdf';
+    const id = 'D' + Date.now();
+    const docs = docs0.map(d => mine(d) ? { ...d, superseded: true } : d)
+      .concat([{ id, contractId: C.id || null, pk, kind, title, program: C.program, nProg: (C.programs || []).length || 1, version, signedAt: today, fileName, html, superseded: false, priceSnap: C.priceSnap || null }]);
+    this.setState({ docs, justSaved: id });
+    try { localStorage.setItem('dachaeum.v3.docs', JSON.stringify(docs)); } catch (e) { this.flash('기기 저장 공간이 부족합니다'); }
+  }
+
+  pvRef = el => this._obs(el, 'pvH');
+  sgRef = el => this._obs(el, 'sgH');
+  _obs(el, key) {
+    this._ro = this._ro || {};
+    if (this._ro[key]) { this._ro[key].disconnect(); this._ro[key] = null; }
+    if (!el || typeof ResizeObserver === 'undefined') return;
+    this._els = this._els || {}; this._els[key] = el;
+    const ro = new ResizeObserver(() => setTimeout(() => {
+      if (Date.now() - (this._fitAt || 0) > 120) { this._fitAt = Date.now(); this._fit(el); }
+      const h = el.offsetHeight; if (h && h !== this.state[key]) this.setState({ [key]: h }); }));
+    ro.observe(el); this._ro[key] = ro;
+  }
+  componentWillUnmount() { Object.values(this._ro || {}).forEach(r => r && r.disconnect()); }
+  // 동의서 타이포 단계: 패드(서명)는 가장 넉넉한 단계, 인쇄/미리보기는 A4 한 장에 들어가는 가장 큰 단계를 자동 선택.
+  static TIERS = [
+    { tx: 14, lh: 1.9, sg: 16, bg: 6, tt: 15, tb: 5, tbl: 13, cp: '20px 24px' },   // 0: 패드
+    { tx: 13, lh: 1.85, sg: 14, bg: 5, tt: 14, tb: 4, tbl: 12.5, cp: '18px 22px' },
+    { tx: 12.5, lh: 1.8, sg: 12, bg: 4, tt: 13.5, tb: 3, tbl: 12, cp: '16px 20px' },
+    { tx: 12, lh: 1.72, sg: 10, bg: 3, tt: 13, tb: 2, tbl: 12, cp: '14px 18px' },
+    { tx: 11.5, lh: 1.62, sg: 8, bg: 2, tt: 12.5, tb: 2, tbl: 11.5, cp: '13px 17px' },
+    { tx: 11, lh: 1.55, sg: 6, bg: 0, tt: 12, tb: 1, tbl: 11.5, cp: '12px 16px' }
+  ];
+  _fit(wrap) {
+    const doc = wrap && wrap.firstElementChild; if (!doc || !wrap.isConnected) return;
+    const A4 = 1046, W = 740, MIN = 0.62, T = Component.TIERS;
+    if (!this._printHooked && typeof window !== 'undefined') {
+      this._printHooked = true;
+      const all = () => Object.values(this._els || {}).forEach(el => this._fit(el));
+      window.addEventListener('beforeprint', () => { this._printing = true; all(); });
+      window.addEventListener('afterprint', () => { this._printing = false; all(); });
+    }
+    const setT = t => this._setT(doc, t);
+    const vis = () => { const ws = wrap.getBoundingClientRect().width / W; return ws ? doc.getBoundingClientRect().height / ws : 0; };
+    const apply = z => { doc.style.zoom = z === 1 ? '' : String(z); doc.style.width = (W / z) + 'px'; doc.style.maxWidth = (W / z) + 'px'; };
+    const prevKey = (doc.style.zoom || '1') + '|' + doc.style.getPropertyValue('--tx');
+    const padMode = wrap === (this._els || {}).sgH && !this._printing;
+    doc.style.fontFamily = padMode ? "Pretendard, 'Apple SD Gothic Neo', sans-serif" : '';
+    doc.style.color = padMode ? '#111418' : '';
+    let z = 1;
+    if (padMode) {
+      // 패드: 글자 크기는 유지, 줄·문단 간격과 여백만 압축해 스크롤 단축
+      setT({ tx: 14, lh: 1.62, sg: 9, bg: 3, tt: 15, tb: 2, tbl: 13, cp: '14px 18px' });
+      z = Math.max(1, Number(this.props.padTextScale ?? 1));
+      apply(z); doc.style.minHeight = '0px';
+    } else {
+      doc.style.minHeight = '0px'; apply(1);
+      let picked = -1;
+      for (let i = 1; i < T.length; i++) { setT(T[i]); if (vis() <= A4) { picked = i; break; } }
+      if (picked < 0) {
+        setT(T[T.length - 1]);
+        let h = vis(); z = A4 / h;
+        for (let i = 0; i < 4; i++) { apply(z); h = vis(); if (!h) break; z = Math.min(1, z * Math.pow(A4 / h, 0.9)); }
+        apply(z); if (vis() > A4) z *= 0.985;
+        if (z < MIN) z = 1;
+        apply(z);
+      }
+      doc.style.minHeight = (A4 / z) + 'px';
+    }
+    const key = (doc.style.zoom || '1') + '|' + doc.style.getPropertyValue('--tx');
+    if (key !== prevKey) { const h2 = wrap.offsetHeight; if (h2) this.setState({ [wrap === (this._els || {}).pvH ? 'pvH' : 'sgH']: h2 }); }
+  }
+  // 열린 문서를 실제 PDF 파일(A4 1장)로 미리 만들어 둠 → 버튼을 누르면 바로 공유 시트
+  async buildPdf(doc) {
+    const key = doc.id; this._pdfKey = key; this._pdfFile = null; this.setState({ pdfReady: false });
+    for (let i = 0; i < 50 && !(window.html2canvas && window.jspdf && document.getElementById('pdfv')); i++) await new Promise(r => setTimeout(r, 100));
+    const el = document.getElementById('pdfv');
+    if (!el || !window.html2canvas || !window.jspdf) { if (this._pdfKey === key) this.setState({ pdfReady: 'fail' }); return; }
+    try {
+      if (document.fonts && document.fonts.ready) await document.fonts.ready;
+      const cv = await window.html2canvas(el, { scale: 2, backgroundColor: '#ffffff', useCORS: true, logging: false, windowWidth: el.scrollWidth });
+      if (this._pdfKey !== key) return;
+      const { jsPDF } = window.jspdf;
+      const pdf = new jsPDF({ unit: 'mm', format: 'a4', orientation: 'portrait', compress: true });
+      const M = 8, AW = 210 - M * 2, AH = 297 - M * 2;
+      const r = Math.min(AW / cv.width, AH / cv.height);
+      const w = cv.width * r, hh = cv.height * r;
+      pdf.addImage(cv.toDataURL('image/jpeg', 0.92), 'JPEG', (210 - w) / 2, M, w, hh);
+      const blob = pdf.output('blob');
+      this._pdfFile = new File([blob], doc.fileName, { type: 'application/pdf' });
+      this.setState({ pdfReady: true });
+    } catch (e) { if (this._pdfKey === key) this.setState({ pdfReady: 'fail' }); }
+  }
+  sharePdf() {
+    const f = this._pdfFile; if (!f) return this.flash('PDF를 만드는 중입니다. 잠시 후 다시 눌러 주세요');
+    if (navigator.canShare && navigator.canShare({ files: [f] })) { navigator.share({ files: [f], title: f.name }).catch(() => {}); return; }
+    const url = URL.createObjectURL(f); const a = document.createElement('a'); a.href = url; a.download = f.name; document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 60000);
+  }
+  componentDidUpdate(pp, ps) {
+    if ((this.state.screen === 'refund' || this.state.screen === 'refundSign') && ['rfUsed', 'rfVisits', 'rfLes', 'rfVar', 'rfAlloc', 'rfReason'].some(k => this.state[k] !== (ps || {})[k])) {
+      clearTimeout(this._draftT); this._draftT = setTimeout(() => this.saveDraft(), 300); }
+    if (this.state.pdfId && this.state.pdfId !== (ps || {}).pdfId) { const d = (this.state.docs || []).find(x => x.id === this.state.pdfId); if (d) setTimeout(() => this.buildPdf(d), 50); }
+    cancelAnimationFrame(this._fitRaf);
+    this._fitRaf = requestAnimationFrame(() => Object.values(this._els || {}).forEach(el => this._fit(el)));
+  }
+
+  defaultContract = {
+    patient: { name: '박서연', birth: '1991-04-12', phone: '010-2847-1193' },
+    program: '리쥬란 스킨부스터 8회', cat: '스킨부스터', date: '2026-08-24', expiry: '2027-08-23',
+    total: 3600000, paid: 3600000, pay: 'full', method: '카드', cap: null, svcVisit: false,
+    items: [
+      { kind: '시술', name: '리쥬란 HB 2cc', qty: 6, price: 500000 },
+      { kind: '시술', name: '리쥬란 힐러 2cc', qty: 2, price: 500000 },
+      { kind: '서비스', name: '재생관리 (LDM)', qty: 4, price: 80000 },
+      { kind: '서비스', name: '진정관리', qty: 2, price: 50000 }
+    ],
+    used: [2, 0, 1, 1], visits: []
+  };
+  setUsed(k, d, C) {
+    this.setState(st => {
+      const u = [...(st.rfUsed || C.used || C.items.map(() => 0))];
+      const it = C.items[k]; const v = (u[k] || 0) + d;
+      if (v < 0 || (it.kind !== '추가' && !it.actual && it.qty && v > it.qty)) return null;
+      if (C.cap && d > 0 && u.reduce((a, b) => a + (b || 0), 0) >= C.cap) return null;
+      u[k] = v; return { rfUsed: u };
+    });
+  }
+
+  // 번호 페이지네이션: 한 페이지를 넘을 때만 표시. 1 … 4 5 6 … 12 형태
+  pager(total, size, key) {
+    const n = Math.max(1, Math.ceil(total / size)), cur = Math.min(Math.max(1, this.state[key] || 1), n);
+    const go = p => () => this.setState({ [key]: Math.min(Math.max(1, p), n) });
+    const nums = n <= 7 ? [...Array(n)].map((_, i) => i + 1)
+      : cur <= 4 ? [1, 2, 3, 4, 5, '…', n] : cur >= n - 3 ? [1, '…', n - 4, n - 3, n - 2, n - 1, n] : [1, '…', cur - 1, cur, cur + 1, '…', n];
+    return { show: n > 1, cur, start: (cur - 1) * size, size,
+      prev: go(cur - 1), next: go(cur + 1), prevFg: cur > 1 ? '#2b3036' : '#c9ced4', nextFg: cur < n ? '#2b3036' : '#c9ced4',
+      pages: nums.map(v => { const on = v === cur, dots = v === '…';
+        return { label: String(v), go: dots ? () => {} : go(v), bg: on ? '#2b3036' : 'transparent', fg: on ? '#ffffff' : (dots ? '#8d949b' : '#2b3036'), cur: dots ? 'default' : 'pointer' }; }) };
+  }
+
+  // 예시 환자 없음 (병원 실사용)
+  sampleContracts() { return []; }
+
+  // 결제 정보 입력 완료 기준 (카드: 카드사·뒤4자리·결제일·승인번호 8자리 / 현금영수증 발급: 발급번호·승인번호 9자리)
+  payDone(p) {
+    const n = v => String(v || '').replace(/[^0-9]/g, '').length;
+    if (p.method === '카드') return !!(p.bank && (p.bank !== '기타' || (p.bankEtc || '').trim()) && n(p.cardNo) === 4 && p.payDate && n(p.approval) === 8);
+    return p.rcpt !== '발급' || (n(p.rcptNo) >= 10 && n(p.rcptAppr) === 9);
+  }
+
+  catLabel(c) { return c === '쁘띠(보톡스·필러)' ? '쁘띠' : c === '홍조·혈관' ? '홍조' : c; }
+
+  catCfg(cat, db, inPcat) {
+    const BOTOX = ['주름', '사각턱·침샘', '스킨보톡스', '종아리·승모근', '다한증'];
+    if (cat === '쁘띠(보톡스·필러)') {
+      const prod = p => (p.name.match(/뉴라미스|벨로테로/) || [])[0] || '';
+      return {
+        subs: [{ label: '보톡스', test: p => BOTOX.includes(p.sub) },
+               { label: '필러', test: p => p.sub === '필러' }],
+        axesFor: sub => sub === '보톡스'
+          ? [{ label: '유형', vals: BOTOX, test: (p, v) => p.sub === v }, { label: '제품', key: '제품' }]
+          : sub === '필러'
+            ? [{ label: '제품', vals: ['뉴라미스', '벨로테로'], test: (p, v) => prod(p) === v }]
+            : []
+      };
+    }
+    if (cat === '여드름') {
+      return {
+        subs: ['1회', '부분', '프로그램', '주사·약처방'].map(n => ({ label: n, test: p => p.sub === n })),
+        axesFor: sub => (!sub || ['주사·약처방', '1회', '부분', '프로그램'].includes(sub)) ? []
+          : [{ label: '부위', key: '부위' }, { label: '횟수', key: '횟수' }]
+      };
+    }
+    if (cat === '리프팅') {
+      return {
+        subs: [{ label: '울쎄라', test: p => p.sub === '울쎄라' },
+               { label: '올리지오', test: p => p.sub === '올리지오' || (p.sub === '결합' && p.name.includes('올리지오')) },
+               { label: '세르프', test: p => p.sub === '세르프' || (p.sub === '결합' && p.name.includes('세르프')) },
+               { label: '기타', test: p => p.sub === '기타' }],
+        axes: [{ label: '원장님', key: '원장' }]
+      };
+    }
+    if (cat === '제모') {
+      return {
+        subs: [{ label: '남성', test: p => p.sub !== '여성 얼굴' },
+               { label: '여성', test: p => p.sub !== '남성 얼굴' }],
+        axesFor: sub => sub ? [
+          { label: '부위', vals: ['페이스', '바디'], test: (p, v) => v === '바디' ? p.sub === '바디' : p.sub !== '바디' },
+          { label: '횟수', key: '횟수' }] : []
+      };
+    }
+    const names = ((db && db.subOrder && db.subOrder[cat]) || []).filter(n => inPcat.some(p => p.sub === n));
+    return {
+      subs: names.map(n => ({ label: n, test: p => p.sub === n })),
+      axes: [...new Set(inPcat.flatMap(p => Object.keys(p.filters || {})))]
+        .map(k => ({ label: k === '원장' ? '원장님' : k, key: k }))
+    };
+  }
+
+  // 저장된 문서 HTML을 다시 그릴 때 스크립트·이벤트 속성 제거 (localStorage 변조 대비)
+  cleanHtml(h) {
+    const t = document.createElement('template'); t.innerHTML = String(h || '');
+    t.content.querySelectorAll('script,iframe,object,embed,link,meta,base,form').forEach(n => n.remove());
+    t.content.querySelectorAll('*').forEach(n => [...n.attributes].forEach(a => {
+      if (/^on/i.test(a.name) || (/^(href|src|xlink:href|action)$/i.test(a.name) && /^\s*javascript:/i.test(a.value))) n.removeAttribute(a.name); }));
+    return t.innerHTML;
+  }
+
+  // 이벤트 적용: 꺼진 이벤트 패키지·숨김 항목 제외, 켜진 서비스 이벤트는 해당 프로그램에 서비스권 추가
+  applyEvents(db) {
+    // LDM Triple 추가는 선택 항목 (저장된 가격표에도 적용)
+    db = { ...db, programs: (db.programs || []).map(p => (p.adds || []).some(a => a.id === 'LDM_TRIPLE')
+      ? { ...p, adds: p.adds.map(a => a.id === 'LDM_TRIPLE' ? { ...a, optional: true, name: a.name.replace(/\s*\(\s*\d+\s*회\s*\)/g, '') } : a) } : p) };
+    const evs = db.events || [], on = id => { const e = evs.find(x => x.id === id); return !e || e.active !== false; };
+    const svc = evs.filter(e => e.kind === 'service' && e.active !== false && e.item);
+    const programs = (db.programs || []).filter(p => !p.hidden && (!p.event || on(p.event))).map(p => {
+      const extra = svc.filter(e => !p.event && new RegExp(e.matchRe).test(p.name) && !(p.items || []).some(i => i.id === e.item.id));
+      return extra.length ? { ...p, items: (p.items || []).concat(extra.map(e => ({ ...e.item, cat: p.cat }))) } : p;
+    });
+    return { ...db, programs };
+  }
+
+  componentDidMount() {
+    try { const d = JSON.parse(localStorage.getItem('dachaeum.v3.docs') || '[]'); if (d.length) this.setState({ docs: d }); } catch (e) {}
+    try { const k = JSON.parse(localStorage.getItem('dachaeum.v3.contracts') || '[]'); this.setState(st => ({ contracts: (st.contracts || []).filter(c => c.sample).concat(k) })); } catch (e) {}
+    try {
+      const m = (location.hash || '').match(/sel=([^&]+)/);
+      const raw = m ? decodeURIComponent(m[1]) : localStorage.getItem('dachaeum.selection');
+      if (raw) {
+        this.setState({ picked: JSON.parse(raw) });
+        if (m) localStorage.setItem('dachaeum.selection', raw);
+      }
+    } catch (err) {}
+    try {
+      fetch((window.__resources && window.__resources.programsDb) || 'programs.json').then(r => r.json()).then(base => new Promise(res => { const w = () => window.DachaeumCatalog ? res(base) : setTimeout(w, 40); w(); })).then(base => {
+        // 최신 programs.json + 가격 관리 override(변경 항목만)
+        const merge = b => window.DachaeumCatalog.withOverride(b);
+        const db = merge(base);
+        const dbx = this.applyEvents(db);
+        this.setState(st => { const real = (st.contracts || []).filter(c => !c.sample);
+          return { db: dbx, contracts: this.sampleContracts(dbx).filter(sc => !real.some(c => c.id === sc.id)).concat(real) }; });
+        // 가격 관리에서 바꾸면 바로 반영 (다른 탭 저장 · 화면 복귀 시)
+        this._base = base;
+        const reload = () => { const d = merge(this._base);
+          const key = JSON.stringify(d).length + '|' + (d.version || '');
+          if (key === this._dbKey) return; this._dbKey = key; this.setState({ db: this.applyEvents(d) }); };
+        this._dbKey = JSON.stringify(db).length + '|' + (db.version || '');
+        this._reload = reload;
+        window.addEventListener('storage', e => { if (e.key === window.DachaeumCatalog.OV_KEY) reload(); });
+        window.addEventListener('focus', reload);
+        window.addEventListener('pageshow', reload);
+        document.addEventListener('visibilitychange', () => { if (!document.hidden) reload(); });
+      });
+    } catch (err) {}
+  }
+
+  // 횟수 선택지 목록 → − / + 스테퍼 (선택된 항목 = 파란 테두리)
+  stepOf(list) {
+    const L = list || [], ix = L.findIndex(o => o.bd === '#345b80');
+    const go = j => { const o = L[j]; if (o && j !== ix) o.pick(); };
+    return { label: ix >= 0 ? L[ix].label : '횟수 선택', sub: ix >= 0 ? (L[ix].sub || '') : L.length + '가지',
+      decFg: ix > 0 ? '#345b80' : '#c9ced4', incFg: ix < L.length - 1 ? '#345b80' : '#c9ced4',
+      dec: () => ix > 0 && go(ix - 1), inc: () => go(ix < 0 ? 0 : Math.min(L.length - 1, ix + 1)) };
+  }
+
+  renderVals() {
+    // 계산 기준: pricing.js (금액·할인·선결제권·결제) / refund.js (환불 계산·검증) / catalog.js (서비스 후보) — 로드 전에는 잠시 대기
+    const PR = window.DachaeumPricing, RF = window.DachaeumRefund, CAT = window.DachaeumCatalog;
+    if (!PR || !RF || !CAT) { clearTimeout(this._waitRules); this._waitRules = setTimeout(() => this.forceUpdate(), 40); return {}; }
+    const s = this.state, S = s.screen;
+    const isSign = S === 'sign', isRefundSign = S === 'refundSign';
+    const won = n => Number(n || 0).toLocaleString('ko-KR');
+    const todayISO = Component.today();
+    const isResign = s.signFrom === 'resign';
+    const pk = s.picked;
+    const pkProgs = pk && pk.programs && pk.programs.length ? pk.programs : null;
+    const progs = [
+      { name: '리쥬란 스킨부스터 8회', desc: '3주 간격 · 유효기간 12개월', price: '3,600,000원', unit: '회당 450,000원' },
+      { name: '울쎄라 300샷 패키지', desc: '1회 시술 + 관리 2회', price: '2,800,000원', unit: '패키지' },
+      { name: '제네시스 레이저 10회', desc: '2주 간격 · 유효기간 12개월', price: '1,500,000원', unit: '회당 150,000원' },
+      { name: '수액 프로그램 12회', desc: '주 1회 권장', price: '960,000원', unit: '회당 80,000원' }
+    ];
+    const rowsRaw = [];
+    // 목록: 저장된 모든 계약 + (저장 전) 현재 계약
+    const allC = (s.contracts || []).slice();
+    if (s.contract && !allC.some(c => c.id && c.id === s.contract.id)) allC.push(s.contract);
+    allC.forEach((c0, ci) => rowsRaw.push([c0.patient.name, c0.program, c0.date, won(c0.total), c0 === s.contract ? s.cStatus : this.statusOf(c0), /선결제/.test(c0.program), c0.patient.phone || '', ci]));
+    const pendRow = s.pendingSign ? [(s.patient && s.patient.name) || '이름 미입력', s.pendingProg || '—', todayISO, s.pendingTotal || '—', '서명대기', false, (s.patient && s.patient.birth) || ''] : null;
+    if (pendRow) rowsRaw.unshift(pendRow);
+    const lq = (s.lq || '').trim();
+    const sk = s.sortKey || 'date', sd = s.sortDir || (sk === 'date' ? 'desc' : 'asc');
+    const cmp = (a, b) => (sk === 'name' ? a[0].localeCompare(b[0], 'ko') : String(a[2]).localeCompare(String(b[2]))) * (sd === 'asc' ? 1 : -1);
+    const rows = rowsRaw.filter(r => (!lq || r[0].includes(lq) || (/^[0-9-]+$/.test(lq) && String(r[6] || '').replace(/[^0-9]/g, '').includes(lq.replace(/[^0-9]/g, ''))))).sort(cmp).map(r => { const [bg, fg, bd] = this.chip(r[4]); return {
+      name: r[0], program: r[1], date: r[2], amount: r[3], status: r[4], bg, fg, bd, prepaid: r[5], progText: r[1], prepaidTag: '선결제 ' + Math.round(Number(String(r[3]).replace(/[^0-9]/g, '')) / 10000), refunded: r[4] === '환불완료',
+      open: () => r === pendRow ? this.setState({ screen: 'new', step: 4 }) : this.setState({ screen: 'detail', tab: 'status', justSaved: null, cSel: false, payDraft: null, ...(typeof r[7] === 'number' && allC[r[7]] !== s.contract ? { contract: allC[r[7]], cStatus: r[4], ...this.rfStateOf(allC[r[7]]) } : {}) }) }; });
+    const listPg = this.pager(rows.length, 10, 'listPage');
+    const fmtBirth = v => v.replace(/[^0-9]/g, '').slice(0, 6);
+    const fmtPhone = v => { const d = v.replace(/[^0-9]/g, '').slice(0, 11); return d.length > 7 ? d.slice(0, 3) + '-' + d.slice(3, d.length - 4) + '-' + d.slice(-4) : d.length > 3 ? d.slice(0, 3) + '-' + d.slice(3) : d; };
+    const P = s.patient || {};
+    const pfDefs = [
+      ['name', '성명', '이름', 'text', v => v.slice(0, 20), v => !!v.trim(), '성명을 입력해 주세요'],
+      ['birth', '생년월일', '970727', 'numeric', fmtBirth, v => v.length === 6, '6자리 숫자로 입력해 주세요 (예: 970727)'],
+      ['phone', '연락처', '01012345678', 'tel', fmtPhone, v => v.length >= 12, '연락처를 확인해 주세요']];
+    const pFields = pfDefs.map(([k, label, ph, im, fmt, ok, msg]) => { const v = P[k] || ''; const bad = !!s.tried1 && !ok(v);
+      return { label, ph, im, value: v, hasErr: bad, errText: msg, bd: bad ? '#d64545' : '#d5d9de', bg: bad ? '#fff6f6' : '#ffffff',
+        onInput: e => { const nv = fmt(e.target.value); this.setState(st => ({ patient: { ...(st.patient || {}), [k]: nv } })); } }; });
+    const p1ok = pfDefs.every(d => d[5](P[d[0]] || ''));
+    // 동명이인·기존 환자 안내: 이름 입력 시 같은 이름의 기존 계약을 환자별로 묶어 표시. 생년월일까지 같으면 '동일인 가능성'
+    const dup = (() => {
+      // 이름 + 생년월일(6자리, 예: 950312)까지 입력된 뒤에 표시
+      const nm = (P.name || '').trim(), bd = String(P.birth || '').replace(/[^0-9]/g, '');
+      if (!nm || bd.length < 6 || s.step !== 1 || s.dupOff === nm + '|' + P.birth) return null;
+      const src = (s.contracts || []).concat(s.contract ? [s.contract] : []);
+      const g = {}; src.forEach(c => { const p = c.patient || {}; if ((p.name || '').trim() !== nm || String(p.birth || '').replace(/[^0-9]/g, '') !== bd) return;
+        const k = nm + '|' + (p.birth || ''); (g[k] = g[k] || { p, n: 0, last: '' });
+        if (!g[k].ids) g[k].ids = new Set(); const id = c.id || c.date + c.program; if (!g[k].ids.has(id)) { g[k].ids.add(id); g[k].n++; }
+        if ((c.date || '') >= g[k].last) { g[k].last = c.date || ''; g[k].lastProg = c.program; } });
+      const rows = Object.values(g); return rows.length ? rows : null; })();
+    const NOTICE = {};
+
+    const steps = ['환자 정보', '프로그램 · 구성', '금액 · 결제', '미리보기 · 서명'].map((label, i) => {
+      const n = i + 1, done = n < s.step, cur = n === s.step;
+      return { n, label, done, notDone: !done, weight: cur ? 600 : 500, fg: cur ? '#1c1f23' : done ? '#5c636b' : '#a4abb3',
+        dotBg: cur ? '#345b80' : done ? '#ffffff' : '#ffffff', dotFg: cur ? '#ffffff' : done ? '#345b80' : '#a4abb3',
+        dotBd: cur ? '#345b80' : done ? '#345b80' : '#dde1e6', lineBg: done ? '#345b80' : '#e3e6ea' };
+    });
+
+    const db = s.db;
+    // 목록 규칙은 programs.json → listRules 에서 관리
+    const LR = (db && db.listRules) || {};
+    const NO_AXES = LR.noAxes || [], HIDE_AXES = LR.hideAxes || {}, AREA_SPLIT = LR.areaSplit || [], SUM_ALWAYS = LR.sumOnMulti || [];
+    // 당일 종료 1회 시술은 동의서 대상 아님 → 목록 제외. 장비 카드(g)·여드름 1회·listed 표시 항목은 예외
+    const oneTime = p => !p.g && p.sub !== '1회' && !p.listed && !p.lesion && (p.cat === '쁘띠(보톡스·필러)' || p.cat === 'CO₂·병변제거' || (() => {
+      const it = (p.items || []).filter(i => !/염증주사|약\s?처방/.test(i.name || '') && i.kind !== '서비스권');
+      return it.length === 1 && (Number(it[0].qty) || 1) <= 1; })());
+    const dbAll = db ? db.programs.filter(p => !oneTime(p)) : [];
+    const dbq = s.pq.trim().toLowerCase();
+    const q = p => !dbq || p.name.toLowerCase().includes(dbq) || p.id.toLowerCase().includes(dbq);
+    // 이벤트 프로그램은 '이벤트' 탭에만 표시
+    const inPcat = dbAll.filter(p => s.pcat !== '전체' && q(p) && (s.pcat === '이벤트' ? !!p.event : (p.cat === s.pcat && !p.event)));
+    const cfg = this.catCfg(s.pcat, db, inPcat);
+
+    const TAB_ORDER = ['색소', '홍조·혈관', '여드름', '흉터·모공', '리프팅', '제모', '스킨부스터', '부분치료', '쁘띠(보톡스·필러)'];
+    const catsSorted = db ? TAB_ORDER.concat(db.cats.filter(c => !TAB_ORDER.includes(c))) : [];
+    // 이벤트 탭은 항상 맨 앞에 고정 (진행 중 이벤트가 없어도 표시)
+    const pTabs = db ? [{ label: '이벤트', v: '이벤트' }]
+      .concat(catsSorted.filter(c => dbAll.some(p => p.cat === c && !p.event)).map(c => ({ label: this.catLabel(c), v: c })))
+      .concat([{ label: '전체', v: '전체' }])
+      .map(t => { const on = s.pcat === t.v; return { ...t,
+        bg: 'transparent', fg: on ? '#1c1f23' : '#6d747c', bd: on ? '#345b80' : 'transparent', tbg: on ? '#ffffff' : 'transparent', tbd: on ? '#e3e6ea' : 'transparent',
+        onClick: () => this.setState({ pcat: t.v, psub: '', paxis: {}, prog: -1, progId: '' }) }; }) : [];
+
+    // 실제 프로그램이 없는 소분류 탭은 숨김
+    cfg.subs = cfg.subs.filter(sb => inPcat.some(p => sb.test(p)));
+    const subDef = cfg.subs.find(x => x.label === s.psub) || null;
+    const scope = inPcat.filter(p => !subDef || subDef.test(p));
+    const pSubs = cfg.subs.length > 1 ? cfg.subs.map(sb => { const on = !!subDef && subDef.label === sb.label; return {
+      label: sb.label, fg: on ? '#345b80' : '#6d747c', fw: on ? 600 : 500,
+      line: on ? '#345b80' : 'transparent',
+      onClick: () => this.setState({ psub: on ? '' : sb.label, paxis: {}, prog: -1, progId: '' }) }; }) : [];
+
+    const axMatch = (a, p, v) => a.test ? a.test(p, v) : (p.filters || {})[a.key] === v;
+    const pAxes = (cfg.axesFor ? cfg.axesFor(s.psub) : cfg.axes).map(a => {
+      const vals = (a.vals || [...new Set(scope.map(p => (p.filters || {})[a.key]).filter(Boolean))])
+        .filter(v => scope.some(p => axMatch(a, p, v)));
+      const sel = (s.paxis || {})[a.label] || '';
+      return { ...a, vals, sel, opts: [{ v: '', label: '전체' }].concat(vals.map(v => ({ v, label: v }))),
+        onChange: e => { const v = e.target.value;
+          this.setState(st => ({ paxis: { ...st.paxis, [a.label]: v }, prog: -1, progId: '' })); } };
+    }).filter(a => a.vals.length > 1 && !NO_AXES.includes(s.pcat) && !(HIDE_AXES[s.pcat] || []).includes(a.label));
+
+    const dbHits = (s.pcat === '전체' ? dbAll.filter(q) : scope)
+      .filter(p => pAxes.every(a => !a.sel || axMatch(a, p, a.sel)));
+
+    const svcOn = s.pcat === '여드름' && s.psub === '주사·약처방';
+    const svcRows = svcOn && db ? [
+      { name: '염증주사', note: '내원 회차별 부위 수로 각각 계산',
+        lines: db.acneSvc.filter(r => r['서비스권 ID'] === 'SERVICE_INFLAMMATION_INJ')
+          .map(r => ({ t: r['사용 범위/기간'] + ' · ' + won(r['정상가']) + '원' })) },
+      { name: '여드름 약처방', note: '처방 건별로 각각 계산',
+        lines: db.acneSvc.filter(r => r['서비스권 ID'] === 'SERVICE_PRESCRIPTION')
+          .map(r => ({ t: r['사용 범위/기간'] + ' · ' + won(r['정상가']) + '원' })) }
+    ] : [];
+
+    const progTitle = p => p.name;
+    const srcForCards = pkProgs || dbHits;
+    const progList = srcForCards.length
+      ? srcForCards.map(p => ({ id: p.id, sub: p.sub, cat: p.cat, g: p.g, r: p.r, o: p.o, event: p.event || '', name: progTitle(p), desc: p.cat + ' · ' + p.id,
+          price: p.lesion ? '1개 ' + won((p.lesionTiers || [{}])[0].price || 0) + '원~' : p.total ? won(p.total) + '원' : '금액 입력',
+          // 같은 이름 프로그램 구분: 추가 항목명만 짧게 (개수 표기 대신)
+          ...(() => { const ad = (p.adds || []).filter(a => !a.optional).map(a => String(a.name || '').replace(/\s*\(.*?\)/g, '').replace(/\s*\d+\s*회$/, '').trim()).filter(Boolean);
+            const dup = srcForCards.filter(q => q.name === p.name).length > 1;
+            const u = ad.length ? '기본 + ' + ad.join(' · ') : dup ? '기본 구성' : '';
+            return { unit: u, hasDiff: !!u }; })() }))
+      : (db ? [] : progs); // 가격표가 로드된 뒤에는 빈 결과를 샘플로 채우지 않음
+    const pickSource = pkProgs || (dbHits.length ? dbHits : null);
+    const pIdx = Math.min(s.prog, (pickSource ? pickSource.length : progList.length) - 1);
+    const held = s.progId ? dbAll.find(p => p.id === s.progId) : null;
+    // 제모 여러 부위: 합산 → 결합할인 (인중·겨드랑이·남성 지정 결합상품은 부위 수·할인 대상 제외)
+    const hairIds = s.hairIds || [];
+    const hairPs = held ? [] : hairIds.map(id => dbAll.find(p => p.id === id)).filter(Boolean);
+    const { elig: hairElig, rate: hairRate, off: hairOff, sum: hairSum } = PR.hairCombo(hairPs);
+    const hairCur = hairPs.length === 1 ? hairPs[0] : hairPs.length > 1 ? { ...hairPs[0], id: 'HAIR-' + hairPs.map(p => p.id).join('+'),
+      name: hairPs.map(p => p.name).join(' + '), total: String(hairSum - hairOff), adds: [],
+      items: hairPs.reduce((a, p) => a.concat(p.items || []), []) } : null;
+    const cur0 = held || hairCur || (pickSource && s.prog >= 0 ? pickSource[Math.max(0, pIdx)] : null);
+    // 서명 전 서비스 조정: 제외(svcOff) · 다른 서비스로 교체(svcSwap). 시술은 건드리지 않음
+    // 교체 후보: 리프팅 프로그램 포함 서비스 + 리프팅 이벤트 서비스(무통주사 등)만
+    const SVC_POOL = CAT.svcPool(db);
+    const svcOff = s.svcOff || [], svcSwap = s.svcSwap || {};
+    const cur = cur0 ? { ...cur0, items: (cur0.items || []).map((i, k) => {
+      if (i.kind !== '서비스권' || /약\s?처방|염증주사/.test(i.name)) return i;
+      if (svcOff.includes(k)) return null;
+      const sw = svcSwap[k] && SVC_POOL.find(x => x.name === svcSwap[k]);
+      return sw ? { ...sw, cat: i.cat, qty: sw.qty || i.qty || '1', swappedFrom: i.name } : i; }).filter(Boolean) } : null;
+    const svcEditRows = cur0 ? (cur0.items || []).map((i, k) => ({ i, k })).filter(x => x.i.kind === '서비스권' && !/약\s?처방|염증주사/.test(x.i.name)).map(({ i, k }) => {
+      const off = svcOff.includes(k), sw = svcSwap[k] || '';
+      return { name: i.name, off, on: !off, strike: off ? 'line-through' : 'none', fg: off ? '#a4abb3' : '#1c1f23',
+        swap: sw, swapOpts: [{ v: '', label: '그대로' }].concat(SVC_POOL.filter(x => x.name !== i.name).map(x => ({ v: x.name, label: '→ ' + x.name }))),
+        onSwap: e => this.setState({ svcSwap: { ...svcSwap, [k]: e.target.value } }),
+        toggle: () => this.setState({ svcOff: off ? svcOff.filter(x => x !== k) : svcOff.concat(k) }),
+        toggleLabel: off ? '되살리기' : '제외' }; }) : [];
+
+    // 모든 구성이 1회인 단건 시술 → 동의서 합계줄 생략
+    const singleVisit = !!cur && !SUM_ALWAYS.includes(cur.cat) && (!!cur.g || cur.sub === '1회' || !!cur.listed)
+      && (cur.items || []).filter(i => i.qty !== '').every(i => String(i.qty) === '1');
+    const capped = !!cur && ((cur.items || []).some(i => i.qtyBasis === '공통 총회차 상한') || !!cur.maxSessions);
+    const capN = capped ? (cur.maxSessions || (cur.items || []).find(i => i.qtyBasis === '공통 총회차 상한').qty) : '';
+    // 조건별 금액(총 금액 미정) 프로그램: 총 등록금액과 환불용 1회 정상가를 각각 직접 입력 — 서로 자동 계산하지 않음
+    const isManual = !!cur && !cur.total && !cur.lesion;
+    const manualUnit = isManual ? Number(String((s.units && s.units[cur.id]) || '').replace(/[^0-9]/g, '') || 0) : 0;
+    const effUnit = i => isManual && (i.unitFromTotal || !Number(i.unitPrice || 0)) ? manualUnit : Number(i.unitPrice || 0);
+    const svcName = n => /스킨보톡스/.test(n) && /뉴럭스/.test(n) ? '스킨보톡스 (뉴럭스)'
+      : /LDM\s*Triple/i.test(n) ? 'LDM Triple'
+      : n.replace(/\s*\d+\s*회\s*S\/V\s*$/i, '').replace(/\s*S\/V\s*$/i, '');
+    const cu = (db && db.capriUnit) || {};
+    // 선택형 추가(optional)는 체크한 항목만 동의서·금액에 반영
+    const addSel = s.addSel || [];
+    // 원장님 서비스로 제공하는 추가 부위(addSvc): 금액 0, 동의서에는 'S/V'로 표시, 환불 시 정가 정산
+    const addSvc = s.addSvc || [];
+    // 선택형 추가: 전체 n회 중 서비스(S/V) m회 → 유상 (n−m)회 + 서비스 m회 두 줄로 나눔
+    const addSvN = s.addSvN || {};
+    const svCount = a => { const n = Number(a.qty) || 1; return Math.max(0, Math.min(n, addSvN[a.id] != null ? addSvN[a.id] : (addSvc.includes(a.id) ? n : 0))); };
+    const curAdds = cur ? (cur.adds || []).filter(a => !a.optional || addSel.includes(a.id)).flatMap(a => {
+      if (!a.optional) return [a];
+      const n = Number(a.qty) || 1, m = svCount(a), out = [];
+      if (n - m > 0) out.push({ ...a, qty: String(n - m), price: String(Math.round(Number(a.price || 0) * (n - m) / n)) });
+      if (m > 0) out.push({ ...a, qty: String(m), price: '0', svc: true });
+      return out; }) : [];
+    const optAddSum = curAdds.filter(a => a.optional).reduce((t, a) => t + Number(a.price || 0), 0);
+    const addUnit = a => /capri-full/.test(a.id || '') ? Number(cu['풀페이스'] || 0)
+      : a.needArea ? Number(cu[s.addArea] || 0) : Number(a.unitPrice || 0);
+    const addName = a => /capri/.test(a.id || '')
+      ? a.name.replace(/\s*\d+\s*회/, '').replace(/\s*\(1부위\)/, '') + (a.needArea && s.addArea ? ' (' + s.addArea + ')' : '')
+      : a.name;
+    const isSvcItem = i => /염증주사|약\s?처방/.test(i.name || '');
+    const svcHidden = cur ? (cur.items || []).filter(isSvcItem) : [];
+    const svcNote = !!cur && !cur.lesion && (cur.cat === '여드름' || svcHidden.length > 0);
+    const svcWhat = !cur ? '' : (cur.cat === '여드름' || svcHidden.some(i => /염증주사/.test(i.name)))
+      ? '염증주사 및 여드름 약 처방' : '약 처방';
+    const docItems = cur
+      ? (cur.items || []).filter(i => !isSvcItem(i)).map(i => ({
+          kind: i.kind === '서비스권' ? '서비스' : '시술',
+          name: i.kind === '서비스권' ? svcName(i.name) : i.name,
+          qtyText: i.kind === '서비스권' ? (i.qty ? i.qty + '회' : '실제 이용분')
+            : i.qtyDash ? '-회' : (i.qtyBasis === '공통 총회차 상한' ? '회차별 선택' : (i.qty ? i.qty + (i.unit || '회') : '실제 이용분')),
+          priceText: i.priceNote ? i.priceNote
+            : isManual && (i.unitFromTotal || !Number(i.unitPrice || 0)) ? (effUnit(i) ? won(effUnit(i)) : '1회 정상가 입력')
+            : i.kind === '서비스권' && !i.unitPrice && !i.perPiece ? '실제 이용 기준'
+            : (i.unitPrice ? won(i.unitPrice) : (i.perPiece ? won(i.perPiece) + '/개' : '미확정'))
+        })).concat(curAdds.map(a => { const u = addUnit(a);
+          // 수량이 없으면 같은 계열 서비스(예: 얼굴 점 CO₂ 제거) 횟수를 따름 — 표시용, 금액 계산에는 사용 안 함
+          const isLes = /흑자|병변/.test(addName(a)), q = a.qty || (/CO₂|CO2/.test(addName(a)) ? ((cur.items || []).find(i => /CO₂|CO2/.test(i.name || '')) || {}).qty : '');
+          return { kind: a.svc ? '서비스' : '추가', svc: !!a.svc,
+          name: addName(a), isAdd: true, addPrice: Number(a.price || 0), addUnitNum: u,
+          addQtyText: isLes ? '-' : q ? q + '회' : '-',
+          qtyText: isLes ? (a.qty || 1) + '개' : q ? q + '회' : '—',
+          priceText: Number(a.price || 0) ? '+' + won(Number(a.price)) + '원' : '실제 이용 기준' }; }))
+      : [];
+
+    const manualKey = cur ? cur.id : '';
+    const manualAmt = Number(String(s.amounts && s.amounts[manualKey] || '').replace(/[^0-9]/g, '') || 0);
+    const isLesion = !!cur && !!cur.lesion;
+    const tiers = (cur && cur.lesionTiers) || [];
+    const tierOf = sz => { const n = parseFloat(sz); return n > 0 ? tiers.find(t => n <= t.max) || null : null; };
+    const LS = s.lesions || [{ site: '', size: '' }];
+    const setLesion = (k, f, v) => this.setState(st => { const a = [...(st.lesions || [{ site: '', size: '' }])];
+      a[k] = { ...a[k], [f]: v }; return { lesions: a }; });
+    const lesionRows = LS.map((l, k) => { const t = tierOf(l.size);
+      return { no: k + 1, site: l.site, size: l.size, siteText: l.site || '—', sizeText: l.size ? l.size + 'cm' : '—',
+        tier: t ? t.label : (l.size ? '3cm 초과 · 상담' : '—'), price: t ? t.price : 0, priceText: t ? won(t.price) + '원' : '—',
+        onSite: e => setLesion(k, 'site', e.target.value),
+        onSize: e => setLesion(k, 'size', e.target.value.replace(/[^0-9.]/g, '')),
+        del: () => this.setState(st => ({ lesions: (st.lesions || LS).filter((_, j) => j !== k) })), canDel: LS.length > 1 }; });
+    const lesionTotal = lesionRows.reduce((t, r) => t + r.price, 0);
+    const lesionOk = LS.length > 0 && lesionRows.every(r => r.site && r.price);
+    const needAmount = !!cur && !cur.total && !isLesion;
+
+    const listSumNum = cur
+      ? (cur.items || []).reduce((t, i) => t + (effUnit(i) * Number(i.qty || 0)), 0)
+        + curAdds.reduce((t, a) => t + Number(a.price || 0), 0)
+      : 0;
+    const listNum = cur ? (isLesion ? lesionTotal : ((Number(cur.total || 0) || manualAmt) + optAddSum)) : 0;
+    // 할인·선결제권: 2단계에서 하나만 선택 → 최종 계약금액 확정 (3단계에서는 다시 계산하지 않음)
+    const { isEvProg, isYearSB, noPreHair, noRet, discOk, discKey, preTier, preBase, discRate, discBase, totalNum, discLabel } =
+      PR.discount({ cur, held, hairParts: hairPs, hairRate, listNum, optAddSum, all: dbAll, disc: s.disc, preTier: s.preTier });
+    const DK = PR.DISCOUNTS;
+    const chip = on => ({ bd: on ? '#345b80' : '#d5d9de', bg: on ? '#345b80' : '#ffffff', fg: on ? '#ffffff' : '#2b3036' });
+
+    const flat = progList.map((p, i) => {
+      // 제모: 여러 부위를 한 번에 선택 (누르면 추가/해제)
+      const hair = p.cat === '제모' && !!p.id;
+      const on = hair ? hairIds.includes(p.id) : (s.progId ? p.id === s.progId : s.prog === i);
+      const reset = { addArea: '', addSel: [], addSvc: [], addSvN: {}, svcOff: [], svcSwap: {}, oGrp: '', disc: 'none', preTier: '', retPeriod: '', preBal: '' };
+      return { ...p, on, hair, pick: hair
+        ? () => this.setState(st => { const h = st.hairIds || []; return { ...reset, prog: -1, progId: '', hairIds: h.includes(p.id) ? h.filter(x => x !== p.id) : h.concat(p.id) }; })
+        : () => this.setState({ ...reset, prog: i, progId: p.id || '', hairIds: [] }),
+        bd: on ? '#345b80' : '#e3e6ea', bg: on ? '#f6f9fc' : '#ffffff',
+        dot: on ? '#345b80' : '#c9ced4', inner: on ? '#345b80' : 'transparent', showOpts: false, opts: [] }; });
+    const oCnt = n => (String(n || '').match(/(\d+)\s*회$/) || [])[1] || '1';
+    const oLab = m => m.o || (oCnt(m.name) + '회');
+    // 카테고리별 구역(programs.json → sections). 없으면 장비 카드를 데이터 순서대로 나열
+    const SEC_DEF = (db && db.sections && db.sections[s.pcat]) || [];
+    const programs = [], devMap = {}, devOrder = [];
+    const T0 = { isSec: false, isDev: false, isPick: false, notDev: false };
+    flat.forEach(p => {
+      if (!p.g) { programs.push({ ...p, ...T0, notDev: true }); return; }
+      const dev = p.g, area = p.r;
+      if (!devMap[dev]) { devMap[dev] = { ...T0, isDev: true, dev, isEv: !!p.event, areas: [], aIdx: {} }; devOrder.push(dev); if (!SEC_DEF.length) programs.push(devMap[dev]); }
+      const D = devMap[dev];
+      if (D.aIdx[area] == null) { D.aIdx[area] = D.areas.length; D.areas.push({ area, members: [] }); }
+      D.areas[D.aIdx[area]].members.push(p);
+    });
+    const SECS = SEC_DEF.map(x => ({ ...x, devs: (x.devs || []).slice() }));
+    const used = {}; SECS.forEach(S => (S.devs || []).concat(S.pick ? S.pick.btns.map(b => b[1]) : []).forEach(d => used[d] = 1));
+    if (SECS.length) SECS[SECS.length - 1].devs = SECS[SECS.length - 1].devs.concat(devOrder.filter(d => !used[d]));
+    const devCards = [];
+    if (!SEC_DEF.length) devOrder.forEach(d => devCards.push(devMap[d]));
+    else SECS.forEach(S => {
+      const out = [];
+      if (S.pick) {
+        const hits = S.pick.btns.map(([label, dev]) => ({ label, D: devMap[dev] })).filter(b => b.D);
+        if (hits.length) {
+          const m0 = hits[0].D.areas[0].members[0], sel = hits.some(b => b.D.areas[0].members[0].on);
+          out.push({ ...T0, isPick: true, head: S.pick.head, area: hits[0].D.areas[0].area, cnt: oCnt(m0.name) + '회', price: m0.price,
+            bd: sel ? '#345b80' : '#e3e6ea', bg: sel ? '#f6f9fc' : '#ffffff',
+            btns: hits.map(b => { const m = b.D.areas[0].members[0]; return { label: b.label, pick: m.pick,
+              bd: m.on ? '#345b80' : '#c9d3de', bg: m.on ? '#345b80' : '#ffffff', fg: m.on ? '#ffffff' : '#2b3036' }; }) });
+        }
+      }
+      (S.devs || []).forEach(d => { if (devMap[d]) { out.push(devMap[d]); devCards.push(devMap[d]); } });
+      if (out.length) { programs.push({ ...T0, isSec: true, secTitle: S.title }); out.forEach(o => programs.push(o)); }
+    });
+    devCards.forEach(D => {
+      D.areas.forEach(A => A.members.sort((a, b) => (parseInt(oLab(a)) || 0) - (parseInt(oLab(b)) || 0)));
+      D.rows = D.areas.map((A, ai) => {
+        const parts = AREA_SPLIT.includes(A.members[0].cat) ? A.area.split('+') : [A.area], key = D.dev + '|' + A.area;
+        const base = { areaMain: parts[0], areaRest: parts.length > 1 ? '+ ' + parts.slice(1).join(' + ') : '', sep: ai > 0 ? '1px solid #eef0f2' : '0' };
+        const unpick = extra => this.setState({ prog: -1, progId: '', addArea: '', ...extra });
+        if (A.members.length === 1) { const m = A.members[0];
+          return { ...base, price: m.price, cnt: oLab(m), pick: () => m.on && !m.hair ? unpick({ oGrp: '' }) : (m.pick(), this.setState({ oGrp: '' })), showOpts: false, opts: [],
+            bg: m.on ? '#f6f9fc' : '#ffffff', dot: m.on ? '#345b80' : '#c9ced4', inner: m.on ? '#345b80' : 'transparent' }; }
+        const sel = A.members.some(m => m.on), open = sel || s.oGrp === key;
+        return { ...base, price: '', cnt: A.members.length > 3 ? oLab(A.members[0]) + ' ~ ' + oLab(A.members[A.members.length - 1]) : A.members.map(oLab).join(' · '), showOpts: open,
+          pick: () => open ? unpick({ oGrp: '' }) : unpick({ oGrp: key }),
+          bg: open ? '#f6f9fc' : '#ffffff', dot: open ? '#345b80' : '#c9ced4', inner: sel ? '#345b80' : 'transparent',
+          opts: A.members.map(m => ({ label: oLab(m), sub: m.price, pick: () => m.hair
+              // 제모: 같은 부위는 횟수 하나만, 다른 부위는 계속 추가
+              ? this.setState(st => { const ids = A.members.map(x => x.id), h = (st.hairIds || []).filter(x => !ids.includes(x));
+                  return { prog: -1, progId: '', addArea: '', disc: 'none', preTier: '', oGrp: key, hairIds: m.on ? h : h.concat(m.id) }; })
+              : m.on ? unpick({ oGrp: key }) : (m.pick(), this.setState({ oGrp: key })),
+            bd: m.on ? '#345b80' : '#c9d3de', bg: m.on ? '#345b80' : '#ffffff', fg: m.on ? '#ffffff' : '#345b80' })) };
+      });
+    });
+
+    // 결제수단 타일: 선택 = 남색 테두리 + 연한 파랑 배경, 미선택 = 회색 배경. 아이콘은 카드·현금·계좌이체
+    const payIcon = (m, on) => { const c = on ? '#345b80' : '#7d8fa3', h = React.createElement, P = { fill: 'none', stroke: c, strokeWidth: 1.8, strokeLinecap: 'round', strokeLinejoin: 'round' };
+      const parts = m === '카드' ? [h('rect', { key: 1, x: 3, y: 5.5, width: 18, height: 13, rx: 2.5, ...P }), h('path', { key: 2, d: 'M3 10h18M7 15h4', ...P })]
+        : m === '현금' ? [h('rect', { key: 1, x: 2.5, y: 6, width: 19, height: 12, rx: 2.5, ...P }), h('circle', { key: 2, cx: 12, cy: 12, r: 2.6, ...P }), h('path', { key: 3, d: 'M6 9.5v5M18 9.5v5', ...P })]
+        : [h('path', { key: 1, d: 'M3 9.5L12 4l9 5.5M5 10v7M9.7 10v7M14.3 10v7M19 10v7M3 19.5h18', ...P })];
+      return h('svg', { width: 24, height: 24, viewBox: '0 0 24 24' }, parts); };
+    const tile = (m, on) => ({ tbd: on ? '#345b80' : '#f2f4f6', tbg: on ? '#f3f7fb' : '#f2f4f6', icon: payIcon(m, on) });
+    // 선택 표시: 선택 = 채운 원 + 흰 체크, 미선택 = 연한 테두리 + 연한 체크
+    const ck = on => ({ ckBg: on ? '#345b80' : '#ffffff', ckBd: on ? '#345b80' : '#c9ced4', ckFg: on ? '#ffffff' : '#c9ced4' });
+    // 결제수단 최대 2개(분할결제). 세 번째를 누르면 두 번째를 교체
+    const selM = s.mSel || [];
+    const methods = ['카드', '현금', '계좌이체'].map(m => { const on = selM.includes(m);
+      return { label: m, ...ck(on), ...tile(m, on), fg: on ? '#1c1f23' : '#5c636b', fw: on ? 600 : 500,
+        pick: () => { const next = on ? selM.filter(x => x !== m) : (selM.length >= 2 ? [selM[0], m] : selM.concat(m));
+          this.setState({ mSel: next, method: next.join(' + ') }); } }; });
+
+    const tabs = [['status', '계약 정보'], ['docs', '문서']].map(([k, label]) => ({
+      label, pick: () => this.setState({ tab: k }), weight: s.tab === k ? 600 : 500,
+      fg: s.tab === k ? '#1c1f23' : '#8d949b', bd: s.tab === k ? '#345b80' : 'transparent', tbg: s.tab === k ? '#ffffff' : 'transparent', tbd: s.tab === k ? '#e3e6ea' : 'transparent' }));
+
+    const curP = (s.contract && s.contract.patient) || {};
+    const curPk = (curP.name || '') + '|' + (curP.birth || '');
+    const docPg = this.pager((s.docs || []).filter(d => d.pk === curPk).length, 6, 'docPage');
+    const docList = (s.docs || []).filter(d => d.pk === curPk).slice().reverse().map(d => ({ title: d.title, fileName: d.fileName,
+      meta: d.program + ' · 서명 ' + d.signedAt + ' · v' + d.version,
+      verLabel: d.superseded ? '대체됨' : '최종본', verBg: d.superseded ? '#f2f3f5' : 'rgba(52,91,128,0.08)', verFg: d.superseded ? '#8d949b' : '#2a4b6b',
+      titleFg: d.superseded ? '#8d949b' : '#1c1f23', thumbOp: d.superseded ? 0.55 : 1,
+      thumb: React.createElement('div', { style: { width: 148, height: 209, overflow: 'hidden', background: '#ffffff', boxShadow: '0 1px 6px rgba(28,31,35,0.14)', pointerEvents: 'none', position: 'relative' } },
+        d.html ? React.createElement('div', { style: { width: 740, transform: 'scale(0.2)', transformOrigin: '0 0', position: 'absolute', top: 0, left: 0 }, dangerouslySetInnerHTML: { __html: this.cleanHtml(d.html) } }) : null),
+      canResign: !d.superseded && d.kind === '이용동의서' && s.cStatus === '등록완료',
+      open: () => this.setState({ pdfId: d.id }), del: () => this.setState({ delAsk: d.id }),
+      resign: () => sameAsContract() ? this.setState({ screen: 'sign', signFrom: 'resign', sig: false, sigOpen: false, sigImg: null, ckRefund: false }) : this.flash(RESIGN_MSG) }));
+    const pdfDoc = s.pdfId ? (s.docs || []).find(d => d.id === s.pdfId) : null;
+
+    const dep = s.pay === 'deposit';
+    // 3단계: 확정된 최종 계약금액 − 기존 선결제권 잔액 − 기납부 예약금 = 당일 결제 필요금액
+    const numOf = v => Number(String(v || '').replace(/[^0-9]/g, '')) || 0;
+    const PAY = PR.payment({ totalNum, preBal: s.preBal, priorDep: s.priorDep, deposit: dep });
+    const { preBal, priorDep, needNum, leftNum, depAmt } = PAY;
+    const payLabels = { label: dep ? '예약금 (10%)' : '당일 결제',
+      now: won(dep ? depAmt : needNum) + '원',
+      rest: won(dep ? needNum - depAmt : 0) + '원' };
+
+    const todayStr = Component.today();
+    const addYear = d => { const x = new Date(d); x.setFullYear(x.getFullYear() + 1); x.setDate(x.getDate() - 1); return x.toISOString().slice(0, 10); };
+    // 이벤트: 첫 시술일 기준 N개월(스킨부스터 3, 그 외 2) 유효
+    const evDef = cur && cur.event ? ((db && db.events) || []).find(e => e.id === cur.event) : null;
+    const isEventCur = !!(cur && cur.event);
+    const evMonths = evDef && evDef.validMonths ? evDef.validMonths : (cur && cur.cat === '스킨부스터' ? 3 : 2);
+    const evFirst = s.evFirst || todayStr;
+    const addMonths = (d, m) => { const x = new Date(d); x.setMonth(x.getMonth() + m); x.setDate(x.getDate() - 1); return x.toISOString().slice(0, 10); };
+    const evExpiry = addMonths(evFirst, evMonths);
+    // 금일 결제액을 선택한 결제수단에 배분. 현금·계좌이체는 현금영수증 발급 여부를 서명 전에 체크
+    const nowNum = PAY.nowNum;
+    const isSplit = selM.length === 2;
+    const a1 = isSplit ? Math.min(nowNum, Number(String(s.split1 || '').replace(/[^0-9]/g, '')) || 0) : nowNum;
+    const hasCash = selM.some(m => m !== '카드');
+    const rcpt = s.cashRcpt || '미발급';
+    const payments = selM.map((m, i) => ({ method: m, amount: isSplit ? (i === 0 ? a1 : nowNum - a1) : nowNum,
+      ...(m === '카드' ? { bank: '', cardNo: '', payDate: '', approval: '' } : { rcpt, rcptNo: '' }) }));
+    const payText = selM.length ? payments.map(p => p.method + (isSplit ? ' ' + won(p.amount) + '원' : '')).join(' + ') + (hasCash ? ' · 현금영수증 ' + rcpt : '') : '';
+    // 재등록 간이 동의서: 같은 환자가 1년 이내 같은 약관 버전으로 전체 동의서에 서명한 적이 있으면 약관 요약본으로 대체
+    const TERMS_VER = 'T-2026-09';
+    const pkP = (P.name || '') + '|' + (P.birth || '');
+    const yearAgo = (() => { const x = new Date(todayStr); x.setFullYear(x.getFullYear() - 1); return x.toISOString().slice(0, 10); })();
+    const priorFull = (s.contracts || []).filter(c => (c.patient.name || '') + '|' + (c.patient.birth || '') === pkP
+      && (c.docMode || 'full') === 'full' && (c.termsVer || TERMS_VER) === TERMS_VER && !c.event && c.date >= yearAgo).pop() || null;
+    const briefOK = !!priorFull && !isEventCur && !isResign;
+    const isBrief = isResign ? ((s.contract || {}).docMode === 'brief') : (briefOK && !s.forceFull);
+    const buildContract = () => !cur ? null : {
+      docMode: isBrief ? 'brief' : 'full', termsVer: TERMS_VER, priorDate: isBrief && priorFull ? priorFull.date : null,
+      // 기존 선결제권 잔액 사용분도 결제수단으로 기록 → 환불 시 잔액으로 복구 (사용액 한도)
+      payments: payments.concat(Math.min(preBal, totalNum) > 0 ? [{ method: '선결제권 잔액', amount: Math.min(preBal, totalNum), prepaid: true }] : []),
+      event: cur.event || null, firstDate: isEventCur ? evFirst : null,
+      patient: { ...P },
+      program: progTitle(cur), cat: cur.cat, date: todayStr, expiry: isEventCur ? evExpiry : addYear(todayStr),
+      // 서명 시점 가격 고정: 이후 가격표가 바뀌어도 이 계약의 환불 정산은 아래 값 기준
+      priceSnap: { ver: (db && db.version) || todayStr, programId: cur.id, total: Number(cur.total || 0) || null, at: todayStr },
+      total: totalNum, paid: PAY.paid, pay: s.pay, method: payText || (needNum ? '카드' : '선결제권 잔액'),
+      // 할인·선결제권 (서명 시 고정). 선결제권 기준(할인율)과 잔액은 별도 값
+      listTotal: discKey === 'pre' ? preBase : listNum, hairCombo: hairRate ? { parts: hairElig.length, rate: hairRate, sum: hairSum, off: hairOff } : null, disc: { kind: discKey, label: discLabel, rate: discRate, retPeriod: discKey === 'ret' ? (s.retPeriod || '1개월 이내') : null, preTier: preTier || null },
+      preBal, priorDep,
+      cap: capped ? Number(capN) : null, svcVisit: svcNote,
+      items: isLesion ? lesionRows.map(r => ({ kind: '시술', lesionUnit: true, qty: 5, price: r.price,
+          name: '흑자 ' + r.no + ' · ' + r.site + ' ' + r.sizeText + ' (' + r.tier + ')' })) :
+        // 환불 정산단가(settleUnit) 기준. 정산 제외 항목은 차감 대상에서 빠짐. 판매금액 0원(S/V)이어도 정산단가는 유지
+        (cur.items || []).filter(i => !isSvcItem(i) && i.settleType !== '정산 제외').map(i => ({
+        kind: i.kind === '서비스권' ? '서비스' : '시술', settleType: i.settleType || '',
+        // 얼굴 점 CO₂ 제거: 등록 개수 고정 아님 → 환불 시 실제 제거한 병변별 개별 정상가 합계 (settleUnit 11,000원은 시작 기준)
+        actual: i.id === 'SERVICE_TONING_CO2' || undefined,
+        name: i.kind === '서비스권' ? svcName(i.name) : i.name, swappedFrom: i.swappedFrom ? svcName(i.swappedFrom) : undefined,
+        qty: i.qtyBasis === '공통 총회차 상한' ? null : (Number(i.qty) || null),
+        price: Number(i.settleUnit || 0) || effUnit(i) || Number(i.perPiece || 0), variants: i.variants || null,
+        // 조건별 금액: 직원 입력 환불용 1회 정상가를 계약 당시 값으로 고정 (총 등록금액과 독립)
+        manualUnit: isManual && (i.unitFromTotal || !Number(i.unitPrice || 0)) || undefined }))
+        .concat(curAdds.filter(a => a.settleType !== '정산 제외').map(a => ({ kind: a.svc ? '서비스' : '추가', settleType: a.svc ? 'S/V' : (a.settleType || '유상'), name: addName(a),
+          qty: Number(a.qty) || 1, price: Number(a.settleUnit || 0) || addUnit(a),
+          // 스페셜 토닝 흑자 추가옵션: 추가금 110,000원은 계약금액에만 포함. 환불은 실제 시술 병변별 크기별 정상가 합계 (서명 시점 가격 고정)
+          actual: a.id === RF.BS_ADD_ID || undefined, tiers: a.id === RF.BS_ADD_ID ? RF.tiersOf(null, db) : undefined }))),
+      // 서비스 이용 기록(염증주사·약처방·알러지케어) 정산단가: 서명 시점 가격 고정
+      svcPrices: { acne: ((db && db.acneSvc) || []).map(r => ({ id: r['서비스권 ID'], range: r['사용 범위/기간'], price: Number(r['정상가'] || 0) })),
+        allergy: (((db && db.careSvc) || []).find(c => c.id === 'ALLERGY') || {}).price != null ? Number(((db && db.careSvc) || []).find(c => c.id === 'ALLERGY').price) : null },
+      used: null, visits: []
+    };
+    // 재서명: 화면에 만들어지는 동의서 구성이 저장된 계약과 같을 때만 허용 (다르면 계약 당시와 다른 내용의 문서가 저장됨)
+    const sameAsContract = () => { const b = buildContract(), c = s.contract; if (!b || !c) return false;
+      const key = x => JSON.stringify([x.program, x.total, (x.items || []).map(i => [i.kind, i.name, i.qty, i.price])]);
+      return key(b) === key(c); };
+    const RESIGN_MSG = '화면 구성이 계약 당시 내용과 달라 재서명할 수 없습니다';
+
+    const C = s.contract || this.defaultContract;
+    // 환불 계산·검증: refund.js 한 곳 기준 (위약금 · 이용금액 · CO₂/흑자 병변 · 최종 환불금액 · 결제수단별 한도/합계)
+    const act = RF.isActual, isBS = RF.isBlackspotAdd;
+    const lesOf = k => (s.rfLes || {})[k] || [];
+    const extraPaid = RF.num(s.rfExtra);
+    const rfAlloc = s.rfAlloc || {};
+    const V = s.rfVisits || C.visits || [];
+    const RS = RF.settle(C, { used: s.rfUsed || C.used, visits: V, extraPaid, rfLes: s.rfLes, alloc: rfAlloc }, db);
+    const { U, lesAmt, trtAmt, svcAmt, usedAmt, penNum, paidEff, refundNum, allocSum, allocOk, allocMsg } = RS, rfPays = RS.pays;
+    const usedCnt = U.reduce((a, b) => a + (b || 0), 0);
+    const updLes = (k, f) => this.setState(st => { const L = { ...(st.rfLes || {}) }; L[k] = f((L[k] || []).slice()); return { rfLes: L }; });
+    const rItems = C.items.map((it, k) => {
+      const u = U[k] || 0;
+      // 추가 부위: 등록 때는 추가 여부만, 환불 시 실제 시술 개수 입력 (등록 수량 상한 없음)
+      const isAdd = it.kind === '추가' || act(it);
+      const canInc = isAdd ? u < 99 : !(it.qty && u >= it.qty) && !(C.cap && usedCnt >= C.cap);
+      const vsel = (s.rfVar && s.rfVar[k]) || [];
+      const variants = (it.variants || []).map(v => { const on = vsel.includes(v); return { label: v,
+        bd: on ? '#345b80' : '#dde1e6', bg: on ? '#f6f9fc' : '#fff', fg: on ? '#345b80' : '#6d747c',
+        pick: () => this.setState(st => { const cur0 = (st.rfVar && st.rfVar[k]) || [];
+          return { rfVar: { ...(st.rfVar || {}), [k]: cur0.includes(v) ? cur0.filter(x => x !== v) : cur0.concat([v]) } }; }) }; });
+      return { hasVar: variants.length > 0, variants,
+        kind: it.kind, name: it.name, reg: isAdd ? '실제 개수' : C.cap ? '회차별' : (it.qty ? it.qty + '회' : '실제 이용'),
+        used: u, price: act(it) ? '개별 정상가' : it.lesionUnit || isAdd ? '1개 ' + won(it.price) : (it.price ? won(it.price) : '—'), amt: won(act(it) ? lesAmt[k] : RF.amtOf(it, u)),
+        isLes: act(it) && u > 0, lesNote: isBS(it) ? '실제 시술 병변별 크기 선택 · ' + RF.tiersOf(it, db).map(t => t.short + ' ' + won(t.price)).join(' / ') : act(it) ? (Number(it.price) ? '1개 ' + won(it.price) + '원부터 · 병변별 정상가 입력' : '실제 시술 병변별 정상가 입력') : '',
+        lesRows: act(it) ? lesOf(k).map((v, j) => { const bad = RF.lesionRowBad(it, v, db);
+          const setL = x => updLes(k, a => { a[j] = x; return a; });
+          return { no: '병변 ' + (j + 1), val: v, bd: bad ? '#d64545' : '#d5d9de', isNum: !isBS(it), isSize: isBS(it),
+            sizes: isBS(it) ? RF.tiersOf(it, db).map(t => { const on = v === t.label; return { label: t.label, price: won(t.price), pick: () => setL(t.label),
+              bd: on ? '#1c1f23' : bad ? '#d64545' : '#d5d9de', bg: on ? '#1c1f23' : '#ffffff', fg: on ? '#ffffff' : '#1c1f23' }; }) : [],
+            onVal: e => { const x = e.target.value.replace(/[^0-9]/g, ''); setL(x ? Number(x).toLocaleString('ko-KR') : ''); },
+            del: () => updLes(k, a => a.filter((_, i2) => i2 !== j)) }; }) : [],
+        docName: isBS(it) && u ? it.name + ' (' + lesOf(k).map(v => v + ' ' + won(RF.tierPrice(RF.tiersOf(it, db), v)) + '원').join(', ') + ')' : act(it) && u ? it.name + ' (' + lesOf(k).map(v => (v || '0') + '원').join(', ') + ')' : it.name + (vsel.length ? ' (이용: ' + vsel.join(', ') + ')' : ''),
+        dec: act(it) ? () => updLes(k, a => a.slice(0, -1)) : () => this.setUsed(k, -1, C),
+        inc: act(it) ? () => updLes(k, a => a.concat([''])) : () => this.setUsed(k, 1, C),
+        decFg: u > 0 ? '#1c1f23' : '#c9ced4', incFg: canInc ? '#1c1f23' : '#c9ced4' };
+    });
+    // 서비스 이용 기록: 모든 프로그램 공통 — 염증주사 · 약처방 · 알러지케어 (DB 정산단가)
+    // 계약 당시 서비스 정산단가 우선 (svcPrices가 없는 이전 계약만 현재 가격표 사용)
+    const SP = C.svcPrices;
+    const acneRows = SP ? (SP.acne || []).map(r => ({ '서비스권 ID': r.id, '사용 범위/기간': r.range, '정상가': r.price })) : ((db && db.acneSvc) || []);
+    const allergy = SP ? (SP.allergy != null ? { id: 'ALLERGY', price: SP.allergy } : null) : ((db && db.careSvc) || []).find(c => c.id === 'ALLERGY');
+    const visitSrc = (acneRows.length ? acneRows.map((r, i) => ({ v: String(i),
+      label: (r['서비스권 ID'] === 'SERVICE_INFLAMMATION_INJ' ? '염증주사' : '약처방') + ' · ' + r['사용 범위/기간'],
+      price: Number(r['정상가'] || 0) })) : []).concat(allergy ? [{ v: 'allergy', label: '알러지케어', price: Number(allergy.price || 0) }] : []);
+    // 서비스 이용 기록: 염증주사 · 약처방 · 알러지케어 개별 입력 (주차 · 범위 · 건수)
+    const acne = acneRows;
+    const GDEF = [
+      { key: 'inj', title: '염증주사', optLabel: '부위 수', opts: acne.filter(r => r['서비스권 ID'] === 'SERVICE_INFLAMMATION_INJ').map(r => ({ label: r['사용 범위/기간'], price: Number(r['정상가'] || 0) })) },
+      { key: 'rx', title: '약처방', optLabel: '처방 기간', opts: acne.filter(r => r['서비스권 ID'] === 'SERVICE_PRESCRIPTION').map(r => ({ label: r['사용 범위/기간'], price: Number(r['정상가'] || 0) })) },
+      { key: 'al', title: '알러지케어', optLabel: '', opts: allergy ? [{ label: '1회', price: Number(allergy.price || 0) }] : [] }
+    ];
+    const SG = s.svcG || {};
+    const svcGroups = GDEF.filter(g => g.opts.length).map((g, gi) => { const st = SG[g.key] || {}, week = st.week || '1', pick = st.pick || '0', qty = st.qty || 1;
+      const upd = o => this.setState(x => ({ svcG: { ...(x.svcG || {}), [g.key]: { ...((x.svcG || {})[g.key] || {}), ...o } } }));
+      const opt = g.opts[Number(pick)] || g.opts[0];
+      // 항목별 기록: 해당 행 바로 아래 작은 태그로 표시 (주차순)
+      const recs = V.map((v, vi) => ({ v, vi })).filter(x => (x.v.label || '').split(' · ')[0] === g.title);
+      return { sep: gi ? '1px solid #eef0f2' : '0', title: g.title, optLabel: g.optLabel, week, pick, qty,
+        hasRecs: recs.length > 0, recSum: won(recs.reduce((t, x) => t + x.v.price, 0)) + '원',
+        recs: recs.map(x => ({ week: x.v.week ? x.v.week + '주' : '', label: (x.v.label.split(' · ')[1] || '1회'),
+          del: () => this.setState({ rfVisits: V.filter((_, j) => j !== x.vi) }) })), hasOpts: g.opts.length > 1, noOpts: g.opts.length <= 1,
+        single: g.opts[0] ? g.opts[0].label + ' · ' + won(g.opts[0].price) + '원' : '',
+        opts: g.opts.map((o, i) => { const on = String(i) === String(pick) || (g.opts.length === 1);
+          return { v: String(i), label: o.label, price: won(o.price), bd: on ? '#345b80' : '#c9ced4', dot: on ? '#345b80' : 'transparent', fg: on ? '#1c1f23' : '#5c636b',
+            pick: () => upd({ pick: String(i) }) }; }),
+        onWeek: e => upd({ week: e.target.value }), onPick: e => upd({ pick: e.target.value }),
+        dec: () => upd({ qty: Math.max(1, qty - 1) }), inc: () => upd({ qty: Math.min(20, qty + 1) }),
+        add: () => { upd({ qty: 1 }); this.setState(x => ({ rfVisits: (x.rfVisits || V).concat(Array.from({ length: qty }, () => ({ label: g.title + (g.opts.length > 1 ? ' · ' + opt.label : ''), price: opt.price, week: Number(week) })))
+          .sort((a, b) => (a.week || 0) - (b.week || 0)) })); } }; });
+    const vWeek = s.vWeek || '1';
+    const visitOpts = visitSrc.map(o => ({ v: o.v, label: o.label + ' · ' + won(o.price) + '원' }));
+    const vPick = s.rfPick || (visitSrc[0] ? visitSrc[0].v : '');
+    const rVisits = V.map((v, i) => ({ label: v.label, amt: won(v.price), week: v.week ? v.week + '주차' : '',
+      del: () => this.setState({ rfVisits: V.filter((_, j) => j !== i) }) }));
+    // 결제수단별 환불: 최종 환불금액은 고정. 직원이 카드 환불금액·선결제권 잔액 복구금액을 직접 입력 (검증은 refund.js)
+    const rfReason = s.rfReason || '개인 사정';
+    const rfDraft = () => ({ used: s.rfUsed || null, visits: V, les: s.rfLes || null, vars: s.rfVar || null, alloc: s.rfAlloc || null, reason: rfReason });
+    const reasons = ['개인 사정', '이사 · 거리', '건강상 사유', '시술 불만족'].map(r => {
+      const on = r === rfReason; return { label: r, pick: () => this.setState({ rfReason: r }),
+        bd: on ? '#345b80' : '#dde1e6', bg: on ? '#f6f9fc' : '#fff', fg: on ? '#345b80' : '#4a5158' }; });
+    const rDocRows = rItems.map(r => ({ kind: r.kind, name: r.docName, reg: C.cap ? '—' : (C.items[rItems.indexOf(r)].qty || '—'),
+      used: r.used, price: r.price, amt: r.amt }))
+      // 정산서: 서비스 기록을 항목별 1줄로 묶음 — 예) 염증주사 (4주차 2~5부위, 8주차 1부위)
+      .concat((() => { const g = {}, order = [];
+        V.slice().sort((a, b) => (a.week || 0) - (b.week || 0)).forEach(v => { const [t, r] = (v.label || '').split(' · ');
+          if (!g[t]) { g[t] = { n: 0, sum: 0, parts: [], prices: new Set() }; order.push(t); }
+          g[t].n++; g[t].sum += v.price; g[t].prices.add(v.price); g[t].parts.push((v.week ? v.week + '주차' : '') + (r ? ' ' + r : '')); });
+        return order.map(t => ({ kind: '서비스', name: t + ' · ' + g[t].parts.join(', '), reg: '—', used: g[t].n,
+          price: g[t].prices.size === 1 ? won([...g[t].prices][0]) : '—', amt: won(g[t].sum) })); })());
+    const koDate = d => { const [y, m, dd] = d.split('-'); return y + '년 ' + Number(m) + '월 ' + Number(dd) + '일'; };
+    const rf = {
+      rfName: C.patient.name, rfBirth: C.patient.birth, rfPhone: C.patient.phone,
+      rfProg: C.program, rfDate: C.date, rfExpiry: C.expiry, rfMethod: C.method,
+      // 납부 상태: 저장된 납부금액 기준 (잔금 결제 기록이 있으면 일부 납부로 표시)
+      rfPayState: Number(C.paid || 0) >= Number(C.total || 0) ? '완납'
+        : (C.payments || []).some(p => p.balance) ? '일부 납부 (잔금 ' + won(Number(C.total || 0) - Number(C.paid || 0)) + '원 미납)' : '예약금 납부 (잔금 미납)',
+      rfTotal: won(C.total), rfPaid: won(paidEff), rfPen: won(penNum),
+      rfPayRows: rfPays.map((p, i) => { const a = RS.amounts[i], over = RS.over[i];
+        return { method: p.prepaid ? '선결제권 잔액 복구' : p.method, paid: won(p.amount) + '원', val: rfAlloc[i] || '', left: won(Math.max(0, Number(p.amount || 0) - a)) + '원',
+          bd: over ? '#d64545' : '#d5d9de', err: over, errText: '원결제 금액을 넘을 수 없습니다',
+          onVal: e => { const v = e.target.value.replace(/[^0-9]/g, ''); this.setState(st => ({ rfAlloc: { ...(st.rfAlloc || {}), [i]: v ? Number(v).toLocaleString('ko-KR') : '' } })); } }; }),
+      rfAllocSum: won(allocSum) + '원', rfMulti: rfPays.length > 1,
+      rfAllocMsg: allocMsg,
+      rfAllocFg: allocOk ? '#2f6b45' : '#b4483f',
+      rfUsedAmt: won(usedAmt), rfUsedBreak: '시술 ' + won(trtAmt) + ' + 서비스 ' + won(svcAmt),
+      rfRefund: won(refundNum), rfHero: refundNum > 0 ? won(refundNum) + '원을 환불할게요' : '환불할 금액이 없어요', rfStage: usedAmt > 0 ? '시술 시작 후 해지' : '시술 시작 전 해지',
+      rfReason, reasons, rItems, rDocRows, rVisits,
+      hasVisitSvc: true, hasAcneSel: visitSrc.length > 0, visitOpts, visitPick: vPick,
+      onVisitPick: e => this.setState({ rfPick: e.target.value }),
+      vQty: s.vQty || 1, vQtyDec: () => this.setState({ vQty: Math.max(1, (s.vQty || 1) - 1) }), vQtyInc: () => this.setState({ vQty: Math.min(20, (s.vQty || 1) + 1) }),
+      // 약처방·염증주사: DB 정산단가 × 선택 건수 (직원 금액 입력 없음)
+      addVisit: () => { const o = visitSrc.find(x => x.v === vPick); const q = s.vQty || 1;
+        if (o) this.setState({ vQty: 1, rfVisits: V.concat(Array.from({ length: q }, () => ({ label: o.label, price: o.price, week: Number(vWeek) }))).sort((a, b) => (a.week || 0) - (b.week || 0)) }); },
+      svcGroups, oldSel: false,
+      hasCap: !!C.cap, rfCapNote: C.cap ? '총 ' + C.cap + '회 중 ' + usedCnt + '회 이용 (회차별 선택 · 1회 정상가 기준 공제)' : '',
+      rfToday: todayStr, rfTodayKo: koDate(todayStr)
+    };
+
+    const bars = {
+      list: { note: '기록은 이 기기에만 저장됩니다. 7일마다 백업하세요.', primary: '새 동의서 작성', secondary: '', onP: () => this.setState({ screen: 'new', step: 1, prog: -1, progId: '', method: '', pay: 'full', addArea: '', lesions: null, sig: false, tried1: false, pendingSign: false, ckRefund: false, ...((this.props.testFill ?? false) ? { step: 2, patient: { name: '테스트', birth: '900101', phone: '010-1234-5678' } } : { patient: { name: '', birth: '', phone: '' } }) }), onS: () => this.flash('백업이 완료되었습니다') },
+      new: { note: s.step === 3 ? '환자에게 iPad를 전달해 서명을 받습니다.' : '단계를 모두 채우면 환자 확인 화면으로 넘어갑니다.',
+             primary: s.step === 3 ? '동의서 미리보기 · 서명' : '다음 단계', secondary: s.step === 1 ? '취소' : '이전',
+             onP: () => {
+               if (s.step === 3) {
+                 if (nowNum > 0 && !selM.length) return this.flash('결제수단을 선택해 주세요');
+                 if (isSplit && (!a1 || a1 >= nowNum)) return this.flash('분할결제 금액을 입력해 주세요');
+                 if (!totalNum) return this.flash('총 등록금액을 입력해 주세요');
+                 if (isManual && !manualUnit) return this.flash('환불용 1회 정상가를 입력해 주세요');
+                 return this.setState({ screen: 'sign', signFrom: 'new', sig: false, sigOpen: false, sigImg: null, ckRefund: false, pendingSign: false, pendingProg: cur ? progTitle(cur) : '', pendingTotal: won(totalNum) });
+               }
+               if (s.step === 2 && discKey === 'pre' && !preTier) return this.flash('선결제권 기준을 선택해 주세요');
+               if (s.step === 1 && !p1ok) { this.setState({ tried1: true }); return this.flash('환자 정보를 확인해 주세요'); }
+               if (s.step === 2 && !cur) return this.flash('프로그램을 선택해 주세요');
+               if (s.step === 2 && isLesion && !lesionOk) return this.flash('흑자별 부위와 크기(3cm 이하)를 입력해 주세요');
+               return this.setState({ step: s.step + 1 });
+             },
+             onS: () => s.step === 1 ? this.setState({ screen: 'list' }) : this.setState({ step: s.step - 1 }) },
+      detail: (() => {
+        const st = s.cStatus;
+        if (st === '등록완료') return { primary: '환불 정산', onP: () => this.setState({ screen: 'refund', ...this.rfStateOf(C) }) };
+        return { primary: '' };
+      })(),
+      refund: { note: '최종 환불금액 ' + won(refundNum) + '원으로 정산서를 생성합니다.', primary: '정산서 생성 · 환자 서명', secondary: '취소',
+                onP: () => { if (RS.error) return this.flash(RS.error); this.saveDraft(); this.setState({ screen: 'refundSign', sig: false, sigOpen: false, sigImg: null }); },
+                onS: () => { this.saveDraft(); this.setState({ screen: 'detail', tab: 'status' }); } }
+    };
+    const bar = bars[S] || bars.list;
+
+    const titles = {
+      list: ['이용 동의 · 환불 정산', '다채움피부과의원 · 프로그램 관리'],
+      new: ['새 동의서 작성', '4단계 중 ' + s.step + '단계'],
+      detail: [C.patient.name + ' · 상세', C.program],
+      refund: ['환불 정산', C.patient.name + ' · ' + C.program]
+    };
+    const t = titles[S] || titles.list;
+
+    return {
+      isChrome: !isSign && !isRefundSign, showBar: !isSign && !isRefundSign && S !== 'new',
+      isList: S === 'list', isNew: S === 'new', isDetail: S === 'detail', isRefund: S === 'refund',
+      isSign, isRefundSign,
+      showBack: S !== 'list', goList: () => { if (S === 'refund') this.saveDraft(); this.setState({ screen: 'list' }); },
+      title: t[0],
+      rows: rows.slice(listPg.start, listPg.start + listPg.size), noRows: !rows.length, listPg,
+      nameArr: sk === 'name' ? (sd === 'asc' ? '▲' : '▼') : '▲', nameArrFg: sk === 'name' ? '#345b80' : '#c3c8ce',
+      dateArr: sk === 'date' ? (sd === 'asc' ? '▲' : '▼') : '▼', dateArrFg: sk === 'date' ? '#345b80' : '#c3c8ce',
+      sortName: () => this.setState({ sortKey: 'name', sortDir: sk === 'name' && sd === 'asc' ? 'desc' : 'asc' }),
+      sortDate: () => this.setState({ sortKey: 'date', sortDir: sk === 'date' && sd === 'desc' ? 'asc' : 'desc' }), steps, programs: programs.map(p => p.rows ? { ...p, rows: p.rows.map(r => ({ ...r, step: this.stepOf(r.opts) })) } : p), methods, tabs,
+      pq: s.pq, onPq: e => this.setState({ pq: e.target.value, prog: -1, progId: '' }),
+      pCount: db ? (svcOn ? '' : dbHits.length + '개') : '', pTabs, pSubs, pAxes,
+      hasPSubs: pSubs.length > 0, hasPAxes: pAxes.length > 0,
+      svcOn, svcRows, showProgList: !svcOn,
+      addNeed: !!cur && (cur.adds || []).some(a => a.needArea),
+      addArea: s.addArea || '',
+      addAreaOpts: db && db.capriUnit ? Object.keys(db.capriUnit).filter(k => k !== '풀페이스').map(v => ({ v, label: v })) : [],
+      onAddArea: e => this.setState({ addArea: e.target.value }),
+      needAmount, amountInput: (s.amounts && s.amounts[manualKey]) || '',
+      onAmount: e => { const v = e.target.value.replace(/[^0-9]/g, '');
+        this.setState(st => ({ amounts: { ...st.amounts, [manualKey]: v } })); },
+      unitInput: (s.units && s.units[manualKey]) ? Number(s.units[manualKey]).toLocaleString('ko-KR') : '',
+      onUnit: e => { const v = e.target.value.replace(/[^0-9]/g, '');
+        this.setState(st => ({ units: { ...st.units, [manualKey]: v } })); },
+      st1: s.step === 1, st2: s.step === 2, st3: false, st4: s.step === 3,
+      // 2단계 우측: 선택 구성 확인 (동의서는 버튼으로만 표시)
+      notSt2: s.step !== 2, showPv: s.step !== 2 || !!s.pvOn, showSel: s.step === 2 && !s.pvOn,
+      pvHead: s.pvOn ? '동의서 미리보기' : '선택 프로그램', pvBtn: s.pvOn ? '구성 보기' : '동의서 보기',
+      togglePv: () => this.setState(st => ({ pvOn: !st.pvOn })),
+      hasSel: !!cur, noSel: !cur, selPrice: cur ? (listNum ? won(listNum) + '원' : '금액 입력') : '',
+      hasBaseSel: docItems.some(i => !i.isAdd && i.kind === '시술'),
+      addRows: docItems.filter(i => i.isAdd).map(i => ({ name: i.name, qtyText: i.addQtyText && i.addQtyText !== '-' ? '×' + i.addQtyText : '', feeText: i.addPrice ? '+' + won(i.addPrice) : '' })),
+      hasAddSel: docItems.some(i => i.isAdd),
+      ckRefund: !!s.ckRefund, noCkRefund: !s.ckRefund,
+      toggleCkRefund: () => this.setState(st => ({ ckRefund: !st.ckRefund })),
+      isLesion, notLesion: !isLesion, lesionRows,
+      lesionSites: ['이마', '우측 관자', '좌측 관자', '우측 광대', '좌측 광대', '우측 볼', '좌측 볼', '코', '턱', '목', '손등', '기타'].map(v => ({ v })),
+      lesionStep: { label: LS.length + '개', decFg: LS.length > 1 ? '#345b80' : '#c9ced4', incFg: '#345b80',
+        dec: () => LS.length > 1 && this.setState(st => ({ lesions: (st.lesions || LS).slice(0, -1) })),
+        inc: () => this.setState(st => ({ lesions: (st.lesions || LS).concat([{ site: '', size: '' }]) })) },
+      items: isLesion ? lesionRows.map(r => ({ kind: '시술', name: '흑자 ' + r.no + ' · ' + r.siteText + ' ' + r.sizeText + ' — 피코 532 1회 + 레블라이트 SI 4회',
+        count: '1개', unit: r.price ? won(r.price) : '—', amount: r.price ? won(r.price) : '—' })) : docItems.map(i => i.isAdd ? { kind: i.kind, name: i.name, count: i.qtyText, unit: i.priceText, amount: won(i.addPrice) } : ({ kind: i.kind, name: i.name, count: i.qtyText, unit: i.priceText,
+        amount: (/[^0-9,]/.test(i.priceText) || !/^\d/.test(i.qtyText)) ? '—'
+          : won(Number(i.priceText.replace(/,/g, '')) * (parseInt(i.qtyText, 10) || 0)) })),
+      svcNote, svcWhat,
+      baseRows: docItems.filter(i => !i.isAdd && i.kind === '시술'),
+      swapNotes: cur ? (cur.items || []).filter(i => i.swappedFrom).map(i => ({ text: '변경 · ' + svcName(i.swappedFrom) + ' → ' + svcName(i.name) })) : [],
+      hasSwap: !!cur && (cur.items || []).some(i => i.swappedFrom),
+      extraRows: docItems.filter(i => i.isAdd || i.kind !== '시술').map(i => ({ kind: i.kind, name: i.name,
+        qtyText: i.isAdd ? i.addQtyText : (/^\d/.test(i.qtyText || '') ? i.qtyText : '-'),
+        feeText: i.svc ? '무상' : i.isAdd && i.addPrice ? '+' + won(i.addPrice) + '원' : '-' })),
+      hasExtra: docItems.some(i => i.isAdd || i.kind !== '시술'),
+      // 1회성(당일 종료) 프로그램: 쁘띠·점제거 전체, 또는 시술 1개·1회 구성 → 이용금액 ※ 생략
+      noSvcNote: !(cur && (cur.cat === '쁘띠(보톡스·필러)' || cur.cat === 'CO₂·병변제거' || (() => {
+        const it = (cur.items || []).filter(i => !isSvcItem(i) && i.kind !== '서비스권');
+        return it.length === 1 && (Number(it[0].qty) || 1) <= 1; })())),
+      pvRef: this.pvRef, sgRef: this.sgRef,
+      pvMb: -Math.ceil((s.pvH || 1046) * (1 - 0.4595)),
+      sgMb: Math.floor((s.sgH || 1046) * 0.1081),
+      // 조건별 금액 프로그램: 시술 정상가 합계 미표시 (총 계약금액 · 환불용 1회 정상가만)
+      showSum: !singleVisit && !isManual, hideSum: singleVisit || isManual, isManualProg: isManual, notManualProg: !isManual,
+      sumLabel: isLesion ? '등록 병변 수' : capped ? '총 이용횟수' : '시술 정상가 합계',
+      sumValue: isLesion ? LS.length + '개' : capped ? capN + '회' : won(listSumNum - curAdds.reduce((t, a) => t + Number(a.price || 0), 0)),
+      svcEditRows, hasSvcEdit: svcEditRows.length > 0,
+      hasOptAdds: !!cur && (cur.adds || []).some(a => a.optional),
+      optAdds: cur ? (cur.adds || []).filter(a => a.optional).map(a => { const on = addSel.includes(a.id), n = Number(a.qty) || 1, m = on ? svCount(a) : 0, sv = on && m > 0;
+        const setM = v => this.setState(st => ({ addSvN: { ...(st.addSvN || {}), [a.id]: Math.max(0, Math.min(n, v)) } }));
+        const paid = Math.round(Number(a.price || 0) * (n - m) / n);
+        return { label: a.name.replace(/\s*\(\s*\d+\s*회\s*\)/g, '') + ' ' + n + '회', price: m >= n && on ? '서비스' : '+' + won(on ? paid : a.price) + '원',
+          multi: on && n > 1, onSingle: on && n <= 1, stop: e => e.stopPropagation(), svN: m + '회', svDec: e => { e.stopPropagation(); setM(m - 1); }, svInc: e => { e.stopPropagation(); setM(m + 1); },
+          svDecFg: m > 0 ? '#345b80' : '#c9ced4', svIncFg: m < n ? '#345b80' : '#c9ced4', ckBd: on ? '#345b80' : '#c9ced4', ckBg: on ? '#345b80' : '#ffffff', fg: on ? '#1c1f23' : '#4a5158',
+          on, svBd: sv ? '#345b80' : '#c9ced4', svBg: sv ? '#345b80' : '#ffffff', svFg: sv ? '#1c1f23' : '#6d747c', priceFg: sv ? '#345b80' : '#6d747c',
+          pickSv: e => { e.stopPropagation(); setM(sv ? 0 : n); },
+          pick: () => this.setState(st => ({ addSel: on ? addSel.filter(x => x !== a.id) : addSel.concat(a.id), addSvc: addSvc.filter(x => x !== a.id), addSvN: { ...(st.addSvN || {}), [a.id]: 0 } })) }; }) : [],
+      capNote: capped,
+      capNoteText: capped ? '※ 본 프로그램은 총 ' + capN + '회이며, 매 회차 의료진 진료 후 프로그램 구성 중 하나를 선택하여 진행합니다.' : '',
+      totalPlain: won(totalNum),
+      discShow: !!cur, discLocked: isEvProg, discOpen: !!cur && !isEvProg,
+      discOpts: DK.filter(d => discOk(d[0])).map(d => ({ label: d[1], ...chip(discKey === d[0]), pick: () => this.setState({ disc: d[0], preTier: d[0] === 'pre' ? s.preTier : '' }) })),
+      isPreDisc: discKey === 'pre', isRetDisc: discKey === 'ret', canUseBal: true,
+      tierOpts: Object.keys(PR.PREPAID_TIER).map(t => ({ label: t, ...chip(preTier === t), pick: () => this.setState({ preTier: t }) })),
+      retOpts: PR.RET_PERIODS.map(t => ({ label: t, ...chip((s.retPeriod || '1개월 이내') === t), pick: () => this.setState({ retPeriod: t }) })),
+      discNote: isYearSB ? (discKey === 'pre' ? '선결제권 사용 · 1년 이내 혜택가 제외, 정상가 기준 계산' : '리프팅 후 1년 이내 혜택가') : noPreHair ? (hairRate ? '제모 결합할인 적용' : '지정 결합가') + ' · 추가 할인 불가' : noRet ? '여드름 4주 프로그램 · 재티켓팅 제외' : '',
+      hasDiscNote: !!cur && (isYearSB || noPreHair || noRet),
+      hasHairOff: hairRate > 0, hairOffLabel: '제모 결합 ' + hairElig.length + '부위 ' + Math.round(hairRate * 100) + '%', hairOffText: '− ' + won(hairOff) + '원', hairSumText: won(hairSum) + '원',
+      hasDisc: !!discRate, discLabel, discBaseText: won(discBase) + '원',
+      discDocText: [hairRate ? '제모 결합 ' + hairElig.length + '부위 ' + Math.round(hairRate * 100) + '% (정상가 합계 ' + won(hairSum) + '원)' : '', discRate ? discLabel + ' (기준 ' + won(discBase) + '원)' : ''].filter(Boolean).join(' · '),
+      hasDiscDoc: !!discRate || hairRate > 0,
+      preBalIn: s.preBal ? won(numOf(s.preBal)) : '', onPreBal: e => this.setState({ preBal: e.target.value.replace(/[^0-9]/g, '') }),
+      priorDepIn: s.priorDep ? won(numOf(s.priorDep)) : '', onPriorDep: e => this.setState({ priorDep: e.target.value.replace(/[^0-9]/g, '') }),
+      hasPreBal: preBal > 0, preBalText: '− ' + won(Math.min(preBal, totalNum)) + '원',
+      hasPriorDep: priorDep > 0, priorDepText: '− ' + won(Math.min(priorDep, Math.max(0, totalNum - preBal))) + '원',
+      hasLeft: leftNum > 0, leftText: won(leftNum) + '원', hasRest: dep && needNum - depAmt > 0,
+      totalText: won(totalNum) + '원',
+      progName: cur ? progTitle(cur) : '',
+      docKind: dep ? '예약금용' : '완납용',
+      isDeposit: dep,
+      isPrepaid: !!cur && /선결제/.test([cur.name, cur.cat, cur.sub].join(' ')),
+      pickDeposit: () => this.setState({ pay: 'deposit' }), pickFull: () => this.setState({ pay: 'full' }),
+      depBd: dep ? '#345b80' : '#e3e6ea', depBg: dep ? '#f6f9fc' : '#ffffff',
+      fullBd: dep ? '#e3e6ea' : '#345b80', fullBg: dep ? '#ffffff' : '#f6f9fc',
+      depCk: ck(dep), fullCk: ck(!dep), depFg: dep ? '#1c1f23' : '#5c636b', fullFg: dep ? '#5c636b' : '#1c1f23',
+      depText: won(depAmt) + '원', fullText: won(needNum) + '원',
+      payHero: (dep ? depAmt : needNum) > 0 ? won(dep ? depAmt : needNum) + '원을 결제할게요' : '추가 결제 없이 등록할게요',
+      payLabel: payLabels.label, payNow: payLabels.now, payRest: payLabels.rest,
+      tabStatus: s.tab === 'status', tabDocs: s.tab === 'docs',
+      dRefunded: s.cStatus === '환불완료', dStatus: s.cStatus, dStatusBg: this.chip(s.cStatus)[0], dStatusFg: this.chip(s.cStatus)[1],
+      dPrepaid: /선결제/.test(C.program), hasNotice: !!NOTICE[s.cStatus], dNotice: NOTICE[s.cStatus] || '',
+      sigRef: this.attachSig, sigDown: this.down, sigMove: this.move, sigUp: this.up, clearSig: this.clear,
+      noSig: !s.sig,
+      sigOpen: s.sigOpen, openSigPad: this.openSigPad, closeSigPad: this.closeSigPad, confirmSigPad: this.confirmSigPad,
+      hasSigImg: !!s.sigImg, noSigImg: !s.sigImg,
+      sigEl: s.sigImg ? React.createElement('img', { src: s.sigImg,
+        style: { position: 'absolute', left: 0, bottom: '1px', width: '100%', height: '25px', objectFit: 'contain' } }) : null,
+      okBg: s.sig ? '#345b80' : '#e8ebee', okFg: s.sig ? '#ffffff' : '#a4abb3',
+      exitSign: () => this.setState({ screen: 'new', step: 4 }),
+      exitRefundSign: () => this.setState({ screen: 'refund' }),
+      ...rf,
+      saveSig: () => { if (this._saving) return;
+        if (!s.ckRefund) return this.flash('환불 규정 확인에 체크해 주세요');
+        if (!s.sigImg) return this.flash('서명이 필요합니다');
+        if (s.signFrom === 'resign' && !sameAsContract()) return this.flash(RESIGN_MSG);
+        this._saving = true; setTimeout(() => { this._saving = false; }, 1500);
+        const nc = s.signFrom === 'new' ? { id: 'CT' + Date.now(), ...buildContract(), status: '등록완료' } : null;
+        if (nc) { const contracts = (s.contracts || []).concat([nc]); this.setState({ contracts, cSel: false });
+          try { localStorage.setItem('dachaeum.v3.contracts', JSON.stringify(contracts.filter(x => !x.sample))); } catch (e) { this.flash('기기 저장 공간이 부족합니다'); } }
+        this.addDoc('이용동의서', ((nc || C).event ? '이벤트 ' : '') + '프로그램 이용 동의서' + ((nc || C).docMode === 'brief' ? ' (재등록)' : ''), nc || C);
+        this.setState({ screen: 'detail', tab: 'docs', savedSig: s.sigImg, signedAt: todayStr, signFrom: '', pendingSign: false, ckRefund: false,
+          ...(nc ? { contract: nc, cStatus: '등록완료', rfUsed: null, rfVisits: null, rfVar: null, lesions: null, rfLes: null, rfAlloc: null, rfReason: '', rfExtra: '' } : {}) }); },
+      saveRefund: () => { if (this._saving) return;
+        if (RS.error) return this.flash(RS.error);
+        if (!s.sigImg) return this.flash('서명이 필요합니다');
+        this._saving = true; setTimeout(() => { this._saving = false; }, 1500);
+        const refund = { signedAt: todayStr, stage: usedAmt > 0 ? '시술 시작 후 해지' : '시술 시작 전 해지', ...rfDraft(),
+          usedCounts: U, lesAmt, trtAmt, svcAmt, usedAmt, penNum, paidEff, refundNum,
+          pays: rfPays.map((p, i) => ({ method: p.prepaid ? '선결제권 잔액 복원' : p.method, prepaid: !!p.prepaid, priorDep: !!p.priorDep, paid: Number(p.amount || 0), refund: RS.amounts[i] })) };
+        const nc = { ...C, status: '환불완료', refunded: true, refundedAt: todayStr, refund, refundDraft: null };
+        this.addDoc('환불정산서', '환불 정산서', nc);
+        this.saveContract(nc, { screen: 'detail', tab: 'docs' }); this.flash('환불이 완료되었습니다'); },
+      primary: bar.primary, secondary: bar.secondary,
+      hasSecondary: !!bar.secondary, onPrimary: bar.onP, onSecondary: bar.onS,
+      today: todayISO, lq: s.lq || '', onLq: e => this.setState({ lq: e.target.value }),
+      pFields,
+      dupShow: !!dup, dupDismiss: () => this.setState({ dupOff: (P.name || '').trim() + '|' + P.birth }),
+      dupTitle: dup ? '이름과 생년월일이 같은 환자가 이미 등록되어 있습니다' : '',
+      dupRows: (dup || []).map((d, i) => ({ sep: i ? '1px solid #f2ead8' : '0', name: d.p.name, birth: d.p.birth || '-', phone: d.p.phone || '-',
+        last: d.last + ' ' + (d.lastProg || ''), n: d.n,
+        ...(() => { const key = d.p.name + '|' + d.p.birth, on = s.dupPick === key;
+          return { ckBd: on ? '#345b80' : '#c9ced4', ckBg: on ? '#345b80' : '#ffffff',
+            use: () => on ? this.setState({ dupPick: '', patient: { ...(s.patient || {}), phone: '' } }) : this.setState({ dupPick: key, patient: { ...(s.patient || {}), ...d.p } }) }; })() })),
+      pName: isResign ? C.patient.name : (P.name || ''), pBirth: isResign ? C.patient.birth : (P.birth || ''), pPhone: isResign ? C.patient.phone : (P.phone || ''),
+      methodText: isResign ? C.method : payText,
+      isBrief, notBrief: !isBrief, briefOK, briefPriorDate: isResign ? (C.priorDate || '') : (priorFull ? priorFull.date : ''),
+      briefLabel: s.forceFull ? '전체 동의서' : '간이 동의서 · ' + (isResign ? (C.priorDate || '') : (priorFull ? priorFull.date : '')) + ' 약관', briefBtn: s.forceFull ? '간이 동의서로' : '전체 동의서로',
+      toggleForceFull: () => this.setState({ forceFull: !s.forceFull }),
+      newForPatient: () => this.setState({ screen: 'new', step: 2, patient: { ...C.patient }, prog: -1, progId: '', mSel: [], method: '', cashRcpt: '', split1: '', pay: 'full', forceFull: false, cSel: false }),
+      isSplit, hasCash, splitA: selM[0] || '', splitB: selM[1] || '', split1: s.split1 || '', split2Text: won(Math.max(0, nowNum - a1)) + '원',
+      onSplit1: e => { const v = e.target.value.replace(/[^0-9]/g, ''); this.setState({ split1: v ? Number(v).toLocaleString('ko-KR') : '' }); },
+      rcptOpts: ['발급', '미발급'].map(v => ({ label: v, ...ck(rcpt === v), fg: rcpt === v ? '#1c1f23' : '#5c636b', pick: () => this.setState({ cashRcpt: v }) })),
+      // 결제 정보: 입력은 임시(payDraft)에만 반영 → [저장] → 1차 확인 → [확인 후 저장]에서만 계약에 기록
+      ...(() => { const saved = (C && C.payments) || [], draft = s.payDraft, dirty = !!draft;
+        const doSave = () => this.setState(st => { const c = { ...st.contract, payments: st.payDraft };
+          const contracts = (st.contracts || []).map(x => x.id && x.id === c.id ? c : x);
+          try { localStorage.setItem('dachaeum.v3.contracts', JSON.stringify(contracts.filter(x => !x.sample))); } catch (err) {}
+          return { contract: c, contracts, payDraft: null, payConfirm: false }; }, () => this.flash('결제 정보가 저장되었습니다'));
+        const cur2 = draft || saved;
+        return { payDirty: dirty, payConfirm: !!s.payConfirm,
+          payAskSave: () => { if (!dirty) return;
+            if (!draft.every(p => this.payDone({ ...p, payDate: p.payDate || C.date }))) return this.flash('빈 항목을 모두 입력해야 저장할 수 있습니다');
+            this.setState({ payConfirm: true }); },
+          payCancelConfirm: () => this.setState({ payConfirm: false }), payDoSave: doSave,
+          payRevert: () => this.setState({ payDraft: null }),
+          paySaveBg: dirty ? '#345b80' : '#c3ccd6',
+          payConfirmRows: cur2.map(p => ({ title: p.method + ' ' + won(p.amount) + '원',
+            lines: p.method === '카드'
+              ? [['카드사', p.bank === '기타' ? (p.bankEtc || '-') : (p.bank || '-')], ['카드번호 뒤 4자리', p.cardNo || '-'], ['결제일', p.payDate || C.date || '-'], ['승인번호', p.approval || '-'], ['할부', p.inst || '일시불']]
+              : [['현금영수증', p.rcpt || '미발급']].concat(p.rcpt === '발급' ? [['용도', p.rcptUse || '소득공제'], ['발급번호', p.rcptNo || '-'], ['승인번호', p.rcptAppr || '-']] : []),
+            ok: this.payDone({ ...p, payDate: p.payDate || C.date }) })).map(r => ({ ...r, lines: r.lines.map(([k, v]) => ({ k, v, fg: v === '-' ? '#b3261e' : '#1c1f23' })),
+              okText: r.ok ? '입력 완료' : '빈 항목 있음', okFg: r.ok ? '#6d747c' : '#7a5115' })) }; })(),
+      payInfo: (s.payDraft || (C && C.payments) || []).map((p, i) => {
+        const upd = (k, fmt) => e => { const v = fmt ? fmt(e.target.value) : e.target.value;
+          this.setState(st => { const base = st.payDraft || (st.contract && st.contract.payments) || [];
+            return { payDraft: base.map((q, j) => j === i ? { ...q, [k]: v } : q) }; }); };
+        const isCard = p.method === '카드', needNo = !isCard && p.rcpt === '발급';
+        const savedP = ((C && C.payments) || [])[i] || p;
+        const todo = !this.payDone({ ...savedP, payDate: savedP.payDate || C.date });
+        return { method: p.method, amount: won(p.amount) + '원', isCard, isCash: !isCard, needNo, rcptText: '현금영수증 ' + (p.rcpt || '미발급'),
+          inst: p.inst || '일시불', onInst: upd('inst'), instOpts: ['일시불', '2개월', '3개월', '4개월', '5개월', '6개월', '10개월', '12개월'],
+          ...(() => { const IO = ['일시불', '2개월', '3개월', '4개월', '5개월', '6개월', '10개월', '12개월'], ix = Math.max(0, IO.indexOf(p.inst || '일시불'));
+            return { instDec: () => ix > 0 && upd('inst')({ target: { value: IO[ix - 1] } }), instInc: () => ix < IO.length - 1 && upd('inst')({ target: { value: IO[ix + 1] } }) }; })(),
+          rcptUse: p.rcptUse || '소득공제', onRcptUse: upd('rcptUse'), rcptAppr: p.rcptAppr || '', onRcptAppr: upd('rcptAppr', v => { const d = v.replace(/[^0-9]/g, '').slice(0, 9); return d.length > 6 ? d.slice(0, 3) + '-' + d.slice(3, 6) + '-' + d.slice(6) : d.length > 3 ? d.slice(0, 3) + '-' + d.slice(3) : d; }),
+          bank: p.bank || '', cardNo: p.cardNo || '', payDate: p.payDate || C.date || '', approval: p.approval || '', rcptNo: p.rcptNo || '',
+          onBank: upd('bank'), bankEtc: p.bankEtc || '', onBankEtc: upd('bankEtc'), isBankEtc: p.bank === '기타',
+          bankOpts: ['', '신한', '삼성', '현대', 'KB국민', '롯데', '하나', '우리', 'BC', 'NH농협', '기타'].map(v => ({ v, label: v || '- 선택 -' })), onCardNo: upd('cardNo', v => v.replace(/[^0-9]/g, '').slice(0, 4)), onPayDate: upd('payDate'), onApproval: upd('approval', v => { const d = v.replace(/[^0-9]/g, '').slice(0, 8); return d.length > 4 ? d.slice(0, 4) + '-' + d.slice(4) : d; }),
+          // 발급번호: 010으로 시작하면 휴대폰(3-4-4), 10자리면 사업자번호(3-2-5)
+          onRcptNo: upd('rcptNo', v => { const d = v.replace(/[^0-9]/g, '').slice(0, 11);
+            if (/^01/.test(d)) return d.length > 7 ? d.slice(0, 3) + '-' + d.slice(3, 7) + '-' + d.slice(7) : d.length > 3 ? d.slice(0, 3) + '-' + d.slice(3) : d;
+            return d.length > 5 ? d.slice(0, 3) + '-' + d.slice(3, 5) + '-' + d.slice(5, 10) : d.length > 3 ? d.slice(0, 3) + '-' + d.slice(3) : d; }),
+          ...(s.payDraft ? { stateText: '저장 안 됨', stateBg: '#eef3f8', stateFg: '#345b80' }
+            : { stateText: todo ? '입력 필요' : '입력 완료', stateBg: todo ? '#fdf6ec' : '#f2f3f5', stateFg: todo ? '#7a5115' : '#6d747c' }) }; }),
+      hasPayInfo: !!(C && C.payments && C.payments.length),
+      // 잔금 결제: 예약금 계약의 남은 금액을 결제수단별로 기록 → 결제내역(payments)·납부금액(paid)에 누적. 기존 결제 기록은 그대로 두고 추가만 함
+      ...(() => {
+        const rest = Math.max(0, Number(C.total || 0) - Number(C.paid || 0));
+        const st = s.cStatus, show = !!C.id && rest > 0 && st === '등록완료';
+        const bm = s.balMethod || '', brc = s.balRcpt || '미발급';
+        const amt = numOf(s.balAmt) || rest, date = s.balDate || todayStr;
+        const save = () => {
+          if (this._saving) return;
+          if (!bm) return this.flash('결제수단을 선택해 주세요');
+          if (amt > rest) return this.flash('남은 잔금(' + won(rest) + '원)보다 많이 기록할 수 없습니다');
+          if (!confirm(bm + ' ' + won(amt) + '원을 ' + date + ' 잔금 결제로 기록합니다.')) return;
+          this._saving = true; setTimeout(() => { this._saving = false; }, 1500);
+          // 결제내역이 없는 이전 계약은 기존 납부분을 먼저 결제내역으로 옮겨 적은 뒤 잔금을 추가
+          const base = C.payments && C.payments.length ? C.payments : [{ method: C.method || '카드', amount: Number(C.paid || 0) }];
+          const pay = { method: bm, amount: amt, balance: true, payDate: date, ...(bm === '카드' ? { bank: '', cardNo: '', approval: '' } : { rcpt: brc, rcptNo: '' }) };
+          const paid = Number(C.paid || 0) + amt;
+          this.saveContract({ ...C, payments: base.concat([pay]), paid, pay: paid >= Number(C.total || 0) ? 'full' : 'deposit',
+            method: String(C.method || '').includes(bm) ? C.method : [C.method, bm].filter(Boolean).join(' + ') },
+            { balMethod: '', balAmt: '', balDate: '', balRcpt: '' });
+          this.flash('잔금 결제가 기록되었습니다');
+        };
+        return { balShow: show, balRest: won(rest), balAmt: s.balAmt ? won(numOf(s.balAmt)) : '', balDate: date, balIsCash: !!bm && bm !== '카드',
+          balMethods: ['카드', '현금', '계좌이체'].map(m => { const on = bm === m; return { label: m, ...ck(on), ...tile(m, on), fg: on ? '#1c1f23' : '#5c636b', fw: on ? 600 : 500, pick: () => this.setState({ balMethod: m }) }; }),
+          balRcptOpts: ['발급', '미발급'].map(v => ({ label: v, ...ck(brc === v), fg: brc === v ? '#1c1f23' : '#5c636b', pick: () => this.setState({ balRcpt: v }) })),
+          onBalAmt: e => this.setState({ balAmt: e.target.value.replace(/[^0-9]/g, '') }), onBalDate: e => this.setState({ balDate: e.target.value }),
+          saveBalance: save };
+      })(),
+      // 환자별 계약(티켓) 목록 → 선택 시 계약·결제 정보 한 화면
+      ...(() => {
+        const pkOf = c => (c.patient.name || '') + '|' + (c.patient.birth || '');
+        const mine = (s.contracts || []).filter(c => pkOf(c) === pkOf(C));
+        const list = mine.length ? mine.slice().reverse() : [C];
+        const payTodo = c => (c.payments || []).some(p => !this.payDone({ ...p, payDate: p.payDate || c.date }));
+        return { cCount: list.length, cListView: !s.cSel, cDetailView: !!s.cSel,
+          backToCList: () => { if (s.payDraft && !confirm('저장하지 않은 결제 정보가 있습니다. 저장하지 않고 나갈까요?')) return; this.setState({ cSel: false, payDraft: null }); },
+          cRows: list.map((c, i) => { const todo = payTodo(c), refunded = !!c.refunded;
+            return { sep: i ? '1px solid #eef0f2' : '0', prog: c.program, refunded,
+              sub: c.date + ' 등록 · ' + (c.pay === 'deposit' ? '예약금' : '완납') + ' · ' + (c.method || '-'),
+              total: won(c.total) + '원', st: (c.payments && c.payments.length) ? (todo ? '결제정보 입력 필요' : '결제정보 입력 완료') : '결제정보 없음',
+              stBg: todo ? '#fdf6ec' : '#f2f3f5', stFg: todo ? '#7a5115' : '#6d747c',
+              open: () => this.setState({ contract: c, cStatus: this.statusOf(c), cSel: true, ...this.rfStateOf(c) }) }; }) };
+      })(),
+      isEvent: isResign ? !!C.event : isEventCur, notEvent: !(isResign ? !!C.event : isEventCur),
+      evFirst, evFirstText: isResign ? (C.firstDate || '') : evFirst, evExpiryText: isResign ? C.expiry : evExpiry,
+      onEvFirst: e => this.setState({ evFirst: e.target.value }),
+      docDate: isResign ? C.date : todayISO, docDateKo: koDate(todayISO),
+      expiryText: isEventCur && !isResign ? evExpiry : (cur && /선결제/.test([cur.name, cur.cat, cur.sub].join(' '))) ? '기간 제한 없음 (선결제권)' : addYear(todayISO),
+      ckBd: s.ckRefund ? '#345b80' : '#8d949b', ckBg: s.ckRefund ? '#345b80' : '#ffffff',
+      rfInitial: (C.patient.name || '?').slice(0, 1),
+      docList: docList.slice(docPg.start, docPg.start + docPg.size), docPg, hasDocs: docList.length > 0, noDocs: !docList.length,
+      yes: true, delAsk: !!s.delAsk, stop: e => e.stopPropagation(),
+      delMsg: s.delAsk && s.delAsk !== 'all' ? '이 문서가 삭제되며 되돌릴 수 없습니다.' : '이 환자의 계약 정보와 모든 문서가 삭제되며 되돌릴 수 없습니다.',
+      delStart: () => this.setState({ delAsk: 'all' }), delCancel: () => this.setState({ delAsk: false }),
+      delConfirm: () => { const one = s.delAsk && s.delAsk !== 'all';
+        const docs = (s.docs || []).filter(d => one ? d.id !== s.delAsk : d.pk !== curPk);
+        try { localStorage.setItem('dachaeum.v3.docs', JSON.stringify(docs)); } catch (e) {}
+        this.setState(one ? { docs, delAsk: false, pdfId: null } : { docs, contract: null, delAsk: false, justSaved: null, pdfId: null, screen: 'list' }); this.flash('삭제되었습니다'); },
+      pdfOpen: !!pdfDoc, pdfTitle: pdfDoc ? pdfDoc.title : '', pdfFile: pdfDoc ? pdfDoc.fileName : '',
+      pdfVerLabel: pdfDoc ? (pdfDoc.superseded ? '대체됨' : '최종본') + ' · v' + pdfDoc.version : '',
+      pdfVerBg: pdfDoc && pdfDoc.superseded ? '#f2f3f5' : 'rgba(52,91,128,0.08)', pdfVerFg: pdfDoc && pdfDoc.superseded ? '#8d949b' : '#2a4b6b',
+      pdfEl: pdfDoc ? React.createElement('div', { id: 'pdfv', style: { width: 740, flex: 'none', background: '#ffffff', boxShadow: '0 2px 14px rgba(28,31,35,0.12)' },
+        dangerouslySetInnerHTML: { __html: this.cleanHtml(pdfDoc.html) || '<div style="padding:60px;text-align:center;color:#8d949b">문서 내용이 없습니다</div>' } }) : null,
+      closePdf: () => this.setState({ pdfId: null }),
+      sharePdf: () => this.sharePdf(),
+      pdfBtnLabel: s.pdfReady === true ? 'PDF 저장·공유·인쇄' : s.pdfReady === 'fail' ? 'PDF 생성 실패' : 'PDF 만드는 중…',
+      pdfBtnOp: s.pdfReady === true ? 1 : 0.55,
+      hasPrimary: !!bar.primary,
+      toast: s.toast
+    };
+  }
+}

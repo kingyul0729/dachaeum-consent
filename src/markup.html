@@ -1,0 +1,1453 @@
+<!DOCTYPE html>
+<html><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=820, initial-scale=1, maximum-scale=1, minimum-scale=1, user-scalable=no, viewport-fit=cover">
+<script src="96f5dfa0-f270-4a8a-b5b3-cf8f08ce6cb8"></script>
+
+</head>
+<body>
+
+<x-dc>
+<helmet data-dc-atomics="">
+<meta name="format-detection" content="telephone=no">
+<meta name="viewport" content="width=820, initial-scale=1, maximum-scale=1, minimum-scale=1, user-scalable=no, viewport-fit=cover">
+<script>['https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css','https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@400;500;600;700&display=swap'].forEach(function(u){var l=document.createElement('link');l.rel='stylesheet';l.href=u;document.head.appendChild(l);});</script>
+<style>
+html,body{margin:0;overscroll-behavior:none;touch-action:pan-y;overflow-x:hidden;max-width:100vw;background:#f2f3f5;-webkit-font-smoothing:antialiased;-webkit-text-size-adjust:100%;-webkit-tap-highlight-color:transparent;-webkit-user-select:none;user-select:none}
+a{color:#345b80}a:hover{color:#1f3e5c}
+canvas{touch-action:none}
+input,select,textarea{font-size:16px!important}
+body,body *{word-break:keep-all;overflow-wrap:break-word;line-break:strict}
+#pdfv>div{height:auto!important;overflow:visible!important}
+#pdfv>div{zoom:1!important}
+#pdfprint{position:fixed;left:-10000px;top:0;width:740px;background:#ffffff}
+#pdfprint img{display:block;width:100%;height:auto}
+@media print{@page{size:A4 portrait;margin:4mm}html.pdfprinting,html.pdfprinting body{height:auto!important;min-height:0!important;max-height:none!important;overflow:hidden!important;background:#ffffff!important;margin:0!important;padding:0!important}html.pdfprinting body>*:not(#pdfprint){display:none!important}html.pdfprinting #pdfprint{position:static!important;left:auto!important;width:100%!important;height:287mm!important;max-height:287mm!important;overflow:hidden!important;margin:0!important;display:flex!important;justify-content:center!important;align-items:flex-start!important;page-break-after:avoid;break-after:avoid;page-break-inside:avoid;break-inside:avoid}html.pdfprinting #pdfprint img{width:auto!important;height:auto!important;width:100%!important;max-width:100%!important;max-height:287mm!important;object-fit:contain}}
+</style>
+<script src="342bc4f3-869a-431b-aa1d-bb2c41618d08"></script>
+<script src="165d204f-42e3-4ae1-8958-09d0f085e36e"></script>
+<script src="b7b8b679-e155-4cd2-9eac-7f7f6b42d8dc"></script>
+<script src="edb5dea4-ba1e-43cb-a651-9a1926ce54e0"></script>
+<script src="6e4fe348-9c15-4758-8ef5-4ac9b4ddad79"></script>
+</helmet>
+
+<div style="width:100%;max-width:820px;height:1180px;position:relative;overflow:hidden;background:#f2f3f5;font-family:Pretendard,'Apple SD Gothic Neo',system-ui,sans-serif;color:#1c1f23;display:flex;flex-direction:column">
+
+<sc-if value="{{ isChrome }}" hint-placeholder-val="{{ true }}">
+<div style="height:64px;flex:none;display:flex;align-items:center;justify-content:space-between;padding:0 28px;border-bottom:1px solid #e3e6ea;background:#ffffff">
+  <div style="display:flex;align-items:center;gap:14px">
+    <sc-if value="{{ showBack }}" hint-placeholder-val="{{ true }}">
+      <div sc-camel-on-click="{{ goList }}" style="width:40px;height:40px;margin-left:-10px;border-radius:20px;display:flex;align-items:center;justify-content:center;font-size:17px;color:#4a5158;cursor:pointer" style-hover="background:#f4f6f8"><svg width="20" height="20" sc-camel-view-box="0 0 24 24" fill="none" stroke="currentColor" sc-camel-stroke-width="1.5" sc-camel-stroke-linecap="round" sc-camel-stroke-linejoin="round"><path d="M15 18l-6-6 6-6"></path></svg></div>
+    </sc-if>
+    <img src="bcc49fd9-4598-4233-952e-b1cedf5f773e" alt="DACHAEUM DERMATOLOGY CLINIC" style="height:30px;width:auto;display:block">
+  </div>
+  <div style="display:flex;align-items:center;gap:10px">
+    <div style="font-size:12.5px;color:#7b828a;font-variant-numeric:tabular-nums">{{ today }}</div>
+  </div>
+</div>
+</sc-if>
+
+<div style="flex:1;min-height:0;display:flex;flex-direction:column;background:#f2f3f5">
+
+<!-- ================= 목록 ================= -->
+<sc-if value="{{ isList }}" hint-placeholder-val="{{ true }}">
+<div style="flex:1;min-height:0;display:flex;flex-direction:column;padding:22px 28px 0">
+  <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px">
+    <div style="flex:0 1 280px;min-width:0;height:46px;box-sizing:border-box;border:1px solid #d5d9de;border-radius:10px;display:flex;align-items:center;gap:10px;padding:0 14px;background:#ffffff;color:#8d949b"><svg width="18" height="18" sc-camel-view-box="0 0 24 24" fill="none" stroke="currentColor" sc-camel-stroke-width="1.5" sc-camel-stroke-linecap="round" sc-camel-stroke-linejoin="round"><circle cx="11" cy="11" r="7"></circle><path d="M20 20l-3.5-3.5"></path></svg><input type="text" placeholder="환자명 · 생년월일 검색" value="{{ lq }}" sc-camel-on-input="{{ onLq }}" style="flex:1;min-width:0;border:0;outline:0;background:transparent;font-family:inherit;color:#1c1f23"></div>
+  </div>
+
+  <div style="border:1px solid #e9ebee;border-radius:16px;overflow:hidden;background:#ffffff">
+    <div style="display:grid;grid-template-columns:120px minmax(0,1fr) 110px 110px 132px;gap:0;background:#f7f8f9;border-bottom:1px solid #e3e6ea;padding:0 18px">
+      <div sc-camel-on-click="{{ sortName }}" style="font-size:12.5px;font-weight:600;color:#6d747c;padding:13px 0;cursor:pointer;display:flex;align-items:center;gap:5px;user-select:none">환자<span style="font-size:10px;color:{{ nameArrFg }}">{{ nameArr }}</span></div>
+      <div style="font-size:12.5px;font-weight:600;color:#6d747c;padding:13px 0">프로그램</div>
+      <div style="font-size:12.5px;font-weight:600;color:#6d747c;padding:13px 0;text-align:right">계약금액</div>
+      <div sc-camel-on-click="{{ sortDate }}" style="font-size:12.5px;font-weight:600;color:#6d747c;padding:13px 0;cursor:pointer;display:flex;align-items:center;justify-content:flex-end;gap:5px;user-select:none">등록일<span style="font-size:10px;color:{{ dateArrFg }}">{{ dateArr }}</span></div>
+      <div style="font-size:12.5px;font-weight:600;color:#6d747c;padding:13px 0;text-align:right">상태</div>
+    </div>
+    <sc-for list="{{ rows }}" as="r" hint-placeholder-count="0">
+      <div sc-camel-on-click="{{ r.open }}" style="display:grid;grid-template-columns:120px minmax(0,1fr) 110px 110px 132px;align-items:center;padding:0 18px;border-bottom:1px solid #eef0f2;cursor:pointer" style-hover="background:#fafbfc">
+        <div style="padding:15px 0">
+          <div style="font-size:15px;font-weight:600;letter-spacing:-0.01em">{{ r.name }}</div>
+        </div>
+        <div style="padding:15px 0;padding-right:14px">
+          <div style="display:flex;align-items:center;gap:8px;min-width:0"><sc-if value="{{ r.prepaid }}" hint-placeholder-val="{{ false }}"><span style="flex:none;padding:2px 8px;border-radius:10px;border:1px solid #c9d3de;font-size:11.5px;font-weight:600;color:#345b80;white-space:nowrap;font-variant-numeric:tabular-nums">{{ r.prepaidTag }}</span></sc-if><div style="font-size:14px;letter-spacing:-0.01em;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ r.progText }}</div></div>
+        </div>
+        <div style="padding:15px 0;text-align:right;font-size:14px;font-variant-numeric:tabular-nums">{{ r.amount }}</div>
+        <div style="padding:15px 0;text-align:right;font-size:13px;color:#4a5158;font-variant-numeric:tabular-nums">{{ r.date }}</div>
+        <div style="padding:15px 0;display:flex;justify-content:flex-end">
+          <sc-if value="{{ r.refunded }}" hint-placeholder-val="{{ false }}"><span style="padding:4px 11px;border-radius:10px;font-size:12px;font-weight:600;white-space:nowrap;background:#f2f3f5;color:#8d949b">환불완료</span></sc-if>
+        </div>
+      </div>
+    </sc-for>
+    <sc-if value="{{ noRows }}" hint-placeholder-val="{{ true }}"><div style="padding:56px 0;text-align:center;font-size:14px;color:#8d949b">등록된 동의서가 없습니다.</div></sc-if>
+  </div>
+  <sc-if value="{{ listPg.show }}" hint-placeholder-val="{{ false }}">
+    <div style="display:flex;align-items:center;justify-content:center;gap:4px;padding:16px 0">
+      <div sc-camel-on-click="{{ listPg.prev }}" style="width:40px;height:40px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:{{ listPg.prevFg }}"><svg width="20" height="20" sc-camel-view-box="0 0 24 24" fill="none" stroke="currentColor" sc-camel-stroke-width="1.5" sc-camel-stroke-linecap="round" sc-camel-stroke-linejoin="round"><path d="M15 19l-7-7 7-7"></path></svg></div>
+      <sc-for list="{{ listPg.pages }}" as="pg" hint-placeholder-count="3">
+        <div sc-camel-on-click="{{ pg.go }}" style="min-width:40px;height:40px;padding:0 4px;box-sizing:border-box;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:14px;font-variant-numeric:tabular-nums;cursor:{{ pg.cur }};background:{{ pg.bg }};color:{{ pg.fg }}">{{ pg.label }}</div>
+      </sc-for>
+      <div sc-camel-on-click="{{ listPg.next }}" style="width:40px;height:40px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:{{ listPg.nextFg }}"><svg width="20" height="20" sc-camel-view-box="0 0 24 24" fill="none" stroke="currentColor" sc-camel-stroke-width="1.5" sc-camel-stroke-linecap="round" sc-camel-stroke-linejoin="round"><path d="M9 5l7 7-7 7"></path></svg></div>
+    </div>
+  </sc-if>
+
+</div>
+</sc-if>
+
+<!-- ================= 신규 동의서 4단계 ================= -->
+<sc-if value="{{ isNew }}" hint-placeholder-val="{{ true }}">
+<div style="flex:1;min-height:0;display:flex;flex-direction:column">
+  <div style="flex:none;padding:18px 28px 16px;border-bottom:1px solid #eef0f2">
+    <div style="display:flex;align-items:center;gap:0">
+      <sc-for list="{{ steps }}" as="s" hint-placeholder-count="4">
+        <div style="display:flex;align-items:center;flex:1">
+          <div style="display:flex;align-items:center;gap:10px">
+            <div style="width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12.5px;font-weight:600;flex:none;background:{{ s.dotBg }};color:{{ s.dotFg }};border:1.5px solid {{ s.dotBd }}"><sc-if value="{{ s.done }}" hint-placeholder-val="{{ false }}"><svg width="14" height="14" sc-camel-view-box="0 0 24 24" fill="none" stroke="currentColor" sc-camel-stroke-width="2.2" sc-camel-stroke-linecap="round" sc-camel-stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg></sc-if><sc-if value="{{ s.notDone }}" hint-placeholder-val="{{ true }}">{{ s.n }}</sc-if></div>
+            <div style="font-size:13.5px;font-weight:{{ s.weight }};color:{{ s.fg }};letter-spacing:-0.01em">{{ s.label }}</div>
+          </div>
+          <div style="flex:1;height:1.5px;margin:0 12px;background:{{ s.lineBg }}"></div>
+        </div>
+      </sc-for>
+    </div>
+  </div>
+
+  <div style="flex:1;min-height:0;display:flex">
+    <!-- 좌: 입력 -->
+    <div style="width:451px;flex:none;box-sizing:border-box;padding:22px 18px;display:flex;flex-direction:column;gap:18px;overflow-x:hidden;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;touch-action:pan-y">
+
+      <sc-if value="{{ st1 }}" hint-placeholder-val="{{ true }}">
+        <div style="font-size:16px;font-weight:600;letter-spacing:-0.02em">환자 정보</div>
+        <div style="display:flex;flex-direction:column;gap:12px;background:#ffffff;border:1px solid #e9ebee;border-radius:16px;padding:18px 18px 18px 10px">
+          <sc-for list="{{ pFields }}" as="f" hint-placeholder-count="3">
+            <label style="display:grid;grid-template-columns:84px minmax(0,1fr);align-items:center;column-gap:12px;row-gap:4px;min-width:0">
+              <div style="font-size:13.5px;color:#4a5158;font-weight:600;text-align:right">{{ f.label }} <span style="color:#d64545">*</span></div>
+              <input type="text" inputmode="{{ f.im }}" placeholder="{{ f.ph }}" value="{{ f.value }}" sc-camel-on-input="{{ f.onInput }}" style="width:100%;min-width:0;height:48px;box-sizing:border-box;border:1px solid {{ f.bd }};border-radius:8px;padding:0 14px;background:{{ f.bg }};font-family:inherit;color:#1c1f23;outline:0;font-variant-numeric:tabular-nums" style-focus="border-color:#345b80;box-shadow:0 0 0 3px rgba(52,91,128,0.12)">
+              <sc-if value="{{ f.hasErr }}" hint-placeholder-val="{{ false }}"><div style="grid-column:2;font-size:12px;color:#d64545">{{ f.errText }}</div></sc-if>
+            </label>
+          </sc-for>
+        </div>
+        <sc-if value="{{ dupShow }}" hint-placeholder-val="{{ false }}">
+          <div style="border:1px solid #e6d2ab;background:#fdf8ef;border-radius:10px;overflow:hidden">
+            <div style="display:flex;align-items:center;gap:10px;padding:12px 16px;border-bottom:1px solid #efe2c6">
+              <svg width="18" height="18" sc-camel-view-box="0 0 24 24" fill="none" stroke="#7a5115" sc-camel-stroke-width="1.5" sc-camel-stroke-linecap="round" sc-camel-stroke-linejoin="round"><circle cx="12" cy="12" r="9"></circle><path d="M12 8v5M12 16.5v.5"></path></svg>
+              <div style="flex:1;font-size:13.5px;font-weight:600;color:#7a5115">{{ dupTitle }}</div>
+              <div sc-camel-on-click="{{ dupDismiss }}" style="width:40px;height:40px;margin-right:-10px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:#a08a60"><svg width="16" height="16" sc-camel-view-box="0 0 24 24" fill="none" stroke="currentColor" sc-camel-stroke-width="1.5" sc-camel-stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"></path></svg></div>
+            </div>
+            <sc-for list="{{ dupRows }}" as="d" hint-placeholder-count="1">
+              <div style="display:flex;align-items:center;gap:12px;padding:10px 16px;border-top:{{ d.sep }};background:#ffffff">
+                <div style="flex:1;min-width:0">
+                  <div style="font-size:14px;font-weight:600;font-variant-numeric:tabular-nums">{{ d.name }} · {{ d.birth }}<span style="font-weight:500;color:#7b828a"> · {{ d.phone }}</span></div>
+                  <div style="font-size:12.5px;color:#7b828a;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">최근 {{ d.last }} · 계약 {{ d.n }}건</div>
+                </div>
+                <div sc-camel-on-click="{{ d.use }}" style="display:flex;align-items:center;justify-content:center;width:40px;height:40px;margin-right:-10px;cursor:pointer;flex:none">
+                  <div style="width:20px;height:20px;border-radius:5px;box-sizing:border-box;border:1.5px solid {{ d.ckBd }};background:{{ d.ckBg }};color:#ffffff;display:flex;align-items:center;justify-content:center"><svg width="12" height="12" sc-camel-view-box="0 0 24 24" fill="none" stroke="currentColor" sc-camel-stroke-width="2.6" sc-camel-stroke-linecap="round" sc-camel-stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg></div>
+                </div>
+              </div>
+            </sc-for>
+          </div>
+        </sc-if>
+      </sc-if>
+
+      <sc-if value="{{ st2 }}" hint-placeholder-val="{{ true }}">
+        <div style="font-size:16px;font-weight:600;letter-spacing:-0.02em">프로그램 선택</div>
+        <div style="height:52px;flex:none;box-sizing:border-box;border:1px solid #d5d9de;border-radius:10px;display:flex;align-items:center;gap:10px;padding:0 14px;background:#ffffff;color:#8d949b"><svg width="18" height="18" sc-camel-view-box="0 0 24 24" fill="none" stroke="currentColor" sc-camel-stroke-width="1.5" sc-camel-stroke-linecap="round" sc-camel-stroke-linejoin="round"><circle cx="11" cy="11" r="7"></circle><path d="M20 20l-3.5-3.5"></path></svg>
+          <input type="text" placeholder="프로그램명 · 코드 검색" value="{{ pq }}" sc-camel-on-input="{{ onPq }}" style="flex:1;min-width:0;border:0;outline:0;background:transparent;font-family:inherit;font-size:14.5px;color:#1c1f23">
+        </div>
+        <div style="display:flex;flex:none;overflow-x:auto;overflow-y:hidden;touch-action:pan-x;overscroll-behavior:contain;border-bottom:1px solid #e3e6ea;-webkit-overflow-scrolling:touch;scrollbar-width:none;gap:2px;padding-top:4px">
+          <sc-for list="{{ pTabs }}" as="t" hint-placeholder-count="9">
+            <div sc-camel-on-click="{{ t.onClick }}" style="flex:none;min-width:64px;height:42px;padding:0 16px;box-sizing:border-box;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:600;cursor:pointer;white-space:nowrap;color:{{ t.fg }};background:{{ t.tbg }};border:1px solid {{ t.tbd }};border-bottom:0;border-radius:10px 10px 0 0;margin-bottom:-1px" style-hover="color:#1c1f23">{{ t.label }}</div>
+          </sc-for>
+        </div>
+        <sc-if value="{{ hasPSubs }}" hint-placeholder-val="{{ false }}">
+          <div style="display:flex;flex-wrap:wrap;gap:0 22px;margin-top:-2px">
+            <sc-for list="{{ pSubs }}" as="sb" hint-placeholder-count="4">
+              <div sc-camel-on-click="{{ sb.onClick }}" style="height:34px;display:flex;align-items:center;font-size:13.5px;cursor:pointer;color:{{ sb.fg }};font-weight:{{ sb.fw }};border-bottom:2px solid {{ sb.line }}">{{ sb.label }}</div>
+            </sc-for>
+          </div>
+        </sc-if>
+        <sc-if value="{{ hasPAxes }}" hint-placeholder-val="{{ false }}">
+          <div style="display:flex;flex-wrap:wrap;gap:8px 20px;align-items:center">
+            <sc-for list="{{ pAxes }}" as="ax" hint-placeholder-count="1">
+              <div style="display:flex;align-items:center;gap:9px">
+                <div style="font-size:12.5px;color:#6d747c;flex:none">{{ ax.label }}</div>
+                <sc-raw-select value="{{ ax.sel }}" sc-camel-on-change="{{ ax.onChange }}" style="height:40px;min-width:110px;padding:0 32px 0 12px;border:1px solid #d5d9de;border-radius:10px;-webkit-appearance:none;appearance:none;background:#ffffff url(data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2216%22%20height%3D%2216%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22%236d747c%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpath%20d%3D%22M6%209l6%206%206-6%22%2F%3E%3C%2Fsvg%3E) no-repeat right 10px center;font-family:inherit;font-size:13px;color:#2b3036;outline:0">
+                  <sc-for list="{{ ax.opts }}" as="o" hint-placeholder-count="3">
+                    <option value="{{ o.v }}">{{ o.label }}</option>
+                  </sc-for>
+                </sc-raw-select>
+              </div>
+            </sc-for>
+          </div>
+        </sc-if>
+        <sc-if value="{{ hasPSubs }}" hint-placeholder-val="{{ true }}"><div style="height:1px;background:#eceff2"></div></sc-if>
+        <sc-if value="{{ svcOn }}" hint-placeholder-val="{{ false }}">
+          <div style="display:flex;flex-direction:column;gap:10px">
+            <sc-for list="{{ svcRows }}" as="sv" hint-placeholder-count="2">
+              <div style="padding:15px 18px;border:1px solid #e3e6ea;border-radius:11px;display:flex;flex-direction:column;gap:8px">
+                <div style="display:flex;align-items:center;justify-content:space-between">
+                  <div style="font-size:15px;font-weight:600;letter-spacing:-0.01em">{{ sv.name }}</div>
+                  
+                </div>
+                <div style="display:flex;flex-wrap:wrap;gap:6px 16px">
+                  <sc-for list="{{ sv.lines }}" as="l" hint-placeholder-count="4">
+                    <div style="font-size:13px;color:#5c636b;font-variant-numeric:tabular-nums">{{ l.t }}</div>
+                  </sc-for>
+                </div>
+                <div style="font-size:12.5px;color:#8d949b">{{ sv.note }}</div>
+              </div>
+            </sc-for>
+          </div>
+        </sc-if>
+        <sc-if value="{{ showProgList }}" hint-placeholder-val="{{ true }}">
+        <div style="display:flex;flex-direction:column;gap:6px;flex:none">
+          <sc-for list="{{ programs }}" as="p" hint-placeholder-count="4">
+            <sc-if value="{{ p.isSec }}" hint-placeholder-val="{{ false }}">
+              <div style="font-size:13px;font-weight:700;color:#6d747c;padding:10px 2px 0">{{ p.secTitle }}</div>
+            </sc-if>
+            <sc-if value="{{ p.isPick }}" hint-placeholder-val="{{ false }}">
+            <div style="border-radius:10px;border:1px solid {{ p.bd }};background:#ffffff;overflow:hidden">
+              <div style="padding:8px 14px;background:#f7f8f9;border-bottom:1px solid #e3e6ea;font-size:13.5px;font-weight:700;color:#2b3036;letter-spacing:-0.01em">{{ p.head }}</div>
+              <div style="padding:10px 14px;background:{{ p.bg }};display:flex;flex-direction:column;gap:8px">
+                <div style="display:flex;align-items:baseline;gap:14px">
+                  <span style="flex:1;font-size:16px;font-weight:700;color:#1c1f23">{{ p.area }}</span>
+                  <span style="font-size:12.5px;color:#8d949b">{{ p.cnt }}</span>
+                  <span style="font-size:15px;font-weight:600;font-variant-numeric:tabular-nums">{{ p.price }}</span>
+                </div>
+                <div style="display:flex;flex-wrap:wrap;gap:8px">
+                  <sc-for list="{{ p.btns }}" as="b" hint-placeholder-count="2">
+                    <div sc-camel-on-click="{{ b.pick }}" style="height:44px;padding:0 16px;box-sizing:border-box;border-radius:10px;display:flex;align-items:center;cursor:pointer;border:1px solid {{ b.bd }};background:{{ b.bg }};color:{{ b.fg }};font-size:14px;font-weight:600">{{ b.label }}</div>
+                  </sc-for>
+                </div>
+              </div>
+            </div>
+            </sc-if>
+            <sc-if value="{{ p.isDev }}" hint-placeholder-val="{{ false }}">
+            <div style="border-radius:10px;border:1px solid #e9ebee;background:#ffffff;overflow:hidden">
+              <div style="padding:8px 14px;background:#f7f8f9;border-bottom:1px solid #e3e6ea;font-size:13.5px;font-weight:700;color:#2b3036;letter-spacing:-0.01em"><div style="display:flex;align-items:center;gap:8px"><span>{{ p.dev }}</span><sc-if value="{{ p.isEv }}" hint-placeholder-val="{{ false }}"><span style="padding:2px 8px;border-radius:10px;background:#b3261e;color:#ffffff;font-size:11px;font-weight:700">이벤트</span></sc-if></div></div>
+              <sc-for list="{{ p.rows }}" as="r" hint-placeholder-count="2">
+                <div style="border-top:{{ r.sep }};background:{{ r.bg }}">
+                  <div sc-camel-on-click="{{ r.pick }}" style="min-height:48px;padding:0 14px;cursor:pointer;display:flex;align-items:center;gap:12px">
+                    <div style="width:20px;height:20px;border-radius:50%;flex:none;border:1.5px solid {{ r.dot }};display:flex;align-items:center;justify-content:center"><div style="width:10px;height:10px;border-radius:50%;background:{{ r.inner }}"></div></div>
+                    <div style="flex:1;display:flex;align-items:baseline;gap:6px"><span style="font-size:16px;font-weight:700;color:#1c1f23">{{ r.areaMain }}</span><span style="font-size:13.5px;color:#7b828a">{{ r.areaRest }}</span></div>
+                    <div style="font-size:12.5px;color:#8d949b">{{ r.cnt }}</div>
+                    <div style="font-size:15px;font-weight:600;font-variant-numeric:tabular-nums;min-width:0">{{ r.price }}</div>
+                  </div>
+                  <sc-if value="{{ r.showOpts }}" hint-placeholder-val="{{ false }}">
+                    <div style="padding:0 14px 10px 46px"><div style="display:flex;align-items:center;gap:8px;height:48px;padding:0 4px;border-radius:26px;background:#f5f7f9;max-width:300px">
+  <div sc-camel-on-click="{{ r.step.dec }}" style="width:44px;height:44px;flex:none;border-radius:22px;display:flex;align-items:center;justify-content:center;cursor:pointer;background:#eef2f6;color:{{ r.step.decFg }}"><svg width="18" height="18" sc-camel-view-box="0 0 24 24" fill="none" stroke="currentColor" sc-camel-stroke-width="1.5" sc-camel-stroke-linecap="round"><path d="M5 12h14"></path></svg></div>
+  <div style="flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;justify-content:center;font-variant-numeric:tabular-nums"><span style="font-size:15px;font-weight:700;color:#1c1f23">{{ r.step.label }}</span><span style="font-size:12px;color:#7b828a">{{ r.step.sub }}</span></div>
+  <div sc-camel-on-click="{{ r.step.inc }}" style="width:44px;height:44px;flex:none;border-radius:22px;display:flex;align-items:center;justify-content:center;cursor:pointer;background:#eef2f6;color:{{ r.step.incFg }}"><svg width="18" height="18" sc-camel-view-box="0 0 24 24" fill="none" stroke="currentColor" sc-camel-stroke-width="1.5" sc-camel-stroke-linecap="round"><path d="M12 5v14M5 12h14"></path></svg></div>
+</div></div>
+                  </sc-if>
+                </div>
+              </sc-for>
+            </div>
+            </sc-if>
+            <sc-if value="{{ p.notDev }}" hint-placeholder-val="{{ true }}">
+            <div style="border-radius:10px;border:1px solid {{ p.bd }};background:{{ p.bg }};display:flex;flex-direction:column">
+            <div sc-camel-on-click="{{ p.pick }}" style="min-height:52px;box-sizing:border-box;padding:8px 14px;cursor:pointer;display:flex;align-items:center;gap:12px">
+              <div style="width:20px;height:20px;border-radius:50%;flex:none;border:1.5px solid {{ p.dot }};display:flex;align-items:center;justify-content:center"><div style="width:10px;height:10px;border-radius:50%;background:{{ p.inner }}"></div></div>
+              <div style="flex:1;min-width:0">
+                <div style="font-size:15px;font-weight:600;letter-spacing:-0.01em">{{ p.name }}</div>
+                <sc-if value="{{ p.hasDiff }}" hint-placeholder-val="{{ false }}"><div style="font-size:12.5px;color:#345b80;margin-top:2px;text-wrap:pretty">{{ p.unit }}</div></sc-if>
+              </div>
+              <div style="font-size:15px;font-weight:600;font-variant-numeric:tabular-nums;flex:none;white-space:nowrap">{{ p.price }}</div>
+            </div>
+            <sc-if value="{{ p.showOpts }}" hint-placeholder-val="{{ false }}">
+              <div style="display:flex;flex-wrap:wrap;gap:8px;padding:0 14px 10px 46px">
+                <sc-for list="{{ p.opts }}" as="o" hint-placeholder-count="2">
+                  <div sc-camel-on-click="{{ o.pick }}" style="height:44px;padding:0 16px;box-sizing:border-box;border-radius:8px;display:flex;align-items:center;gap:8px;cursor:pointer;border:1px solid {{ o.bd }};background:{{ o.bg }};color:{{ o.fg }};font-size:14px;font-weight:600;font-variant-numeric:tabular-nums">{{ o.label }}</div>
+                </sc-for>
+              </div>
+            </sc-if>
+            </div>
+            </sc-if>
+          </sc-for>
+        </div>
+        </sc-if>
+        <sc-if value="{{ addNeed }}" hint-placeholder-val="{{ false }}">
+          <div style="display:flex;align-items:center;gap:10px">
+            <div style="font-size:12.5px;color:#6d747c;flex:none">추가 부위 (1부위)</div>
+            <sc-raw-select value="{{ addArea }}" sc-camel-on-change="{{ onAddArea }}" style="height:40px;min-width:170px;padding:0 32px 0 12px;border:1px solid #d5d9de;border-radius:10px;-webkit-appearance:none;appearance:none;background:#ffffff url(data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2216%22%20height%3D%2216%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22%236d747c%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpath%20d%3D%22M6%209l6%206%206-6%22%2F%3E%3C%2Fsvg%3E) no-repeat right 10px center;font-family:inherit;font-size:13px;color:#2b3036;outline:0">
+              <option value="">부위 선택</option>
+              <sc-for list="{{ addAreaOpts }}" as="o" hint-placeholder-count="6">
+                <option value="{{ o.v }}">{{ o.label }}</option>
+              </sc-for>
+            </sc-raw-select>
+          </div>
+        </sc-if>
+        <sc-if value="{{ isLesion }}" hint-placeholder-val="{{ false }}">
+          <div style="border:1px solid #e3e6ea;border-radius:11px;padding:16px 18px;display:flex;flex-direction:column;gap:12px">
+            <div style="display:flex;justify-content:space-between;align-items:baseline">
+              <div style="font-size:14px;font-weight:600">흑자 병변 등록</div>
+              <div style="font-size:12px;color:#8d949b">1개 기준 · 피코 532 1회 + 레블라이트 SI 4회</div>
+            </div>
+            <div style="display:flex;gap:14px;font-size:12.5px;color:#5c636b;font-variant-numeric:tabular-nums">
+              <div>1cm 이하 330,000원</div><div>2cm 이하 440,000원</div><div>3cm 이하 550,000원</div>
+            </div>
+            <sc-for list="{{ lesionRows }}" as="l" hint-placeholder-count="1">
+              <div style="display:flex;flex-direction:column;gap:8px;padding-bottom:10px;border-bottom:1px solid #f1f3f5">
+                <div style="display:flex;align-items:center;gap:8px">
+                  <div style="width:22px;flex:none;font-size:13px;color:#7b828a;text-align:center">{{ l.no }}</div>
+                  <input value="{{ l.site }}" sc-camel-on-change="{{ l.onSite }}" placeholder="치료 부위 입력" style="flex:1;min-width:0;height:44px;box-sizing:border-box;padding:0 12px;border:1px solid #d5d9de;border-radius:10px;background:#fff;font-family:inherit;color:#1c1f23">
+                  <sc-if value="{{ l.canDel }}" hint-placeholder-val="{{ false }}"><div sc-camel-on-click="{{ l.del }}" style="height:44px;padding:0 6px;display:flex;align-items:center;font-size:12.5px;color:#8d949b;cursor:pointer;flex:none">삭제</div></sc-if>
+                </div>
+                <div style="display:flex;align-items:center;gap:10px;padding-left:30px">
+                  <div style="position:relative;width:110px;flex:none"><input value="{{ l.size }}" sc-camel-on-change="{{ l.onSize }}" sc-camel-input-mode="decimal" placeholder="크기" style="width:100%;box-sizing:border-box;height:44px;padding:0 34px 0 12px;border:1px solid #d5d9de;border-radius:10px;font-family:inherit;text-align:right"><span style="position:absolute;right:11px;top:13px;font-size:13px;color:#8d949b">cm</span></div>
+                  <div style="flex:1;min-width:0;font-size:13px;color:#5c636b">{{ l.tier }}</div>
+                  <div style="font-size:14px;font-weight:600;text-align:right;font-variant-numeric:tabular-nums;flex:none">{{ l.priceText }}</div>
+                </div>
+              </div>
+            </sc-for>
+            <div style="display:flex;justify-content:space-between;align-items:center;border-top:1px solid #eef0f2;padding-top:12px">
+              <div style="font-size:13.5px;font-weight:600;color:#4a5158">병변 개수</div>
+              <div style="width:200px"><div style="display:flex;align-items:center;gap:8px;height:52px;padding:0 4px;border-radius:26px;background:#f5f7f9;max-width:300px">
+  <div sc-camel-on-click="{{ lesionStep.dec }}" style="width:44px;height:44px;flex:none;border-radius:22px;display:flex;align-items:center;justify-content:center;cursor:pointer;background:#eef2f6;color:{{ lesionStep.decFg }}"><svg width="18" height="18" sc-camel-view-box="0 0 24 24" fill="none" stroke="currentColor" sc-camel-stroke-width="1.5" sc-camel-stroke-linecap="round"><path d="M5 12h14"></path></svg></div>
+  <div style="flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;justify-content:center;font-variant-numeric:tabular-nums"><span style="font-size:15px;font-weight:700;color:#1c1f23">{{ lesionStep.label }}</span></div>
+  <div sc-camel-on-click="{{ lesionStep.inc }}" style="width:44px;height:44px;flex:none;border-radius:22px;display:flex;align-items:center;justify-content:center;cursor:pointer;background:#eef2f6;color:{{ lesionStep.incFg }}"><svg width="18" height="18" sc-camel-view-box="0 0 24 24" fill="none" stroke="currentColor" sc-camel-stroke-width="1.5" sc-camel-stroke-linecap="round"><path d="M12 5v14M5 12h14"></path></svg></div>
+</div></div>
+            </div>
+          </div>
+        </sc-if>
+      </sc-if>
+
+      <sc-if value="{{ st3 }}" hint-placeholder-val="{{ true }}">
+        <div style="height:1px;background:#eceff2"></div>
+        <div style="font-size:15px;font-weight:600;letter-spacing:-0.02em">선택 구성</div>
+        <div style="border:1px solid #e3e6ea;border-radius:11px;overflow:hidden">
+          <sc-if value="{{ isLesion }}" hint-placeholder-val="{{ false }}">
+          <div style="display:grid;grid-template-columns:52px minmax(0,1fr) 72px 110px;column-gap:6px;background:#f7f8f9;border-bottom:1px solid #e3e6ea;padding:0 16px"><div style="font-size:12px;font-weight:600;color:#6d747c;padding:11px 0">구분</div><div style="font-size:12px;font-weight:600;color:#6d747c;padding:11px 0">구성 항목</div><div style="font-size:12px;font-weight:600;color:#6d747c;padding:11px 0;text-align:right">개수</div><div style="font-size:12px;font-weight:600;color:#6d747c;padding:11px 0;text-align:right">병변별 금액</div></div>
+          <sc-for list="{{ items }}" as="it" hint-placeholder-count="1">
+            <div style="display:grid;grid-template-columns:52px minmax(0,1fr) 72px 110px;column-gap:6px;padding:0 16px;border-bottom:1px solid #eef0f2"><div style="padding:12px 0;font-size:12.5px;color:#7b828a;">{{ it.kind }}</div><div style="padding:12px 0;font-size:14px;white-space:pre-line">{{ it.name }}</div><div style="padding:12px 0;font-size:13.5px;text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap">{{ it.count }}</div><div style="padding:12px 0;font-size:13.5px;text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap">{{ it.unit }}</div></div>
+          </sc-for>
+          </sc-if>
+          <sc-if value="{{ notLesion }}" hint-placeholder-val="{{ true }}">
+          <div style="padding:10px 16px 0;font-size:12.5px;font-weight:600;color:#4a5158">1. 기본 시술</div>
+          <div style="display:grid;grid-template-columns:52px minmax(0,1fr) 72px 110px;column-gap:6px;border-bottom:1px solid #e3e6ea;padding:0 16px"><div style="font-size:12px;font-weight:600;color:#6d747c;padding:11px 0">구분</div><div style="font-size:12px;font-weight:600;color:#6d747c;padding:11px 0">구성 항목</div><div style="font-size:12px;font-weight:600;color:#6d747c;padding:11px 0;text-align:right">횟수</div><div style="font-size:12px;font-weight:600;color:#6d747c;padding:11px 0;text-align:right"><sc-if value="{{ isManualProg }}" hint-placeholder-val="{{ false }}">환불용 1회 정상가</sc-if><sc-if value="{{ notManualProg }}" hint-placeholder-val="{{ true }}">1회 정상가</sc-if></div></div>
+          <sc-for list="{{ baseRows }}" as="it" hint-placeholder-count="3">
+            <div style="display:grid;grid-template-columns:52px minmax(0,1fr) 72px 110px;column-gap:6px;padding:0 16px;border-bottom:1px solid #eef0f2"><div style="padding:12px 0;font-size:12.5px;color:#7b828a;">{{ it.kind }}</div><div style="padding:12px 0;font-size:14px;white-space:pre-line">{{ it.name }}</div><div style="padding:12px 0;font-size:13.5px;text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap">{{ it.qtyText }}</div><div style="padding:12px 0;font-size:13.5px;text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap">{{ it.priceText }}</div></div>
+          </sc-for>
+          <sc-if value="{{ hasSwap }}" hint-placeholder-val="{{ false }}"><div style="display:flex;flex-direction:column;gap:3px;padding:9px 16px;border-bottom:1px solid #eef0f2"><sc-for list="{{ swapNotes }}" as="w" hint-placeholder-count="1"><div style="font-size:12.5px;color:#345b80">{{ w.text }}</div></sc-for></div></sc-if>
+          <sc-if value="{{ hasExtra }}" hint-placeholder-val="{{ false }}">
+          <div style="padding:14px 16px 0;font-size:12.5px;font-weight:600;color:#4a5158">2. 서비스 · 추가</div>
+          <div style="display:grid;grid-template-columns:52px minmax(0,1fr) 72px 110px;column-gap:6px;border-bottom:1px solid #e3e6ea;padding:0 16px"><div style="font-size:12px;font-weight:600;color:#6d747c;padding:11px 0">구분</div><div style="font-size:12px;font-weight:600;color:#6d747c;padding:11px 0">항목</div><div style="font-size:12px;font-weight:600;color:#6d747c;padding:11px 0;text-align:right">제공 횟수</div><div style="font-size:12px;font-weight:600;color:#6d747c;padding:11px 0;text-align:right">추가금</div></div>
+          <sc-for list="{{ extraRows }}" as="it" hint-placeholder-count="2">
+            <div style="display:grid;grid-template-columns:52px minmax(0,1fr) 72px 110px;column-gap:6px;padding:0 16px;border-bottom:1px solid #eef0f2"><div style="padding:12px 0;font-size:12.5px;color:#7b828a;">{{ it.kind }}</div><div style="padding:12px 0;font-size:14px;white-space:pre-line">{{ it.name }}</div><div style="padding:12px 0;font-size:13.5px;text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap">{{ it.qtyText }}</div><div style="padding:12px 0;font-size:13.5px;text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap">{{ it.feeText }}</div></div>
+          </sc-for>
+          </sc-if>
+          </sc-if>
+          <sc-if value="{{ showSum }}" hint-placeholder-val="{{ true }}"><div style="display:grid;grid-template-columns:1fr 104px;padding:0 16px;border-bottom:1px solid #eef0f2;background:#fbfcfd">
+            <div style="padding:12px 0;font-size:13.5px;color:#5c636b">{{ sumLabel }}</div>
+            <div style="padding:12px 0;font-size:13.5px;text-align:right;font-variant-numeric:tabular-nums">{{ sumValue }}</div>
+          </div></sc-if>
+          <div style="display:grid;grid-template-columns:1fr 104px;padding:0 16px;background:#f6f9fc">
+            <div style="padding:14px 0;font-size:14px;font-weight:600">프로그램 총 결제금액</div>
+            <div style="padding:14px 0;font-size:14px;font-weight:600;text-align:right;font-variant-numeric:tabular-nums;color:#345b80">{{ totalPlain }}</div>
+          </div>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ st4 }}" hint-placeholder-val="{{ true }}">
+        <div style="display:flex;flex-direction:column;gap:4px;padding:2px 2px 4px">
+          <div style="font-size:14px;font-weight:500;color:#6d747c">{{ payLabel }}</div>
+          <div style="font-size:26px;font-weight:700;letter-spacing:-0.03em;color:#1c1f23;font-variant-numeric:tabular-nums;line-height:1.3">{{ payHero }}</div>
+          <div style="font-size:13px;color:#8d949b;font-variant-numeric:tabular-nums">최종 계약금액 {{ totalText }}</div>
+        </div>
+        <sc-if value="{{ briefOK }}" hint-placeholder-val="{{ false }}">
+          <div style="display:flex;align-items:center;gap:10px;padding:4px 4px 4px 14px;border:1px solid #d5dde6;background:#f6f9fc;border-radius:8px">
+            <div style="flex:1;min-width:0;font-size:13px;color:#2a4b6b">{{ briefLabel }}</div>
+            <div sc-camel-on-click="{{ toggleForceFull }}" style="height:40px;padding:0 12px;border-radius:8px;display:flex;align-items:center;font-size:13px;font-weight:600;color:#345b80;cursor:pointer;white-space:nowrap;border:1px solid #c9d3de;background:#ffffff">{{ briefBtn }}</div>
+          </div>
+        </sc-if>
+        <sc-if value="{{ isEvent }}" hint-placeholder-val="{{ false }}">
+          <div style="display:flex;align-items:center;gap:12px;padding:14px 16px;border:1px solid #f0c9c6;background:#fdf6f5;border-radius:8px">
+            <span style="padding:2px 8px;border-radius:10px;background:#b3261e;color:#ffffff;font-size:11px;font-weight:700;flex:none">이벤트</span>
+            <div style="font-size:13.5px;color:#4a5158;flex:1">첫 시술일</div>
+            <input type="date" value="{{ evFirst }}" sc-camel-on-change="{{ onEvFirst }}" style="height:44px;padding:0 12px;border:1px solid #d5d9de;border-radius:10px;font-family:inherit;color:#1c1f23;background:#ffffff">
+            <div style="font-size:13px;color:#6d747c;white-space:nowrap">만료 {{ evExpiryText }}</div>
+          </div>
+        </sc-if>
+        <sc-if value="{{ discShow }}" hint-placeholder-val="{{ false }}">
+          <div style="flex:none;border:1px solid #e9ebee;border-radius:12px;overflow:hidden;background:#ffffff">
+            <div style="padding:11px 16px;border-bottom:1px solid #eef0f2;font-size:14px;font-weight:600;color:#1c1f23">할인</div>
+            <div style="display:flex;flex-direction:column;gap:10px;padding:12px 16px">
+              <sc-if value="{{ discLocked }}" hint-placeholder-val="{{ false }}"><div style="font-size:13px;color:#b3261e">이벤트가 적용 · 추가 할인 불가</div></sc-if>
+              <sc-if value="{{ discOpen }}" hint-placeholder-val="{{ true }}">
+                <div style="display:flex;flex-wrap:wrap;gap:6px">
+                  <sc-for list="{{ discOpts }}" as="o" hint-placeholder-count="4">
+                    <div sc-camel-on-click="{{ o.pick }}" style="height:40px;padding:0 14px;box-sizing:border-box;border-radius:10px;display:flex;align-items:center;font-size:13.5px;font-weight:600;cursor:pointer;border:1px solid {{ o.bd }};background:{{ o.bg }};color:{{ o.fg }}">{{ o.label }}</div>
+                  </sc-for>
+                </div>
+                <sc-if value="{{ isPreDisc }}" hint-placeholder-val="{{ false }}">
+                  <div style="display:flex;align-items:center;gap:6px">
+                    <div style="width:84px;flex:none;font-size:13px;color:#5c636b;text-align:right;padding-right:6px">선결제권 기준</div>
+                    <sc-for list="{{ tierOpts }}" as="o" hint-placeholder-count="3">
+                      <div sc-camel-on-click="{{ o.pick }}" style="height:40px;min-width:56px;padding:0 12px;box-sizing:border-box;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:13.5px;font-weight:600;cursor:pointer;border:1px solid {{ o.bd }};background:{{ o.bg }};color:{{ o.fg }}">{{ o.label }}</div>
+                    </sc-for>
+                  </div>
+                </sc-if>
+                <sc-if value="{{ isRetDisc }}" hint-placeholder-val="{{ false }}">
+                  <div style="display:flex;align-items:center;gap:6px">
+                    <div style="width:84px;flex:none;font-size:13px;color:#5c636b;text-align:right;padding-right:6px">인정 기간</div>
+                    <sc-for list="{{ retOpts }}" as="o" hint-placeholder-count="2">
+                      <div sc-camel-on-click="{{ o.pick }}" style="height:40px;padding:0 12px;box-sizing:border-box;border-radius:10px;display:flex;align-items:center;font-size:13.5px;font-weight:600;cursor:pointer;border:1px solid {{ o.bd }};background:{{ o.bg }};color:{{ o.fg }}">{{ o.label }}</div>
+                    </sc-for>
+                  </div>
+                </sc-if>
+              </sc-if>
+              <sc-if value="{{ hasDiscNote }}" hint-placeholder-val="{{ false }}"><div style="font-size:12.5px;color:#6d747c">{{ discNote }}</div></sc-if>
+              <div style="display:flex;flex-direction:column;gap:4px;font-variant-numeric:tabular-nums">
+                <sc-if value="{{ hasHairOff }}" hint-placeholder-val="{{ false }}">
+                  <div style="display:flex;justify-content:space-between;font-size:13px;color:#6d747c"><span>정상가 합계</span><span>{{ hairSumText }}</span></div>
+                  <div style="display:flex;justify-content:space-between;font-size:13px;color:#6d747c"><span>{{ hairOffLabel }}</span><span>{{ hairOffText }}</span></div>
+                </sc-if>
+                <sc-if value="{{ hasDisc }}" hint-placeholder-val="{{ false }}">
+                  <div style="display:flex;justify-content:space-between;font-size:13px;color:#6d747c"><span>등록가</span><span>{{ discBaseText }}</span></div>
+                  <div style="display:flex;justify-content:space-between;font-size:13px;color:#6d747c"><span>할인</span><span>{{ discLabel }}</span></div>
+                </sc-if>
+              </div>
+            </div>
+          </div>
+        </sc-if>
+        <div style="border:1px solid #e9ebee;border-radius:12px;background:#ffffff">
+          <div style="display:flex;align-items:baseline;justify-content:space-between;gap:10px;padding:14px 16px;border-bottom:1px solid #eef0f2">
+            <div style="font-size:14px;font-weight:600">최종 계약금액</div>
+            <div style="font-size:16px;font-weight:700;font-variant-numeric:tabular-nums">{{ totalText }}</div>
+          </div>
+          <sc-if value="{{ needAmount }}" hint-placeholder-val="{{ false }}">
+          <div style="display:flex;flex-direction:column;gap:10px;padding:14px 16px;border-bottom:1px solid #eef0f2">
+            <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;max-width:420px">
+            <label style="display:flex;flex-direction:column;gap:6px;min-width:0">
+              <span style="font-size:12.5px;font-weight:500;color:#4a5158">총 등록금액</span>
+              <span style="display:flex;align-items:center;gap:6px;height:40px;box-sizing:border-box;border:1px solid #d5d9de;border-radius:8px;padding:0 12px;background:#ffffff">
+                <input type="text" sc-camel-input-mode="numeric" placeholder="0" value="{{ amountInput }}" sc-camel-on-input="{{ onAmount }}" style="flex:1;min-width:0;height:100%;border:0;outline:0;padding:0;background:transparent;font-family:inherit;font-size:14px;text-align:right;color:#1c1f23;font-variant-numeric:tabular-nums">
+                <span style="font-size:13px;color:#8a9199">원</span>
+              </span>
+            </label>
+            <label style="display:flex;flex-direction:column;gap:6px;min-width:0">
+              <span style="font-size:12.5px;font-weight:500;color:#4a5158">환불용 1회 정상가</span>
+              <span style="display:flex;align-items:center;gap:6px;height:40px;box-sizing:border-box;border:1px solid #d5d9de;border-radius:8px;padding:0 12px;background:#ffffff">
+                <input type="text" sc-camel-input-mode="numeric" placeholder="0" value="{{ unitInput }}" sc-camel-on-input="{{ onUnit }}" style="flex:1;min-width:0;height:100%;border:0;outline:0;padding:0;background:transparent;font-family:inherit;font-size:14px;text-align:right;color:#1c1f23;font-variant-numeric:tabular-nums">
+                <span style="font-size:13px;color:#8a9199">원</span>
+              </span>
+            </label>
+            </div>
+          </div>
+          </sc-if>
+          <div style="padding:14px 16px">
+            <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;max-width:420px">
+            <sc-if value="{{ canUseBal }}" hint-placeholder-val="{{ false }}">
+            <label style="display:flex;flex-direction:column;gap:6px;min-width:0">
+              <span style="font-size:12.5px;font-weight:500;color:#4a5158">기존 선결제권 잔액</span>
+              <span style="display:flex;align-items:center;gap:6px;height:40px;box-sizing:border-box;border:1px solid #d5d9de;border-radius:8px;padding:0 12px;background:#ffffff">
+                <input type="text" sc-camel-input-mode="numeric" placeholder="0" value="{{ preBalIn }}" sc-camel-on-input="{{ onPreBal }}" style="flex:1;min-width:0;height:100%;border:0;outline:0;padding:0;background:transparent;font-family:inherit;font-size:14px;text-align:right;color:#1c1f23;font-variant-numeric:tabular-nums">
+                <span style="font-size:13px;color:#8a9199">원</span>
+              </span>
+            </label>
+            </sc-if>
+            <label style="display:flex;flex-direction:column;gap:6px;min-width:0">
+              <span style="font-size:12.5px;font-weight:500;color:#4a5158">기납부 예약금</span>
+              <span style="display:flex;align-items:center;gap:6px;height:40px;box-sizing:border-box;border:1px solid #d5d9de;border-radius:8px;padding:0 12px;background:#ffffff">
+                <input type="text" sc-camel-input-mode="numeric" placeholder="0" value="{{ priorDepIn }}" sc-camel-on-input="{{ onPriorDep }}" style="flex:1;min-width:0;height:100%;border:0;outline:0;padding:0;background:transparent;font-family:inherit;font-size:14px;text-align:right;color:#1c1f23;font-variant-numeric:tabular-nums">
+                <span style="font-size:13px;color:#8a9199">원</span>
+              </span>
+            </label>
+            </div>
+          </div>
+        </div>
+        <div style="border:1px solid #e9ebee;border-radius:12px;overflow:hidden;background:#ffffff">
+          <div style="display:flex;flex-direction:column;gap:8px;padding:14px 16px;border-bottom:1px solid #eef0f2">
+            <div style="font-size:13px;font-weight:600;color:#4a5158">결제 방식</div>
+            <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px">
+              <div sc-camel-on-click="{{ pickFull }}" style="box-sizing:border-box;border-radius:12px;padding:12px 14px;display:flex;flex-direction:column;gap:4px;cursor:pointer;border:1.5px solid {{ fullBd }};background:{{ fullBg }}"><span style="font-size:15px;font-weight:600;color:{{ fullFg }}">완납 결제</span><span style="font-size:13px;color:#6d747c;font-variant-numeric:tabular-nums">{{ fullText }}</span></div>
+              <div sc-camel-on-click="{{ pickDeposit }}" style="box-sizing:border-box;border-radius:12px;padding:12px 14px;display:flex;flex-direction:column;gap:4px;cursor:pointer;border:1.5px solid {{ depBd }};background:{{ depBg }}"><span style="font-size:15px;font-weight:600;color:{{ depFg }}">예약금 결제 (10%)</span><span style="font-size:13px;color:#6d747c;font-variant-numeric:tabular-nums">{{ depText }}</span></div>
+            </div>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:8px;padding:14px 16px">
+            <div style="display:flex;align-items:baseline;justify-content:space-between;gap:8px"><span style="font-size:13px;font-weight:600;color:#4a5158">결제 수단</span><span style="font-size:12px;color:#8d949b">2개 선택 시 분할결제</span></div>
+            <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px">
+              <sc-for list="{{ methods }}" as="m" hint-placeholder-count="3">
+                <div sc-camel-on-click="{{ m.pick }}" style="height:80px;box-sizing:border-box;border-radius:12px;padding:12px 14px;display:flex;flex-direction:column;justify-content:space-between;cursor:pointer;border:1.5px solid {{ m.tbd }};background:{{ m.tbg }}"><div style="height:24px;display:flex;align-items:center">{{ m.icon }}</div><span style="font-size:15px;font-weight:{{ m.fw }};color:{{ m.fg }};letter-spacing:-0.01em">{{ m.label }}</span></div>
+              </sc-for>
+            </div>
+          </div>
+          <sc-if value="{{ isSplit }}" hint-placeholder-val="{{ false }}">
+            <div style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:10px;padding:12px 16px;border-top:1px solid #eef0f2;background:#fafbfc">
+              <div style="display:flex;align-items:center;gap:8px"><span style="font-size:13px;color:#4a5158;flex:none">{{ splitA }}</span><input type="text" sc-camel-input-mode="numeric" placeholder="금액" value="{{ split1 }}" sc-camel-on-input="{{ onSplit1 }}" style="flex:1;min-width:0;height:40px;border:1px solid #d5d9de;border-radius:10px;padding:0 10px;font-family:inherit;text-align:right;background:#ffffff"><span style="font-size:13px;color:#6d747c">원</span></div>
+              <div style="display:flex;align-items:center;justify-content:space-between;gap:8px"><span style="font-size:13px;color:#4a5158">{{ splitB }}</span><span style="font-size:14px;font-weight:600;font-variant-numeric:tabular-nums">{{ split2Text }}</span></div>
+            </div>
+          </sc-if>
+          <sc-if value="{{ hasCash }}" hint-placeholder-val="{{ false }}">
+            <div style="display:flex;align-items:center;gap:16px;padding:0 16px;height:48px;border-top:1px solid #eef0f2">
+              <span style="font-size:13px;color:#4a5158;flex:1">현금영수증</span>
+              <sc-for list="{{ rcptOpts }}" as="o" hint-placeholder-count="2">
+                <div sc-camel-on-click="{{ o.pick }}" style="display:flex;align-items:center;gap:8px;cursor:pointer;height:44px">
+                  <div style="width:20px;height:20px;border-radius:50%;flex:none;box-sizing:border-box;border:1.5px solid {{ o.ckBd }};background:{{ o.ckBg }};color:{{ o.ckFg }};display:flex;align-items:center;justify-content:center"><svg width="12" height="12" sc-camel-view-box="0 0 24 24" fill="none" stroke="currentColor" sc-camel-stroke-width="2.6" sc-camel-stroke-linecap="round" sc-camel-stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg></div>
+                  <span style="font-size:13.5px;color:{{ o.fg }}">{{ o.label }}</span>
+                </div>
+              </sc-for>
+            </div>
+          </sc-if>
+          <sc-if value="{{ hasRest }}" hint-placeholder-val="{{ false }}"><div style="display:flex;justify-content:space-between;padding:10px 16px 0;border-top:1px solid #eef0f2;font-size:13px;color:#6d747c"><span>미수금 (잔금)</span><span style="font-variant-numeric:tabular-nums;color:#2b3036">{{ payRest }}</span></div></sc-if>
+          <sc-if value="{{ hasLeft }}" hint-placeholder-val="{{ false }}"><div style="display:flex;justify-content:space-between;padding:10px 16px 0;font-size:13px;color:#345b80"><span>차감 후 남은 금액</span><span style="font-variant-numeric:tabular-nums;font-weight:600">{{ leftText }}</span></div></sc-if>
+          <div style="display:flex;align-items:baseline;justify-content:space-between;gap:10px;padding:14px 16px;margin-top:10px;border-top:1px solid #e3e6ea;background:#fafbfc">
+            <span style="font-size:14px;font-weight:600;color:#1c1f23">{{ payLabel }}</span>
+            <span style="font-size:22px;font-weight:700;letter-spacing:-0.02em;font-variant-numeric:tabular-nums;color:#1c1f23">{{ payNow }}</span>
+          </div>
+        </div>
+      </sc-if>
+    </div>
+
+    <!-- 우: 실시간 미리보기 -->
+    <div style="flex:1;min-width:0;border-left:1px solid #eef0f2;background:#f7f8f9;display:flex;flex-direction:column;align-items:center;padding:16px 14px">
+      <sc-if value="{{ st2 }}" hint-placeholder-val="{{ false }}">
+      <div style="width:100%;display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:10px">
+        <div style="font-size:12.5px;font-weight:600;color:#6d747c">{{ pvHead }}</div>
+        <div sc-camel-on-click="{{ togglePv }}" style="height:40px;padding:0 12px;box-sizing:border-box;border-radius:8px;display:flex;align-items:center;font-size:13.5px;font-weight:600;color:#345b80;cursor:pointer;border:1px solid #c9d3de;background:#ffffff">{{ pvBtn }}</div>
+      </div>
+      </sc-if>
+      <sc-if value="{{ showPv }}" hint-placeholder-val="{{ true }}">
+      <sc-if value="{{ notSt2 }}" hint-placeholder-val="{{ true }}">
+      <div style="width:340px;display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:6px;margin-bottom:10px">
+        <div style="font-size:12.5px;font-weight:600;color:#6d747c;white-space:nowrap">실시간 미리보기</div>
+        <div style="font-size:11.5px;color:#6d747c;padding:4px 9px;background:#ffffff;border:1px solid #e3e6ea;border-radius:6px;white-space:nowrap">{{ docKind }} · A4 1장</div>
+      </div>
+      </sc-if>
+      <div style="width:340px;flex:none;height:481px;overflow-x:hidden;overflow-y:auto;-webkit-overflow-scrolling:touch;touch-action:pan-y;background:#fff;border:1px solid #d5d9de;box-shadow:0 2px 10px rgba(28,31,35,.06)">
+        <div style="width:340px;overflow:hidden">
+        <div ref="{{ pvRef }}" style="width:740px;transform:translateZ(0) scale(0.4595);transform-origin:top left;will-change:transform;backface-visibility:hidden;margin-bottom:{{ pvMb }}px">
+          <div style="width:740px;max-width:740px;overflow:hidden;min-height:1046px;padding:30px 40px;box-sizing:border-box;display:flex;flex-direction:column;word-break:keep-all;overflow-wrap:break-word;font-family:'Noto Serif KR',serif;color:#1c1f23">
+            <div style="text-align:center;font-size:23px;font-weight:600;letter-spacing:0.06em"><sc-if value="{{ isEvent }}" hint-placeholder-val="{{ false }}">이벤트 </sc-if>프로그램 이용 동의서</div>
+            <div style="text-align:center;font-size:11.5px;color:#7b828a;margin-top:7px;font-family:Pretendard,sans-serif">다채움피부과의원 · 등록일 {{ docDate }}</div>
+            <div style="height:1.5px;background:#1c1f23;margin:9px 0 10px"></div>
+            <div style="display:grid;grid-template-columns:132px 1fr 132px 1fr;border-top:1px solid #d5d9de;font-size:var(--tbl,11.5px);line-height:1.5;white-space:nowrap">
+              <div style="padding:6px 14px;background:#f7f8f9;border-bottom:1px solid #d5d9de;font-weight:500">성명</div><div style="padding:6px 14px;border-bottom:1px solid #d5d9de">{{ pName }}</div>
+              <div style="padding:6px 14px;background:#f7f8f9;border-bottom:1px solid #d5d9de;font-weight:500">생년월일</div><div style="padding:6px 14px;border-bottom:1px solid #d5d9de">{{ pBirth }}</div>
+              <div style="padding:6px 14px;background:#f7f8f9;border-bottom:1px solid #d5d9de;font-weight:500">연락처</div><div style="padding:6px 14px;border-bottom:1px solid #d5d9de">{{ pPhone }}</div>
+              <div style="padding:6px 14px;background:#f7f8f9;border-bottom:1px solid #d5d9de;font-weight:500">결제수단</div><div style="padding:6px 14px;border-bottom:1px solid #d5d9de">{{ methodText }}</div>
+              <div style="padding:6px 14px;background:#f7f8f9;border-bottom:1px solid #d5d9de;font-weight:500">프로그램</div><div style="padding:6px 14px;border-bottom:1px solid #d5d9de">{{ progName }}</div>
+              <div style="padding:6px 14px;background:#f7f8f9;border-bottom:1px solid #d5d9de;font-weight:500">프로그램 총 결제금액</div><div style="padding:6px 14px;border-bottom:1px solid #d5d9de"><b style="font-weight:700;font-size:12.5px;color:#1d4f8a">{{ totalText }}</b></div>
+<sc-if value="{{ hasDiscDoc }}" hint-placeholder-val="{{ false }}"><div style="padding:6px 14px;background:#f7f8f9;border-bottom:1px solid #d5d9de;font-weight:500">적용 할인</div><div style="padding:6px 14px;border-bottom:1px solid #d5d9de">{{ discDocText }}</div></sc-if>
+            </div>
+            <div style="margin-top:12px;font-size:12px;font-weight:600">1. 프로그램 구성</div>
+<sc-if value="{{ isLesion }}" hint-placeholder-val="{{ false }}">
+<div style="margin-top:7px;border-top:1.2px solid #1c1f23;font-size:var(--tbl,11.5px);line-height:1.5;font-variant-numeric:tabular-nums">
+<div style="display:grid;grid-template-columns:44px minmax(0,1fr) 70px 90px 60px 120px;background:#f7f8f9;border-bottom:1px solid #d5d9de;font-weight:500">
+<div style="padding:8px 10px;text-align:center">No</div><div style="padding:6px 14px">치료 부위</div><div style="padding:6px 14px;text-align:right">크기</div><div style="padding:6px 14px">적용 기준</div><div style="padding:6px 10px;text-align:right">개수</div><div style="padding:6px 20px 6px 14px;text-align:right">병변별 계약금액</div>
+</div>
+<sc-for list="{{ lesionRows }}" as="l" hint-placeholder-count="2">
+<div style="display:grid;grid-template-columns:44px minmax(0,1fr) 70px 90px 60px 120px;border-bottom:1px solid #e3e6ea">
+<div style="padding:8px 10px;text-align:center">{{ l.no }}</div><div style="padding:6px 14px;font-weight:600;color:#111418">{{ l.siteText }}</div><div style="padding:6px 14px;text-align:right">{{ l.sizeText }}</div><div style="padding:6px 14px">{{ l.tier }}</div><div style="padding:6px 10px;text-align:right">1개</div><div style="padding:6px 20px 6px 14px;text-align:right">{{ l.priceText }}</div>
+</div>
+</sc-for>
+<div style="border-bottom:1.2px solid #1c1f23"></div>
+</div>
+<div style="margin-top:10px;background:#fcfcfc;border:1px solid #eaeeef;border-radius:8px;padding:var(--cp,12px 16px);display:flex;flex-direction:column;gap:var(--sg,6px);font-size:var(--tx,11px);line-height:var(--lh,1.55);letter-spacing:-0.017em;text-wrap:pretty;color:#2b2f34">
+<div style="display:flex;flex-direction:column;gap:var(--bg,2px)"><div style="font-weight:700;font-size:var(--tt,12px);color:#111418;margin-bottom:var(--tb,1px)">[흑자 치료 등록 및 가격 기준]</div><div style="padding-left:11px;display:flex;gap:5px;margin-top:var(--bg,0px)"><div>•</div><div>흑자 치료는 병변 1개를 등록 및 가격 산정의 기본 단위로 하며, 등록 시 병변의 크기 및 개수를 확인하여 <span style="background:linear-gradient(100deg, rgba(255,236,120,0) 0%, rgba(255,236,120,0.55) 2%, rgba(255,232,110,0.5) 50%, rgba(255,236,120,0.55) 97%, rgba(255,236,120,0) 100%) 0 62% / 100% 68% no-repeat;padding:0 2px;margin:0 -1px;border-radius:2px 5px 3px 6px;-webkit-box-decoration-break:clone;box-decoration-break:clone;color:#1f2226">각 병변의 크기에 따라</span> 병변별 계약금액을 산정합니다.</div></div><div style="padding-left:11px;display:flex;gap:5px;margin-top:var(--bg,0px)"><div>•</div><div>병변별 계약금액은 해당 병변에 대한 전체 금액으로, <span style="background:linear-gradient(100deg, rgba(255,190,215,0) 0%, rgba(255,190,215,0.45) 2%, rgba(255,184,210,0.4) 50%, rgba(255,190,215,0.45) 97%, rgba(255,190,215,0) 100%) 0 62% / 100% 68% no-repeat;padding:0 2px;margin:0 -1px;border-radius:2px 5px 3px 6px;-webkit-box-decoration-break:clone;box-decoration-break:clone;color:#1f2226">부분 PICO 532 1회 및 부분 REVLITE SI 4회 치료를 포함</span>합니다.</div></div><div style="padding-left:11px;display:flex;gap:5px;font-size:0.9em;color:#50565d"><div>※</div><div>각 레이저 회차는 개별 시술권으로 분할 판매하지 아니하며, 계약금액을 총 5회로 균등 분할하여 회차별 금액으로 산정하지 않습니다.</div></div></div>
+<div style="display:flex;flex-direction:column;gap:var(--bg,2px)"><div style="font-weight:700;font-size:var(--tt,12px);color:#111418;margin-bottom:var(--tb,1px)">[이용기간]</div><div style="padding-left:11px;display:flex;gap:5px;margin-top:var(--bg,0px)"><div>•</div><div>등록된 흑자 치료는 결제 완료일로부터 <span style="background:linear-gradient(100deg, rgba(255,236,120,0) 0%, rgba(255,236,120,0.55) 2%, rgba(255,232,110,0.5) 50%, rgba(255,236,120,0.55) 97%, rgba(255,236,120,0) 100%) 0 62% / 100% 68% no-repeat;padding:0 2px;margin:0 -1px;border-radius:2px 5px 3px 6px;-webkit-box-decoration-break:clone;box-decoration-break:clone;color:#1f2226">1년 이내에 진행</span>하여야 합니다.</div></div></div>
+<div style="display:flex;flex-direction:column;gap:var(--bg,2px)"><div style="font-weight:700;font-size:var(--tt,12px);color:#111418;margin-bottom:var(--tb,1px)">[환불 규정]</div><div style="padding-left:11px;margin-top:var(--bg,0px)">• 시술 시작 전 해지 시 환불금액은 아래 기준으로 산정합니다.</div><div style="margin:4px 0 0 11px;background:#ffffff;border:1px solid #e3e6ea;border-radius:6px;display:flex;flex-direction:column"><div style="display:grid;grid-template-columns:84px minmax(0,1fr);gap:10px;padding:7px 12px;align-items:baseline"><div style="font-weight:700;color:#111418">시술 시작 전</div><div style="font-variant-numeric:tabular-nums">환불금액 = 실제 납부금액 − <span style="background:linear-gradient(100deg, rgba(255,190,215,0) 0%, rgba(255,190,215,0.45) 2%, rgba(255,184,210,0.4) 50%, rgba(255,190,215,0.45) 97%, rgba(255,190,215,0) 100%) 0 62% / 100% 68% no-repeat;padding:0 2px;margin:0 -1px;border-radius:2px 5px 3px 6px;-webkit-box-decoration-break:clone;box-decoration-break:clone;color:#1f2226">위약금 10%</span></div></div></div><div style="padding-left:11px;display:flex;gap:5px;font-size:0.9em;color:#50565d"><div>※</div><div>위약금은 실제 납부 금액이 아닌 총 계약금액의 10%를 기준으로 산정합니다.</div></div><div style="padding-left:11px;display:flex;gap:5px;margin-top:var(--bg,0px)"><div>•</div><div>시술이 시작된 병변은 해당 병변에 대한 치료가 시작된 것으로 보며, <span style="background:linear-gradient(100deg, rgba(255,190,215,0) 0%, rgba(255,190,215,0.45) 2%, rgba(255,184,210,0.4) 50%, rgba(255,190,215,0.45) 97%, rgba(255,190,215,0) 100%) 0 62% / 100% 68% no-repeat;padding:0 2px;margin:0 -1px;border-radius:2px 5px 3px 6px;-webkit-box-decoration-break:clone;box-decoration-break:clone;color:#1f2226">해당 병변의 계약금액 전액을 이용금액으로 산정</span>합니다. <span style="background:linear-gradient(100deg, rgba(255,190,215,0) 0%, rgba(255,190,215,0.45) 2%, rgba(255,184,210,0.4) 50%, rgba(255,190,215,0.45) 97%, rgba(255,190,215,0) 100%) 0 62% / 100% 68% no-repeat;padding:0 2px;margin:0 -1px;border-radius:2px 5px 3px 6px;-webkit-box-decoration-break:clone;box-decoration-break:clone;color:#1f2226">미이용 REVLITE SI 회차는 별도의 환불 단위로 산정하지 않습니다.</span></div></div><div style="padding-left:11px;display:flex;gap:5px;margin-top:var(--bg,0px)"><div>•</div><div>여러 병변을 등록한 경우, 시술하지 않은 병변은 환불 정산 대상에 포함하며, 실제 납부금액에서 위약금 10%(총 계약금액 기준)와 이용금액을 공제한 금액을 최종 환불금액으로 산정합니다.</div></div></div>
+<div style="display:flex;flex-direction:column;gap:var(--bg,2px)"><div style="font-weight:700;font-size:var(--tt,12px);color:#111418;margin-bottom:var(--tb,1px)">[환불 방법]</div><div style="padding-left:11px;display:flex;gap:5px;margin-top:var(--bg,0px)"><div>•</div><div>환불은 <span style="background:linear-gradient(100deg, rgba(255,236,120,0) 0%, rgba(255,236,120,0.55) 2%, rgba(255,232,110,0.5) 50%, rgba(255,236,120,0.55) 97%, rgba(255,236,120,0) 100%) 0 62% / 100% 68% no-repeat;padding:0 2px;margin:0 -1px;border-radius:2px 5px 3px 6px;-webkit-box-decoration-break:clone;box-decoration-break:clone;color:#1f2226">원 결제 수단</span>을 기준으로 처리함을 원칙으로 합니다.</div></div><div style="padding-left:11px;display:flex;gap:5px;font-size:0.9em;color:#50565d"><div>※</div><div>신용카드사 등 결제 대행기관의 사정에 따라 실제 환불 반영 시점은 다를 수 있습니다.</div></div></div>
+
+</div>
+</sc-if>
+<sc-if value="{{ notLesion }}" hint-placeholder-val="{{ true }}">
+            <div style="margin-top:7px;border-top:1.2px solid #1c1f23;font-size:var(--tbl,11.5px);line-height:1.5;font-variant-numeric:tabular-nums">
+<div style="padding:8px 14px 5px;font-weight:600;border-bottom:1px solid #d5d9de">기본 시술</div>
+<div style="display:flex;background:#f7f8f9;border-bottom:1px solid #d5d9de;font-weight:500">
+<div style="width:132px;box-sizing:border-box;padding:6px 14px">구분</div><div style="flex:1;min-width:0;padding:6px 14px">기본 시술</div><div style="width:100px;box-sizing:border-box;padding:6px 14px;text-align:right;white-space:nowrap">횟수</div><div style="width:150px;box-sizing:border-box;padding:6px 20px 6px 14px;text-align:right"><sc-if value="{{ isManualProg }}" hint-placeholder-val="{{ false }}">환불용 1회 정상가</sc-if><sc-if value="{{ notManualProg }}" hint-placeholder-val="{{ true }}">1회 정상가</sc-if></div>
+</div>
+<sc-for list="{{ baseRows }}" as="d" hint-placeholder-count="3">
+<div style="display:flex;border-bottom:1px solid #e3e6ea">
+<div style="width:132px;box-sizing:border-box;padding:6px 14px">{{ d.kind }}</div><div style="flex:1;min-width:0;padding:6px 14px;text-wrap:pretty;white-space:pre-line">{{ d.name }}</div><div style="width:100px;box-sizing:border-box;padding:6px 14px;text-align:right;white-space:nowrap">{{ d.qtyText }}</div><div style="width:150px;box-sizing:border-box;padding:6px 20px 6px 14px;text-align:right">{{ d.priceText }}</div>
+</div>
+</sc-for>
+<sc-if value="{{ hasSwap }}" hint-placeholder-val="{{ false }}"><div style="display:flex;flex-direction:column;gap:2px;padding:5px 14px;border-bottom:1px solid #e3e6ea"><sc-for list="{{ swapNotes }}" as="w" hint-placeholder-count="1"><div>{{ w.text }}</div></sc-for></div></sc-if>
+<sc-if value="{{ hasExtra }}" hint-placeholder-val="{{ false }}">
+<div style="padding:8px 14px 5px;font-weight:600;border-bottom:1px solid #d5d9de">서비스·추가</div>
+<div style="display:flex;background:#f7f8f9;border-bottom:1px solid #d5d9de;font-weight:500">
+<div style="width:132px;box-sizing:border-box;padding:6px 14px">구분</div><div style="flex:1;min-width:0;padding:6px 14px">서비스·추가</div><div style="width:100px;box-sizing:border-box;padding:6px 14px;text-align:right;white-space:nowrap">제공 횟수</div><div style="width:150px;box-sizing:border-box;padding:6px 20px 6px 14px;text-align:right">추가금</div>
+</div>
+<sc-for list="{{ extraRows }}" as="d" hint-placeholder-count="3">
+<div style="display:flex;border-bottom:1px solid #e3e6ea">
+<div style="width:132px;box-sizing:border-box;padding:6px 14px">{{ d.kind }}</div><div style="flex:1;min-width:0;padding:6px 14px;text-wrap:pretty;white-space:pre-line">{{ d.name }}</div><div style="width:100px;box-sizing:border-box;padding:6px 14px;text-align:right;white-space:nowrap">{{ d.qtyText }}</div><div style="width:150px;box-sizing:border-box;padding:6px 20px 6px 14px;text-align:right">{{ d.feeText }}</div>
+</div>
+</sc-for>
+</sc-if>
+<sc-if value="{{ showSum }}" hint-placeholder-val="{{ true }}"><div style="display:flex;border-bottom:1.2px solid #1c1f23;font-weight:600">
+<div style="flex:1;padding:9px 14px">{{ sumLabel }}</div><div style="width:150px;box-sizing:border-box;padding:9px 20px 9px 14px;text-align:right">{{ sumValue }}</div>
+</div></sc-if><sc-if value="{{ hideSum }}" hint-placeholder-val="{{ false }}"><div style="border-bottom:1.2px solid #1c1f23"></div></sc-if>
+<sc-if value="{{ capNote }}" hint-placeholder-val="{{ false }}"><div style="padding:6px 0 0;font-size:11px;color:#4a5158;line-height:1.55">{{ capNoteText }}</div></sc-if>
+</div>
+</sc-if>
+
+            <sc-if value="{{ notBrief }}" hint-placeholder-val="{{ true }}"><sc-if value="{{ notLesion }}" hint-placeholder-val="{{ true }}"><div style="margin-top:12px;font-size:12.5px;font-weight:600">2. 약관</div>
+            <div style="margin-top:8px;background:#fcfcfc;border:1px solid #eaeeef;border-radius:8px;padding:var(--cp,12px 16px);display:flex;flex-direction:column;gap:var(--sg,6px);font-size:var(--tx,11px);line-height:var(--lh,1.55);letter-spacing:-0.017em;text-wrap:pretty;color:#2b2f34">
+              <sc-if value="{{ isDeposit }}" hint-placeholder-val="{{ false }}">
+                <div>
+                  <div style="font-weight:700;font-size:var(--tt,12px);color:#111418;margin-bottom:var(--tb,1px)">[예약금]</div>
+                  <div style="padding-left:11px;margin-top:var(--bg,0px)">• 예약금은 일정 확정을 위해 <span style="background:linear-gradient(100deg, rgba(255,236,120,0) 0%, rgba(255,236,120,0.55) 2%, rgba(255,232,110,0.5) 50%, rgba(255,236,120,0.55) 97%, rgba(255,236,120,0) 100%) 0 62% / 100% 68% no-repeat;padding:0 2px;margin:0 -1px;border-radius:2px 5px 3px 6px;-webkit-box-decoration-break:clone;box-decoration-break:clone;color:#1f2226">프로그램 총 결제금액의 10%({{ depText }})</span>로 책정되며, 완납 전 환자 사유로 취소하는 경우 <span style="background:linear-gradient(100deg, rgba(255,190,215,0) 0%, rgba(255,190,215,0.45) 2%, rgba(255,184,210,0.4) 50%, rgba(255,190,215,0.45) 97%, rgba(255,190,215,0) 100%) 0 62% / 100% 68% no-repeat;padding:0 2px;margin:0 -1px;border-radius:2px 5px 3px 6px;-webkit-box-decoration-break:clone;box-decoration-break:clone;color:#1f2226">반환되지 않습니다</span>.</div>
+                  
+                </div>
+              </sc-if>
+              <div>
+                <div style="font-weight:700;font-size:var(--tt,12px);color:#111418;margin-bottom:var(--tb,1px)">[이용기간]</div>
+<sc-if value="{{ isEvent }}" hint-placeholder-val="{{ false }}"><div style="padding-left:11px;margin-top:var(--bg,0px)">• 이벤트 프로그램의 유효기간은 첫 시술 시작일로부터 2개월 이내이며, 스킨부스터 이벤트는 3개월입니다.</div><div style="padding-left:11px;margin-top:var(--bg,0px)">• 첫 시술일 {{ evFirstText }} · 유효기간 만료일 <b style="font-weight:700;color:#111418">{{ evExpiryText }}</b></div></sc-if><sc-if value="{{ notEvent }}" hint-placeholder-val="{{ true }}">
+                <div style="padding-left:11px;margin-top:var(--bg,0px)">• 프로그램은 결제 완료일로부터 <span style="background:linear-gradient(100deg, rgba(255,236,120,0) 0%, rgba(255,236,120,0.55) 2%, rgba(255,232,110,0.5) 50%, rgba(255,236,120,0.55) 97%, rgba(255,236,120,0) 100%) 0 62% / 100% 68% no-repeat;padding:0 2px;margin:0 -1px;border-radius:2px 5px 3px 6px;-webkit-box-decoration-break:clone;box-decoration-break:clone;color:#1f2226">1년 이내</span>에 진행합니다.</div><div style="padding-left:11px;margin-top:var(--bg,0px)">• 이용기간이 경과한 후에는 잔여 횟수를 이용할 수 없으며, <b style="font-weight:700;color:#111418">환불 정산 대상에서 제외</b>됩니다.</div></sc-if>
+                
+                <sc-if value="{{ isPrepaid }}" hint-placeholder-val="{{ false }}"><div style="padding-left:11px;margin-top:var(--bg,0px)">• 단, 프로그램 내용이 정해지지 않은 선결제권은 <span style="background:linear-gradient(100deg, rgba(255,236,120,0) 0%, rgba(255,236,120,0.55) 2%, rgba(255,232,110,0.5) 50%, rgba(255,236,120,0.55) 97%, rgba(255,236,120,0) 100%) 0 62% / 100% 68% no-repeat;padding:0 2px;margin:0 -1px;border-radius:2px 5px 3px 6px;-webkit-box-decoration-break:clone;box-decoration-break:clone;color:#1f2226">1년 기간을 적용하지 않습니다</span>.</div></sc-if>
+              </div>
+              <sc-if value="{{ svcNote }}" hint-placeholder-val="{{ false }}"><div><div style="font-weight:700;font-size:var(--tt,12px);color:#111418;margin-bottom:var(--tb,1px)">[서비스 및 관리 변경]</div><div style="padding-left:11px;margin-top:var(--bg,0px)">• 프로그램 진행 중 피부 상태 및 의료진 판단에 따라 {{ svcWhat }}이 서비스로 제공될 수 있으며, 제공 여부와 수량·범위는 치료 경과에 따라 달라질 수 있습니다.</div><div style="padding-left:11px;margin-top:var(--bg,0px)">• 관리 변경은 의료진이 권유하고 <b style="font-weight:700;color:#111418">환자가 동의한 경우에만</b> 진행하며, 차액은 <b style="font-weight:700;color:#111418">변경 시점의 남은 회차</b>를 기준으로 추가 결제합니다.</div></div></sc-if><div>
+                <div style="font-weight:700;font-size:var(--tt,12px);color:#111418;margin-bottom:var(--tb,1px)">[양도·전환]</div>
+<sc-if value="{{ isEvent }}" hint-placeholder-val="{{ false }}"><div style="padding-left:11px;margin-top:var(--bg,0px)">• 이벤트 프로그램은 타인에게 양도 불가합니다.</div></sc-if><sc-if value="{{ notEvent }}" hint-placeholder-val="{{ true }}">
+                <div style="padding-left:11px;margin-top:var(--bg,0px)">• 해당 프로그램은 환자와 의료진의 합의 하에 타인에게 양도할 수 있습니다.</div>
+                <div style="padding-left:11px;margin-top:var(--bg,0px)">• 다른 프로그램으로 전환을 원하는 경우, 잔여 횟수를 <span style="background:linear-gradient(100deg, rgba(255,236,120,0) 0%, rgba(255,236,120,0.55) 2%, rgba(255,232,110,0.5) 50%, rgba(255,236,120,0.55) 97%, rgba(255,236,120,0) 100%) 0 62% / 100% 68% no-repeat;padding:0 2px;margin:0 -1px;border-radius:2px 5px 3px 6px;-webkit-box-decoration-break:clone;box-decoration-break:clone;color:#1f2226">등록 당시 1회 정상가</span> 기준 금액으로 환산하여 전환할 수 있습니다.</div></sc-if>
+              </div>
+              <div>
+                <div style="font-weight:700;font-size:var(--tt,12px);color:#111418;margin-bottom:var(--tb,1px)">[환불 규정]</div>
+                <div style="padding-left:11px;margin-top:var(--bg,0px)">• 해지 시 환불금액은 아래 기준으로 산정합니다.</div><div style="margin:4px 0 0 11px;background:#ffffff;border:1px solid #e3e6ea;border-radius:6px;display:flex;flex-direction:column"><div style="display:grid;grid-template-columns:84px minmax(0,1fr);gap:10px;padding:7px 12px;align-items:baseline"><div style="font-weight:700;color:#111418">시술 시작 전</div><div style="font-variant-numeric:tabular-nums">환불금액 = 실제 납부금액 − <span style="background:linear-gradient(100deg, rgba(255,190,215,0) 0%, rgba(255,190,215,0.45) 2%, rgba(255,184,210,0.4) 50%, rgba(255,190,215,0.45) 97%, rgba(255,190,215,0) 100%) 0 62% / 100% 68% no-repeat;padding:0 2px;margin:0 -1px;border-radius:2px 5px 3px 6px;-webkit-box-decoration-break:clone;box-decoration-break:clone;color:#1f2226">위약금 10%</span></div></div><div style="display:grid;grid-template-columns:84px minmax(0,1fr);gap:10px;padding:7px 12px;border-top:1px dashed #e3e6ea;align-items:baseline"><div style="font-weight:700;color:#111418">시술 시작 후</div><div style="font-variant-numeric:tabular-nums">환불금액 = 실제 납부금액 − <span style="background:linear-gradient(100deg, rgba(255,190,215,0) 0%, rgba(255,190,215,0.45) 2%, rgba(255,184,210,0.4) 50%, rgba(255,190,215,0.45) 97%, rgba(255,190,215,0) 100%) 0 62% / 100% 68% no-repeat;padding:0 2px;margin:0 -1px;border-radius:2px 5px 3px 6px;-webkit-box-decoration-break:clone;box-decoration-break:clone;color:#1f2226">위약금 10%</span> − <span style="background:linear-gradient(100deg, rgba(255,190,215,0) 0%, rgba(255,190,215,0.45) 2%, rgba(255,184,210,0.4) 50%, rgba(255,190,215,0.45) 97%, rgba(255,190,215,0) 100%) 0 62% / 100% 68% no-repeat;padding:0 2px;margin:0 -1px;border-radius:2px 5px 3px 6px;-webkit-box-decoration-break:clone;box-decoration-break:clone;color:#1f2226">이용금액</span></div></div>
+                </div>
+                <div style="padding-left:11px;margin-top:5px;display:flex;flex-direction:column;gap:2px;font-size:0.9em;color:#50565d">
+                  <div>※ 위약금은 예약금이나 현재까지 납부한 금액이 아닌, <b style="font-weight:700;color:#111418">프로그램 총 결제금액의 10%</b>로 산정합니다.</div>
+                  <sc-if value="{{ noSvcNote }}" hint-placeholder-val="{{ true }}"><div>※ 이용금액은 <span style="background:linear-gradient(100deg, rgba(255,190,215,0) 0%, rgba(255,190,215,0.45) 2%, rgba(255,184,210,0.4) 50%, rgba(255,190,215,0.45) 97%, rgba(255,190,215,0) 100%) 0 62% / 100% 68% no-repeat;padding:0 2px;margin:0 -1px;border-radius:2px 5px 3px 6px;-webkit-box-decoration-break:clone;box-decoration-break:clone;color:#1f2226">실제 이용한 시술</span>과 <span style="background:linear-gradient(100deg, rgba(255,190,215,0) 0%, rgba(255,190,215,0.45) 2%, rgba(255,184,210,0.4) 50%, rgba(255,190,215,0.45) 97%, rgba(255,190,215,0) 100%) 0 62% / 100% 68% no-repeat;padding:0 2px;margin:0 -1px;border-radius:2px 5px 3px 6px;-webkit-box-decoration-break:clone;box-decoration-break:clone;color:#1f2226">프로그램(시술) 결제 시 발생되는 서비스</span>의 이용 수량·범위에 따라 <span style="background:linear-gradient(100deg, rgba(255,236,120,0) 0%, rgba(255,236,120,0.55) 2%, rgba(255,232,110,0.5) 50%, rgba(255,236,120,0.55) 97%, rgba(255,236,120,0) 100%) 0 62% / 100% 68% no-repeat;padding:0 2px;margin:0 -1px;border-radius:2px 5px 3px 6px;-webkit-box-decoration-break:clone;box-decoration-break:clone;color:#1f2226">등록 당시 1회 정상가</span>를 기준으로 계산합니다.</div></sc-if><sc-if value="{{ svcNote }}" hint-placeholder-val="{{ false }}"><div>※ 관리 변경으로 추가 결제한 금액은 <b style="font-weight:700;color:#111418">아직 이용하지 않은 회차</b>에 해당하는 금액을 환불합니다.</div></sc-if>
+                  <div>※ 계산 결과가 0원 이하인 경우 추가 금액은 청구하지 않습니다.</div>
+                  
+                </div>
+              </div>
+              <div>
+                <div style="font-weight:700;font-size:var(--tt,12px);color:#111418;margin-bottom:var(--tb,1px)">[환불 방법]</div>
+                <div style="padding-left:11px;margin-top:var(--bg,0px)">• 환불은 원 결제 수단으로 처리하며, 카드 결제는 원 결제 거래를 취소하는 방식으로 진행합니다.</div><div style="padding-left:11px;font-size:0.9em;color:#50565d">※ 신용카드사 등 결제 대행기관의 사정에 따라 실제 환불 반영 시점은 다를 수 있습니다.</div>
+                
+              </div>
+              
+              
+              
+              
+              
+              
+              
+              
+            </div>
+            </sc-if></sc-if><sc-if value="{{ isBrief }}" hint-placeholder-val="{{ false }}"><div style="margin-top:12px;font-size:12.5px;font-weight:600">2. 약관 (재등록 요약)</div>
+<div style="margin-top:8px;background:#fcfcfc;border:1px solid #eaeeef;border-radius:8px;padding:var(--cp,12px 16px);display:flex;flex-direction:column;gap:var(--sg,6px);font-size:var(--tx,11px);line-height:1.7;color:#2b3036">
+<div>• <b style="font-weight:700;color:#111418">이용기간</b> — 결제일로부터 1년 이내 (만료일 {{ expiryText }}). 기간이 지나면 잔여 회차는 환불 정산 대상에서 제외됩니다.</div>
+<div>• <b style="font-weight:700;color:#111418">환불</b> — 시술 시작 전에는 총 결제금액의 10%를 위약금으로 공제합니다. 시작 후에는 위약금과 함께, 이용한 시술·서비스를 등록 당시 1회 정상가로 차감한 뒤 환불합니다.</div>
+<div>• <b style="font-weight:700;color:#111418">서비스</b> — 프로그램 결제 시 제공되는 서비스(약처방·주사 등)는 무상 제공이며, 환불 시 이미 사용한 서비스는 정가로 정산합니다. 관리 변경은 환자가 동의한 경우에만 진행합니다.</div>
+<div>• <b style="font-weight:700;color:#111418">양도·전환</b> — 의료진과 합의한 경우에만 가능합니다.</div>
+<div style="margin-top:4px;padding-top:6px;border-top:1px solid #eaeeef">본인은 <b style="font-weight:700;color:#111418">{{ briefPriorDate }}</b> 서명한 프로그램 이용 동의서의 약관 전문과 동일한 조건으로 본 프로그램을 등록하는 것에 동의합니다.</div>
+</div></sc-if><div style="margin-top:auto;padding-top:12px"><div style="border-top:1px solid #d5d9de;padding-top:6px;display:flex;justify-content:center"><div sc-camel-on-click="{{ toggleCkRefund }}" style="min-height:32px;display:flex;align-items:center;gap:10px;cursor:pointer;color:#1f2226;font-size:var(--tx,12px)"><div style="width:18px;height:18px;flex:none;box-sizing:border-box;border:1.5px solid {{ ckBd }};background:{{ ckBg }};border-radius:8px;display:flex;align-items:center;justify-content:center"><sc-if value="{{ ckRefund }}" hint-placeholder-val="{{ false }}"><svg width="12" height="12" sc-camel-view-box="0 0 24 24" fill="none" stroke="#ffffff" sc-camel-stroke-width="3.4" sc-camel-stroke-linecap="round" sc-camel-stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg></sc-if></div><div>위 <b style="font-weight:700">환불 규정</b>을 확인하였습니다. <span style="color:#b4483f">(필수)</span></div></div></div></div><div style="margin-top:6px;font-size:var(--tbl,11.5px);line-height:1.7;text-align:center">본인은 위 내용에 대해 충분히 설명을 듣고 이해하였으며, 이에 동의합니다.</div>
+            <div style="margin-top:14px;display:flex;justify-content:center;align-items:flex-end;gap:18px;font-size:11.5px">
+              <div>{{ docDateKo }}</div>
+              <div>환자 성명 <span style="display:inline-block;width:96px;border-bottom:1px solid #1c1f23;text-align:center">{{ pName }}</span></div>
+              <div>서명 <span style="display:inline-block;width:116px;border-bottom:1px solid #1c1f23">&nbsp;</span></div>
+            </div>
+          </div>
+        </div>
+        </div>
+      </div>
+      </sc-if>
+      <sc-if value="{{ showSel }}" hint-placeholder-val="{{ true }}">
+      <div style="width:100%;flex:1;min-height:0;overflow-x:hidden;overflow-y:auto;-webkit-overflow-scrolling:touch;touch-action:pan-y;overscroll-behavior:contain;display:flex;flex-direction:column;gap:10px">
+        <sc-if value="{{ noSel }}" hint-placeholder-val="{{ false }}">
+          <div style="padding:28px 16px;text-align:center;font-size:13.5px;color:#8d949b;border:1px dashed #d5d9de;border-radius:12px">왼쪽에서 프로그램을 선택해 주세요</div>
+        </sc-if>
+        <sc-if value="{{ hasSel }}" hint-placeholder-val="{{ false }}">
+        <div style="flex:none;border:1px solid #e9ebee;border-radius:12px;overflow:hidden;background:#ffffff;padding-bottom:8px">
+          <div style="display:flex;align-items:baseline;gap:10px;padding:14px 16px 12px;border-bottom:1px solid #eef0f2">
+            <div style="flex:1;min-width:0;font-size:15px;font-weight:700;text-wrap:pretty">{{ progName }}</div>
+            <div style="flex:none;font-size:15px;font-weight:600;font-variant-numeric:tabular-nums">{{ selPrice }}</div>
+          </div>
+          <sc-if value="{{ hasBaseSel }}" hint-placeholder-val="{{ true }}">
+          <div style="padding:12px 16px 4px;font-size:12.5px;font-weight:600;color:#6d747c">기본 구성</div>
+          <sc-for list="{{ baseRows }}" as="it" hint-placeholder-count="3">
+            <div style="display:flex;align-items:baseline;gap:10px;padding:5px 16px;font-size:14px;line-height:1.4"><span style="flex:1;min-width:0;text-wrap:pretty">{{ it.name }}</span><span style="flex:none;color:#4a5158;font-variant-numeric:tabular-nums">×{{ it.qtyText }}</span></div>
+          </sc-for>
+          </sc-if>
+          <sc-if value="{{ hasAddSel }}" hint-placeholder-val="{{ false }}">
+          <div style="padding:12px 16px 4px;font-size:12.5px;font-weight:600;color:#6d747c">추가 구성</div>
+          <sc-for list="{{ addRows }}" as="it" hint-placeholder-count="1">
+            <div style="display:flex;align-items:baseline;gap:10px;padding:5px 16px;font-size:14px;line-height:1.4"><span style="flex:1;min-width:0;text-wrap:pretty">{{ it.name }}</span><span style="flex:none;color:#4a5158;font-variant-numeric:tabular-nums">{{ it.qtyText }}</span><span style="flex:none;min-width:70px;text-align:right;color:#6d747c;font-size:13px;font-variant-numeric:tabular-nums">{{ it.feeText }}</span></div>
+          </sc-for>
+          </sc-if>
+        <sc-if value="{{ hasSvcEdit }}" hint-placeholder-val="{{ false }}">
+          <div>
+            <div style="padding:12px 16px 4px;font-size:12.5px;font-weight:600;color:#6d747c">포함 서비스</div>
+            <sc-for list="{{ svcEditRows }}" as="v" hint-placeholder-count="1">
+              <div style="display:flex;align-items:center;gap:8px;padding:0 8px 0 16px;min-height:44px">
+                <div style="flex:1;min-width:0;padding:6px 0;font-size:13.5px;line-height:1.35;color:{{ v.fg }};text-decoration:{{ v.strike }};text-wrap:pretty">{{ v.name }}</div>
+                <sc-if value="{{ v.on }}" hint-placeholder-val="{{ true }}">
+                  <div style="position:relative;flex:none;width:130px;overflow:hidden">
+                    <sc-raw-select value="{{ v.swap }}" sc-camel-on-change="{{ v.onSwap }}" style="width:123%;height:40px;transform:scale(0.8125);transform-origin:left center;border:1px solid #d5d9de;border-radius:10px;padding:0 12px;font-family:inherit;color:#1c1f23;background:#ffffff">
+                      <sc-for list="{{ v.swapOpts }}" as="o" hint-placeholder-count="2"><option value="{{ o.v }}">{{ o.label }}</option></sc-for>
+                    </sc-raw-select>
+                  </div>
+                </sc-if>
+                <div sc-camel-on-click="{{ v.toggle }}" style="flex:none;height:40px;padding:0 10px;display:flex;align-items:center;font-size:13px;font-weight:600;color:#6d747c;cursor:pointer;border-radius:8px" style-hover="background:#f3f5f7">{{ v.toggleLabel }}</div>
+              </div>
+            </sc-for>
+          </div>
+        </sc-if>
+        <sc-if value="{{ hasOptAdds }}" hint-placeholder-val="{{ false }}">
+          <div>
+            <div style="padding:12px 16px 4px;font-size:12.5px;font-weight:600;color:#6d747c">추가 선택</div>
+            <div style="display:flex;flex-direction:column">
+              <sc-for list="{{ optAdds }}" as="o" hint-placeholder-count="4">
+                <div sc-camel-on-click="{{ o.pick }}" style="display:flex;flex-wrap:wrap;align-items:center;gap:0 10px;padding:0 16px;min-height:44px;cursor:pointer" style-hover="background:#fafbfc">
+                  <div style="width:20px;height:20px;border-radius:5px;flex:none;box-sizing:border-box;border:1.5px solid {{ o.ckBd }};background:{{ o.ckBg }};color:#ffffff;display:flex;align-items:center;justify-content:center"><svg width="12" height="12" sc-camel-view-box="0 0 24 24" fill="none" stroke="currentColor" sc-camel-stroke-width="2.6" sc-camel-stroke-linecap="round" sc-camel-stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg></div>
+                  <span style="flex:1;min-width:0;padding:6px 0;font-size:13.5px;line-height:1.35;color:{{ o.fg }};text-wrap:pretty">{{ o.label }}</span>
+                  <span style="flex:none;font-size:13px;color:{{ o.priceFg }};font-variant-numeric:tabular-nums;white-space:nowrap">{{ o.price }}</span>
+                  <sc-if value="{{ o.multi }}" hint-placeholder-val="{{ false }}">
+                    <div sc-camel-on-click="{{ o.stop }}" style="flex:1 0 100%;box-sizing:border-box;display:flex;align-items:center;justify-content:flex-end;gap:2px;height:40px;padding-left:30px;margin-top:-4px">
+                      <span style="font-size:12px;color:#6d747c;margin-right:2px">서비스</span>
+                      <div sc-camel-on-click="{{ o.svDec }}" style="width:32px;height:40px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:{{ o.svDecFg }}"><svg width="16" height="16" sc-camel-view-box="0 0 24 24" fill="none" stroke="currentColor" sc-camel-stroke-width="1.5" sc-camel-stroke-linecap="round"><path d="M5 12h14"></path></svg></div>
+                      <span style="min-width:28px;text-align:center;font-size:13px;font-weight:600;font-variant-numeric:tabular-nums">{{ o.svN }}</span>
+                      <div sc-camel-on-click="{{ o.svInc }}" style="width:32px;height:40px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:{{ o.svIncFg }}"><svg width="16" height="16" sc-camel-view-box="0 0 24 24" fill="none" stroke="currentColor" sc-camel-stroke-width="1.5" sc-camel-stroke-linecap="round"><path d="M12 5v14M5 12h14"></path></svg></div>
+                    </div>
+                  </sc-if>
+                  <sc-if value="{{ o.onSingle }}" hint-placeholder-val="{{ false }}">
+                    <div sc-camel-on-click="{{ o.pickSv }}" style="flex:none;display:flex;align-items:center;gap:5px;height:40px;padding-left:8px;cursor:pointer">
+                      <div style="width:16px;height:16px;border-radius:4px;box-sizing:border-box;border:1.5px solid {{ o.svBd }};background:{{ o.svBg }};color:#ffffff;display:flex;align-items:center;justify-content:center"><svg width="10" height="10" sc-camel-view-box="0 0 24 24" fill="none" stroke="currentColor" sc-camel-stroke-width="3" sc-camel-stroke-linecap="round" sc-camel-stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg></div>
+                      <span style="font-size:12px;color:{{ o.svFg }}">S/V</span>
+                    </div>
+                  </sc-if>
+                </div>
+              </sc-for>
+            </div>
+          </div>
+        </sc-if>
+        </div>
+        </sc-if>
+      </div>
+      </sc-if>
+      <div style="width:240px;align-self:flex-end;display:flex;gap:8px;margin-top:16px;flex:none">
+        <sc-if value="{{ hasSecondary }}" hint-placeholder-val="{{ true }}">
+          <div sc-camel-on-click="{{ onSecondary }}" style="flex:1;height:44px;padding:0 12px;box-sizing:border-box;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:600;cursor:pointer;white-space:nowrap;border:1px solid #c9d3de;background:#ffffff;color:#345b80" style-hover="background:#f3f6f9" style-active="background:#e8eef4">{{ secondary }}</div>
+        </sc-if>
+        <sc-if value="{{ hasPrimary }}" hint-placeholder-val="{{ true }}"><div sc-camel-on-click="{{ onPrimary }}" style="flex:1;height:44px;padding:0 12px;box-sizing:border-box;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:600;cursor:pointer;white-space:nowrap;background:#345b80;color:#ffffff" style-hover="background:#2a4b6b" style-active="background:#1f3a55">{{ primary }}</div></sc-if>
+      </div>
+    </div>
+  </div>
+</div>
+</sc-if>
+
+<!-- ================= 환자 서명 모드 (동의서) ================= -->
+<sc-if value="{{ isSign }}" hint-placeholder-val="{{ true }}">
+<div style="position:fixed;top:0;left:0;width:820px;height:100vh;height:100dvh;background:#ffffff;overflow:hidden;z-index:20">
+  <div style="position:absolute;inset:0;overflow:hidden;background:#fff">
+    <div style="width:100%;height:100%;box-sizing:border-box;padding-bottom:100px;overflow-x:hidden;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;touch-action:pan-y;background:#fff">
+      <div style="width:820px;overflow:hidden">
+      <div ref="{{ sgRef }}" style="width:740px;transform:translateZ(0) scale(1.1081);transform-origin:top left;will-change:transform;backface-visibility:hidden;margin-bottom:{{ sgMb }}px">
+        <div style="width:740px;max-width:740px;overflow:hidden;min-height:0px;padding:24px 34px;box-sizing:border-box;display:flex;flex-direction:column;--lh:1.72;--sg:11px;--bg:4px;--tt:14px;--tb:4px;--cp:16px 20px;word-break:keep-all;overflow-wrap:break-word;font-family:'Noto Serif KR',serif;color:#1c1f23">
+          <div style="text-align:center;font-size:23px;font-weight:600;letter-spacing:0.06em"><sc-if value="{{ isEvent }}" hint-placeholder-val="{{ false }}">이벤트 </sc-if>프로그램 이용 동의서</div>
+          <div style="text-align:center;font-size:11.5px;color:#7b828a;margin-top:7px;font-family:Pretendard,sans-serif">다채움피부과의원 · 등록일 {{ docDate }}</div>
+          <div style="height:1.5px;background:#1c1f23;margin:9px 0 10px"></div>
+          <div style="display:grid;grid-template-columns:132px 1fr 132px 1fr;border-top:1px solid #d5d9de;font-size:var(--tbl,11.5px);line-height:1.5;white-space:nowrap">
+            <div style="padding:6px 14px;background:#f7f8f9;border-bottom:1px solid #d5d9de;font-weight:500">성명</div><div style="padding:6px 14px;border-bottom:1px solid #d5d9de">{{ pName }}</div>
+            <div style="padding:6px 14px;background:#f7f8f9;border-bottom:1px solid #d5d9de;font-weight:500">생년월일</div><div style="padding:6px 14px;border-bottom:1px solid #d5d9de">{{ pBirth }}</div>
+            <div style="padding:6px 14px;background:#f7f8f9;border-bottom:1px solid #d5d9de;font-weight:500">연락처</div><div style="padding:6px 14px;border-bottom:1px solid #d5d9de">{{ pPhone }}</div>
+            <div style="padding:6px 14px;background:#f7f8f9;border-bottom:1px solid #d5d9de;font-weight:500">결제수단</div><div style="padding:6px 14px;border-bottom:1px solid #d5d9de">{{ methodText }}</div>
+            <div style="padding:6px 14px;background:#f7f8f9;border-bottom:1px solid #d5d9de;font-weight:500">프로그램</div><div style="padding:6px 14px;border-bottom:1px solid #d5d9de">{{ progName }}</div>
+            <div style="padding:6px 14px;background:#f7f8f9;border-bottom:1px solid #d5d9de;font-weight:500">프로그램 총 결제금액</div><div style="padding:6px 14px;border-bottom:1px solid #d5d9de"><b style="font-weight:700;font-size:12.5px;color:#1d4f8a">{{ totalText }}</b></div>
+<sc-if value="{{ hasDiscDoc }}" hint-placeholder-val="{{ false }}"><div style="padding:6px 14px;background:#f7f8f9;border-bottom:1px solid #d5d9de;font-weight:500">적용 할인</div><div style="padding:6px 14px;border-bottom:1px solid #d5d9de">{{ discDocText }}</div></sc-if>
+          </div>
+          <div style="margin-top:12px;font-size:12px;font-weight:600">1. 프로그램 구성</div>
+<sc-if value="{{ isLesion }}" hint-placeholder-val="{{ false }}">
+<div style="margin-top:7px;border-top:1.2px solid #1c1f23;font-size:var(--tbl,11.5px);line-height:1.5;font-variant-numeric:tabular-nums">
+<div style="display:grid;grid-template-columns:44px minmax(0,1fr) 70px 90px 60px 120px;background:#f7f8f9;border-bottom:1px solid #d5d9de;font-weight:500">
+<div style="padding:8px 10px;text-align:center">No</div><div style="padding:6px 14px">치료 부위</div><div style="padding:6px 14px;text-align:right">크기</div><div style="padding:6px 14px">적용 기준</div><div style="padding:6px 10px;text-align:right">개수</div><div style="padding:6px 20px 6px 14px;text-align:right">병변별 계약금액</div>
+</div>
+<sc-for list="{{ lesionRows }}" as="l" hint-placeholder-count="2">
+<div style="display:grid;grid-template-columns:44px minmax(0,1fr) 70px 90px 60px 120px;border-bottom:1px solid #e3e6ea">
+<div style="padding:8px 10px;text-align:center">{{ l.no }}</div><div style="padding:6px 14px;font-weight:600;color:#111418">{{ l.siteText }}</div><div style="padding:6px 14px;text-align:right">{{ l.sizeText }}</div><div style="padding:6px 14px">{{ l.tier }}</div><div style="padding:6px 10px;text-align:right">1개</div><div style="padding:6px 20px 6px 14px;text-align:right">{{ l.priceText }}</div>
+</div>
+</sc-for>
+<div style="border-bottom:1.2px solid #1c1f23"></div>
+</div>
+<div style="margin-top:10px;background:#fcfcfc;border:1px solid #eaeeef;border-radius:8px;padding:var(--cp,12px 16px);display:flex;flex-direction:column;gap:var(--sg,6px);font-size:var(--tx,11px);line-height:var(--lh,1.55);letter-spacing:-0.017em;text-wrap:pretty;color:#2b2f34">
+<div style="display:flex;flex-direction:column;gap:var(--bg,2px)"><div style="font-weight:700;font-size:var(--tt,12px);color:#111418;margin-bottom:var(--tb,1px)">[흑자 치료 등록 및 가격 기준]</div><div style="padding-left:11px;display:flex;gap:5px;margin-top:var(--bg,0px)"><div>•</div><div>흑자 치료는 병변 1개를 등록 및 가격 산정의 기본 단위로 하며, 등록 시 병변의 크기 및 개수를 확인하여 <span style="background:linear-gradient(100deg, rgba(255,236,120,0) 0%, rgba(255,236,120,0.55) 2%, rgba(255,232,110,0.5) 50%, rgba(255,236,120,0.55) 97%, rgba(255,236,120,0) 100%) 0 62% / 100% 68% no-repeat;padding:0 2px;margin:0 -1px;border-radius:2px 5px 3px 6px;-webkit-box-decoration-break:clone;box-decoration-break:clone;color:#1f2226">각 병변의 크기에 따라</span> 병변별 계약금액을 산정합니다.</div></div><div style="padding-left:11px;display:flex;gap:5px;margin-top:var(--bg,0px)"><div>•</div><div>병변별 계약금액은 해당 병변에 대한 전체 금액으로, <span style="background:linear-gradient(100deg, rgba(255,190,215,0) 0%, rgba(255,190,215,0.45) 2%, rgba(255,184,210,0.4) 50%, rgba(255,190,215,0.45) 97%, rgba(255,190,215,0) 100%) 0 62% / 100% 68% no-repeat;padding:0 2px;margin:0 -1px;border-radius:2px 5px 3px 6px;-webkit-box-decoration-break:clone;box-decoration-break:clone;color:#1f2226">부분 PICO 532 1회 및 부분 REVLITE SI 4회 치료를 포함</span>합니다.</div></div><div style="padding-left:11px;display:flex;gap:5px;font-size:0.9em;color:#50565d"><div>※</div><div>각 레이저 회차는 개별 시술권으로 분할 판매하지 아니하며, 계약금액을 총 5회로 균등 분할하여 회차별 금액으로 산정하지 않습니다.</div></div></div>
+<div style="display:flex;flex-direction:column;gap:var(--bg,2px)"><div style="font-weight:700;font-size:var(--tt,12px);color:#111418;margin-bottom:var(--tb,1px)">[이용기간]</div><div style="padding-left:11px;display:flex;gap:5px;margin-top:var(--bg,0px)"><div>•</div><div>등록된 흑자 치료는 결제 완료일로부터 <span style="background:linear-gradient(100deg, rgba(255,236,120,0) 0%, rgba(255,236,120,0.55) 2%, rgba(255,232,110,0.5) 50%, rgba(255,236,120,0.55) 97%, rgba(255,236,120,0) 100%) 0 62% / 100% 68% no-repeat;padding:0 2px;margin:0 -1px;border-radius:2px 5px 3px 6px;-webkit-box-decoration-break:clone;box-decoration-break:clone;color:#1f2226">1년 이내에 진행</span>하여야 합니다.</div></div></div>
+<div style="display:flex;flex-direction:column;gap:var(--bg,2px)"><div style="font-weight:700;font-size:var(--tt,12px);color:#111418;margin-bottom:var(--tb,1px)">[환불 규정]</div><div style="padding-left:11px;margin-top:var(--bg,0px)">• 시술 시작 전 해지 시 환불금액은 아래 기준으로 산정합니다.</div><div style="margin:4px 0 0 11px;background:#ffffff;border:1px solid #e3e6ea;border-radius:6px;display:flex;flex-direction:column"><div style="display:grid;grid-template-columns:84px minmax(0,1fr);gap:10px;padding:7px 12px;align-items:baseline"><div style="font-weight:700;color:#111418">시술 시작 전</div><div style="font-variant-numeric:tabular-nums">환불금액 = 실제 납부금액 − <span style="background:linear-gradient(100deg, rgba(255,190,215,0) 0%, rgba(255,190,215,0.45) 2%, rgba(255,184,210,0.4) 50%, rgba(255,190,215,0.45) 97%, rgba(255,190,215,0) 100%) 0 62% / 100% 68% no-repeat;padding:0 2px;margin:0 -1px;border-radius:2px 5px 3px 6px;-webkit-box-decoration-break:clone;box-decoration-break:clone;color:#1f2226">위약금 10%</span></div></div></div><div style="padding-left:11px;display:flex;gap:5px;font-size:0.9em;color:#50565d"><div>※</div><div>위약금은 실제 납부 금액이 아닌 총 계약금액의 10%를 기준으로 산정합니다.</div></div><div style="padding-left:11px;display:flex;gap:5px;margin-top:var(--bg,0px)"><div>•</div><div>시술이 시작된 병변은 해당 병변에 대한 치료가 시작된 것으로 보며, <span style="background:linear-gradient(100deg, rgba(255,190,215,0) 0%, rgba(255,190,215,0.45) 2%, rgba(255,184,210,0.4) 50%, rgba(255,190,215,0.45) 97%, rgba(255,190,215,0) 100%) 0 62% / 100% 68% no-repeat;padding:0 2px;margin:0 -1px;border-radius:2px 5px 3px 6px;-webkit-box-decoration-break:clone;box-decoration-break:clone;color:#1f2226">해당 병변의 계약금액 전액을 이용금액으로 산정</span>합니다. <span style="background:linear-gradient(100deg, rgba(255,190,215,0) 0%, rgba(255,190,215,0.45) 2%, rgba(255,184,210,0.4) 50%, rgba(255,190,215,0.45) 97%, rgba(255,190,215,0) 100%) 0 62% / 100% 68% no-repeat;padding:0 2px;margin:0 -1px;border-radius:2px 5px 3px 6px;-webkit-box-decoration-break:clone;box-decoration-break:clone;color:#1f2226">미이용 REVLITE SI 회차는 별도의 환불 단위로 산정하지 않습니다.</span></div></div><div style="padding-left:11px;display:flex;gap:5px;margin-top:var(--bg,0px)"><div>•</div><div>여러 병변을 등록한 경우, 시술하지 않은 병변은 환불 정산 대상에 포함하며, 실제 납부금액에서 위약금 10%(총 계약금액 기준)와 이용금액을 공제한 금액을 최종 환불금액으로 산정합니다.</div></div></div>
+<div style="display:flex;flex-direction:column;gap:var(--bg,2px)"><div style="font-weight:700;font-size:var(--tt,12px);color:#111418;margin-bottom:var(--tb,1px)">[환불 방법]</div><div style="padding-left:11px;display:flex;gap:5px;margin-top:var(--bg,0px)"><div>•</div><div>환불은 <span style="background:linear-gradient(100deg, rgba(255,236,120,0) 0%, rgba(255,236,120,0.55) 2%, rgba(255,232,110,0.5) 50%, rgba(255,236,120,0.55) 97%, rgba(255,236,120,0) 100%) 0 62% / 100% 68% no-repeat;padding:0 2px;margin:0 -1px;border-radius:2px 5px 3px 6px;-webkit-box-decoration-break:clone;box-decoration-break:clone;color:#1f2226">원 결제 수단</span>을 기준으로 처리함을 원칙으로 합니다.</div></div><div style="padding-left:11px;display:flex;gap:5px;font-size:0.9em;color:#50565d"><div>※</div><div>신용카드사 등 결제 대행기관의 사정에 따라 실제 환불 반영 시점은 다를 수 있습니다.</div></div></div>
+
+</div>
+</sc-if>
+<sc-if value="{{ notLesion }}" hint-placeholder-val="{{ true }}">
+          <div style="margin-top:7px;border-top:1.2px solid #1c1f23;font-size:var(--tbl,11.5px);line-height:1.5;font-variant-numeric:tabular-nums">
+<div style="padding:8px 14px 5px;font-weight:600;border-bottom:1px solid #d5d9de">기본 시술</div>
+<div style="display:flex;background:#f7f8f9;border-bottom:1px solid #d5d9de;font-weight:500">
+<div style="width:132px;box-sizing:border-box;padding:6px 14px">구분</div><div style="flex:1;min-width:0;padding:6px 14px">기본 시술</div><div style="width:100px;box-sizing:border-box;padding:6px 14px;text-align:right;white-space:nowrap">횟수</div><div style="width:150px;box-sizing:border-box;padding:6px 20px 6px 14px;text-align:right"><sc-if value="{{ isManualProg }}" hint-placeholder-val="{{ false }}">환불용 1회 정상가</sc-if><sc-if value="{{ notManualProg }}" hint-placeholder-val="{{ true }}">1회 정상가</sc-if></div>
+</div>
+<sc-for list="{{ baseRows }}" as="d" hint-placeholder-count="3">
+<div style="display:flex;border-bottom:1px solid #e3e6ea">
+<div style="width:132px;box-sizing:border-box;padding:6px 14px">{{ d.kind }}</div><div style="flex:1;min-width:0;padding:6px 14px;text-wrap:pretty;white-space:pre-line">{{ d.name }}</div><div style="width:100px;box-sizing:border-box;padding:6px 14px;text-align:right;white-space:nowrap">{{ d.qtyText }}</div><div style="width:150px;box-sizing:border-box;padding:6px 20px 6px 14px;text-align:right">{{ d.priceText }}</div>
+</div>
+</sc-for>
+<sc-if value="{{ hasSwap }}" hint-placeholder-val="{{ false }}"><div style="display:flex;flex-direction:column;gap:2px;padding:5px 14px;border-bottom:1px solid #e3e6ea"><sc-for list="{{ swapNotes }}" as="w" hint-placeholder-count="1"><div>{{ w.text }}</div></sc-for></div></sc-if>
+<sc-if value="{{ hasExtra }}" hint-placeholder-val="{{ false }}">
+<div style="padding:8px 14px 5px;font-weight:600;border-bottom:1px solid #d5d9de">서비스·추가</div>
+<div style="display:flex;background:#f7f8f9;border-bottom:1px solid #d5d9de;font-weight:500">
+<div style="width:132px;box-sizing:border-box;padding:6px 14px">구분</div><div style="flex:1;min-width:0;padding:6px 14px">서비스·추가</div><div style="width:100px;box-sizing:border-box;padding:6px 14px;text-align:right;white-space:nowrap">제공 횟수</div><div style="width:150px;box-sizing:border-box;padding:6px 20px 6px 14px;text-align:right">추가금</div>
+</div>
+<sc-for list="{{ extraRows }}" as="d" hint-placeholder-count="3">
+<div style="display:flex;border-bottom:1px solid #e3e6ea">
+<div style="width:132px;box-sizing:border-box;padding:6px 14px">{{ d.kind }}</div><div style="flex:1;min-width:0;padding:6px 14px;text-wrap:pretty;white-space:pre-line">{{ d.name }}</div><div style="width:100px;box-sizing:border-box;padding:6px 14px;text-align:right;white-space:nowrap">{{ d.qtyText }}</div><div style="width:150px;box-sizing:border-box;padding:6px 20px 6px 14px;text-align:right">{{ d.feeText }}</div>
+</div>
+</sc-for>
+</sc-if>
+<sc-if value="{{ showSum }}" hint-placeholder-val="{{ true }}"><div style="display:flex;border-bottom:1.2px solid #1c1f23;font-weight:600">
+<div style="flex:1;padding:9px 14px">{{ sumLabel }}</div><div style="width:150px;box-sizing:border-box;padding:9px 20px 9px 14px;text-align:right">{{ sumValue }}</div>
+</div></sc-if><sc-if value="{{ hideSum }}" hint-placeholder-val="{{ false }}"><div style="border-bottom:1.2px solid #1c1f23"></div></sc-if>
+<sc-if value="{{ capNote }}" hint-placeholder-val="{{ false }}"><div style="padding:6px 0 0;font-size:11px;color:#4a5158;line-height:1.55">{{ capNoteText }}</div></sc-if>
+</div>
+</sc-if>
+
+          <sc-if value="{{ notBrief }}" hint-placeholder-val="{{ true }}"><sc-if value="{{ notLesion }}" hint-placeholder-val="{{ true }}"><div style="margin-top:12px;font-size:12.5px;font-weight:600">2. 약관</div>
+          <div style="margin-top:8px;background:#fcfcfc;border:1px solid #eaeeef;border-radius:8px;padding:var(--cp,12px 16px);display:flex;flex-direction:column;gap:var(--sg,6px);font-size:var(--tx,11px);line-height:var(--lh,1.55);letter-spacing:-0.017em;text-wrap:pretty;color:#2b2f34">
+            <sc-if value="{{ isDeposit }}" hint-placeholder-val="{{ false }}">
+              <div>
+                <div style="font-weight:700;font-size:var(--tt,12px);color:#111418;margin-bottom:var(--tb,1px)">[예약금]</div>
+                <div style="padding-left:11px;margin-top:var(--bg,0px)">• 예약금은 일정 확정을 위해 <span style="background:linear-gradient(100deg, rgba(255,236,120,0) 0%, rgba(255,236,120,0.55) 2%, rgba(255,232,110,0.5) 50%, rgba(255,236,120,0.55) 97%, rgba(255,236,120,0) 100%) 0 62% / 100% 68% no-repeat;padding:0 2px;margin:0 -1px;border-radius:2px 5px 3px 6px;-webkit-box-decoration-break:clone;box-decoration-break:clone;color:#1f2226">프로그램 총 결제금액의 10%({{ depText }})</span>로 책정되며, 완납 전 환자 사유로 취소하는 경우 <span style="background:linear-gradient(100deg, rgba(255,190,215,0) 0%, rgba(255,190,215,0.45) 2%, rgba(255,184,210,0.4) 50%, rgba(255,190,215,0.45) 97%, rgba(255,190,215,0) 100%) 0 62% / 100% 68% no-repeat;padding:0 2px;margin:0 -1px;border-radius:2px 5px 3px 6px;-webkit-box-decoration-break:clone;box-decoration-break:clone;color:#1f2226">반환되지 않습니다</span>.</div>
+                
+              </div>
+            </sc-if>
+            <div>
+              <div style="font-weight:700;font-size:var(--tt,12px);color:#111418;margin-bottom:var(--tb,1px)">[이용기간]</div>
+<sc-if value="{{ isEvent }}" hint-placeholder-val="{{ false }}"><div style="padding-left:11px;margin-top:var(--bg,0px)">• 이벤트 프로그램의 유효기간은 첫 시술 시작일로부터 2개월 이내이며, 스킨부스터 이벤트는 3개월입니다.</div><div style="padding-left:11px;margin-top:var(--bg,0px)">• 첫 시술일 {{ evFirstText }} · 유효기간 만료일 <b style="font-weight:700;color:#111418">{{ evExpiryText }}</b></div></sc-if><sc-if value="{{ notEvent }}" hint-placeholder-val="{{ true }}">
+              <div style="padding-left:11px;margin-top:var(--bg,0px)">• 프로그램은 결제 완료일로부터 <span style="background:linear-gradient(100deg, rgba(255,236,120,0) 0%, rgba(255,236,120,0.55) 2%, rgba(255,232,110,0.5) 50%, rgba(255,236,120,0.55) 97%, rgba(255,236,120,0) 100%) 0 62% / 100% 68% no-repeat;padding:0 2px;margin:0 -1px;border-radius:2px 5px 3px 6px;-webkit-box-decoration-break:clone;box-decoration-break:clone;color:#1f2226">1년 이내</span>에 진행합니다.</div><div style="padding-left:11px;margin-top:var(--bg,0px)">• 이용기간이 경과한 후에는 잔여 횟수를 이용할 수 없으며, <b style="font-weight:700;color:#111418">환불 정산 대상에서 제외</b>됩니다.</div></sc-if>
+              
+              <sc-if value="{{ isPrepaid }}" hint-placeholder-val="{{ false }}"><div style="padding-left:11px;margin-top:var(--bg,0px)">• 단, 프로그램 내용이 정해지지 않은 선결제권은 <span style="background:linear-gradient(100deg, rgba(255,236,120,0) 0%, rgba(255,236,120,0.55) 2%, rgba(255,232,110,0.5) 50%, rgba(255,236,120,0.55) 97%, rgba(255,236,120,0) 100%) 0 62% / 100% 68% no-repeat;padding:0 2px;margin:0 -1px;border-radius:2px 5px 3px 6px;-webkit-box-decoration-break:clone;box-decoration-break:clone;color:#1f2226">1년 기간을 적용하지 않습니다</span>.</div></sc-if>
+            </div>
+            <sc-if value="{{ svcNote }}" hint-placeholder-val="{{ false }}"><div><div style="font-weight:700;font-size:var(--tt,12px);color:#111418;margin-bottom:var(--tb,1px)">[서비스 및 관리 변경]</div><div style="padding-left:11px;margin-top:var(--bg,0px)">• 프로그램 진행 중 피부 상태 및 의료진 판단에 따라 {{ svcWhat }}이 서비스로 제공될 수 있으며, 제공 여부와 수량·범위는 치료 경과에 따라 달라질 수 있습니다.</div><div style="padding-left:11px;margin-top:var(--bg,0px)">• 관리 변경은 의료진이 권유하고 <b style="font-weight:700;color:#111418">환자가 동의한 경우에만</b> 진행하며, 차액은 <b style="font-weight:700;color:#111418">변경 시점의 남은 회차</b>를 기준으로 추가 결제합니다.</div></div></sc-if><div>
+              <div style="font-weight:700;font-size:var(--tt,12px);color:#111418;margin-bottom:var(--tb,1px)">[양도·전환]</div>
+<sc-if value="{{ isEvent }}" hint-placeholder-val="{{ false }}"><div style="padding-left:11px;margin-top:var(--bg,0px)">• 이벤트 프로그램은 타인에게 양도 불가합니다.</div></sc-if><sc-if value="{{ notEvent }}" hint-placeholder-val="{{ true }}">
+              <div style="padding-left:11px;margin-top:var(--bg,0px)">• 해당 프로그램은 환자와 의료진의 합의 하에 타인에게 양도할 수 있습니다.</div>
+              <div style="padding-left:11px;margin-top:var(--bg,0px)">• 다른 프로그램으로 전환을 원하는 경우, 잔여 횟수를 <span style="background:linear-gradient(100deg, rgba(255,236,120,0) 0%, rgba(255,236,120,0.55) 2%, rgba(255,232,110,0.5) 50%, rgba(255,236,120,0.55) 97%, rgba(255,236,120,0) 100%) 0 62% / 100% 68% no-repeat;padding:0 2px;margin:0 -1px;border-radius:2px 5px 3px 6px;-webkit-box-decoration-break:clone;box-decoration-break:clone;color:#1f2226">등록 당시 1회 정상가</span> 기준 금액으로 환산하여 전환할 수 있습니다.</div></sc-if>
+            </div>
+            <div>
+              <div style="font-weight:700;font-size:var(--tt,12px);color:#111418;margin-bottom:var(--tb,1px)">[환불 규정]</div>
+              <div style="padding-left:11px;margin-top:var(--bg,0px)">• 해지 시 환불금액은 아래 기준으로 산정합니다.</div><div style="margin:4px 0 0 11px;background:#ffffff;border:1px solid #e3e6ea;border-radius:6px;display:flex;flex-direction:column"><div style="display:grid;grid-template-columns:84px minmax(0,1fr);gap:10px;padding:7px 12px;align-items:baseline"><div style="font-weight:700;color:#111418">시술 시작 전</div><div style="font-variant-numeric:tabular-nums">환불금액 = 실제 납부금액 − <span style="background:linear-gradient(100deg, rgba(255,190,215,0) 0%, rgba(255,190,215,0.45) 2%, rgba(255,184,210,0.4) 50%, rgba(255,190,215,0.45) 97%, rgba(255,190,215,0) 100%) 0 62% / 100% 68% no-repeat;padding:0 2px;margin:0 -1px;border-radius:2px 5px 3px 6px;-webkit-box-decoration-break:clone;box-decoration-break:clone;color:#1f2226">위약금 10%</span></div></div><div style="display:grid;grid-template-columns:84px minmax(0,1fr);gap:10px;padding:7px 12px;border-top:1px dashed #e3e6ea;align-items:baseline"><div style="font-weight:700;color:#111418">시술 시작 후</div><div style="font-variant-numeric:tabular-nums">환불금액 = 실제 납부금액 − <span style="background:linear-gradient(100deg, rgba(255,190,215,0) 0%, rgba(255,190,215,0.45) 2%, rgba(255,184,210,0.4) 50%, rgba(255,190,215,0.45) 97%, rgba(255,190,215,0) 100%) 0 62% / 100% 68% no-repeat;padding:0 2px;margin:0 -1px;border-radius:2px 5px 3px 6px;-webkit-box-decoration-break:clone;box-decoration-break:clone;color:#1f2226">위약금 10%</span> − <span style="background:linear-gradient(100deg, rgba(255,190,215,0) 0%, rgba(255,190,215,0.45) 2%, rgba(255,184,210,0.4) 50%, rgba(255,190,215,0.45) 97%, rgba(255,190,215,0) 100%) 0 62% / 100% 68% no-repeat;padding:0 2px;margin:0 -1px;border-radius:2px 5px 3px 6px;-webkit-box-decoration-break:clone;box-decoration-break:clone;color:#1f2226">이용금액</span></div></div>
+              </div>
+              <div style="padding-left:11px;margin-top:5px;display:flex;flex-direction:column;gap:2px;font-size:0.9em;color:#50565d">
+                <div>※ 위약금은 예약금이나 현재까지 납부한 금액이 아닌, <b style="font-weight:700;color:#111418">프로그램 총 결제금액의 10%</b>로 산정합니다.</div>
+                <sc-if value="{{ noSvcNote }}" hint-placeholder-val="{{ true }}"><div>※ 이용금액은 <span style="background:linear-gradient(100deg, rgba(255,190,215,0) 0%, rgba(255,190,215,0.45) 2%, rgba(255,184,210,0.4) 50%, rgba(255,190,215,0.45) 97%, rgba(255,190,215,0) 100%) 0 62% / 100% 68% no-repeat;padding:0 2px;margin:0 -1px;border-radius:2px 5px 3px 6px;-webkit-box-decoration-break:clone;box-decoration-break:clone;color:#1f2226">실제 이용한 시술</span>과 <span style="background:linear-gradient(100deg, rgba(255,190,215,0) 0%, rgba(255,190,215,0.45) 2%, rgba(255,184,210,0.4) 50%, rgba(255,190,215,0.45) 97%, rgba(255,190,215,0) 100%) 0 62% / 100% 68% no-repeat;padding:0 2px;margin:0 -1px;border-radius:2px 5px 3px 6px;-webkit-box-decoration-break:clone;box-decoration-break:clone;color:#1f2226">프로그램(시술) 결제 시 발생되는 서비스</span>의 이용 수량·범위에 따라 <span style="background:linear-gradient(100deg, rgba(255,236,120,0) 0%, rgba(255,236,120,0.55) 2%, rgba(255,232,110,0.5) 50%, rgba(255,236,120,0.55) 97%, rgba(255,236,120,0) 100%) 0 62% / 100% 68% no-repeat;padding:0 2px;margin:0 -1px;border-radius:2px 5px 3px 6px;-webkit-box-decoration-break:clone;box-decoration-break:clone;color:#1f2226">등록 당시 1회 정상가</span>를 기준으로 계산합니다.</div></sc-if><sc-if value="{{ svcNote }}" hint-placeholder-val="{{ false }}"><div>※ 관리 변경으로 추가 결제한 금액은 <b style="font-weight:700;color:#111418">아직 이용하지 않은 회차</b>에 해당하는 금액을 환불합니다.</div></sc-if>
+                <div>※ 계산 결과가 0원 이하인 경우 추가 금액은 청구하지 않습니다.</div>
+                
+              </div>
+            </div>
+            <div>
+              <div style="font-weight:700;font-size:var(--tt,12px);color:#111418;margin-bottom:var(--tb,1px)">[환불 방법]</div>
+              <div style="padding-left:11px;margin-top:var(--bg,0px)">• 환불은 원 결제 수단으로 처리하며, 카드 결제는 원 결제 거래를 취소하는 방식으로 진행합니다.</div><div style="padding-left:11px;font-size:0.9em;color:#50565d">※ 신용카드사 등 결제 대행기관의 사정에 따라 실제 환불 반영 시점은 다를 수 있습니다.</div>
+              
+            </div>
+            
+            
+            
+            
+            
+            
+            
+            
+          </div>
+          </sc-if></sc-if><sc-if value="{{ isBrief }}" hint-placeholder-val="{{ false }}"><div style="margin-top:12px;font-size:12.5px;font-weight:600">2. 약관 (재등록 요약)</div>
+<div style="margin-top:8px;background:#fcfcfc;border:1px solid #eaeeef;border-radius:8px;padding:var(--cp,12px 16px);display:flex;flex-direction:column;gap:var(--sg,6px);font-size:var(--tx,11px);line-height:1.7;color:#2b3036">
+<div>• <b style="font-weight:700;color:#111418">이용기간</b> — 결제일로부터 1년 이내 (만료일 {{ expiryText }}). 기간이 지나면 잔여 회차는 환불 정산 대상에서 제외됩니다.</div>
+<div>• <b style="font-weight:700;color:#111418">환불</b> — 시술 시작 전에는 총 결제금액의 10%를 위약금으로 공제합니다. 시작 후에는 위약금과 함께, 이용한 시술·서비스를 등록 당시 1회 정상가로 차감한 뒤 환불합니다.</div>
+<div>• <b style="font-weight:700;color:#111418">서비스</b> — 프로그램 결제 시 제공되는 서비스(약처방·주사 등)는 무상 제공이며, 환불 시 이미 사용한 서비스는 정가로 정산합니다. 관리 변경은 환자가 동의한 경우에만 진행합니다.</div>
+<div>• <b style="font-weight:700;color:#111418">양도·전환</b> — 의료진과 합의한 경우에만 가능합니다.</div>
+<div style="margin-top:4px;padding-top:6px;border-top:1px solid #eaeeef">본인은 <b style="font-weight:700;color:#111418">{{ briefPriorDate }}</b> 서명한 프로그램 이용 동의서의 약관 전문과 동일한 조건으로 본 프로그램을 등록하는 것에 동의합니다.</div>
+</div></sc-if><div style="margin-top:auto;padding-top:12px"><div style="border-top:1px solid #d5d9de;padding-top:6px;display:flex;justify-content:center"><div sc-camel-on-click="{{ toggleCkRefund }}" style="min-height:32px;display:flex;align-items:center;gap:10px;cursor:pointer;color:#1f2226;font-size:var(--tx,12px)"><div style="width:18px;height:18px;flex:none;box-sizing:border-box;border:1.5px solid {{ ckBd }};background:{{ ckBg }};border-radius:8px;display:flex;align-items:center;justify-content:center"><sc-if value="{{ ckRefund }}" hint-placeholder-val="{{ false }}"><svg width="12" height="12" sc-camel-view-box="0 0 24 24" fill="none" stroke="#ffffff" sc-camel-stroke-width="3.4" sc-camel-stroke-linecap="round" sc-camel-stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg></sc-if></div><div>위 <b style="font-weight:700">환불 규정</b>을 확인하였습니다. <span style="color:#b4483f">(필수)</span></div></div></div></div><div style="margin-top:6px;font-size:var(--tbl,11.5px);line-height:1.7;text-align:center">본인은 위 내용에 대해 충분히 설명을 듣고 이해하였으며, 이에 동의합니다.</div>
+          <div style="margin-top:14px;display:flex;justify-content:center;align-items:flex-end;gap:18px;font-size:11.5px">
+            <div>{{ docDateKo }}</div>
+            <div>환자 성명 <span style="display:inline-block;width:96px;border-bottom:1px solid #1c1f23;text-align:center">{{ pName }}</span></div>
+            <div sc-camel-on-click="{{ openSigPad }}" style="cursor:pointer">서명 <span style="display:inline-block;width:116px;height:26px;border-bottom:1px solid #1c1f23;position:relative;vertical-align:bottom">
+              <sc-if value="{{ hasSigImg }}" hint-placeholder-val="{{ false }}">
+                {{ sigEl }}
+              </sc-if>
+              <sc-if value="{{ noSigImg }}" hint-placeholder-val="{{ true }}">
+                <span style="position:absolute;left:0;right:0;bottom:4px;text-align:center;font-size:9.5px;color:#9aa0a7;font-family:Pretendard,sans-serif">터치하여 서명</span>
+              </sc-if>
+            </span></div>
+          </div>
+        </div>
+      </div>
+      </div>
+    </div>
+  </div>
+  <div sc-camel-on-click="{{ exitSign }}" style="position:absolute;left:14px;bottom:14px;width:34px;height:34px;border-radius:17px;background:rgba(28,31,35,.06);display:flex;align-items:center;justify-content:center;font-size:11px;color:#9aa0a7;font-family:Pretendard,sans-serif;cursor:pointer">직원</div>
+
+  <sc-if value="{{ sigOpen }}" hint-placeholder-val="{{ false }}">
+    <div style="position:absolute;inset:0;background:rgba(20,24,28,.46);display:flex;align-items:flex-end;justify-content:center;z-index:40">
+      <div style="width:820px;background:#fff;border-radius:22px 22px 0 0;padding:20px 26px 26px;box-sizing:border-box;font-family:Pretendard,sans-serif;box-shadow:0 -6px 30px rgba(20,24,28,.18)">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+          <div style="font-size:17px;font-weight:700;letter-spacing:-0.01em">환자 서명</div>
+          <div sc-camel-on-click="{{ clearSig }}" style="font-size:13px;color:#4a5158;padding:6px 14px;border:1px solid #d5d9de;border-radius:10px;cursor:pointer">다시 쓰기</div>
+        </div>
+        <div style="width:768px;height:230px;border:1.5px dashed #c9ced4;border-radius:12px;background:#fff;position:relative">
+          <canvas ref="{{ sigRef }}" width="768" height="230" sc-camel-on-pointer-down="{{ sigDown }}" sc-camel-on-pointer-move="{{ sigMove }}" sc-camel-on-pointer-up="{{ sigUp }}" style="width:768px;height:230px;display:block;border-radius:12px;cursor:crosshair;touch-action:none"></canvas>
+          <sc-if value="{{ noSig }}" hint-placeholder-val="{{ true }}">
+            <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none;font-size:15px;color:#b6bcc2">여기에 서명해 주세요</div>
+          </sc-if>
+        </div>
+        <div style="margin-top:16px;display:flex;align-items:center;gap:12px">
+          <div style="flex:1"></div>
+          <div sc-camel-on-click="{{ closeSigPad }}" style="height:52px;padding:0 22px;border-radius:8px;display:flex;align-items:center;font-size:15px;font-weight:600;color:#345b80;background:transparent;cursor:pointer">취소</div>
+          <div sc-camel-on-click="{{ confirmSigPad }}" style="height:52px;padding:0 30px;border-radius:8px;display:flex;align-items:center;font-size:15.5px;font-weight:700;cursor:pointer;background:{{ okBg }};color:{{ okFg }}">서명 완료</div>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ hasSigImg }}" hint-placeholder-val="{{ false }}">
+    <div style="position:absolute;right:20px;bottom:20px;display:flex;align-items:center;gap:12px;font-family:Pretendard,sans-serif">
+      <div sc-camel-on-click="{{ openSigPad }}" style="height:48px;padding:0 18px;box-sizing:border-box;border:1px solid #c9d3de;border-radius:8px;display:flex;align-items:center;font-size:14px;font-weight:600;color:#345b80;background:#fff;cursor:pointer">서명 다시</div>
+      <div sc-camel-on-click="{{ saveSig }}" style="height:56px;padding:0 30px;border-radius:8px;display:flex;align-items:center;font-size:16px;font-weight:700;background:#345b80;color:#fff;cursor:pointer;box-shadow:0 4px 16px rgba(52,91,128,.28)">동의하고 저장</div>
+    </div>
+  </sc-if>
+</div>
+</sc-if>
+
+<!-- ================= 상세 ================= -->
+<sc-if value="{{ isDetail }}" hint-placeholder-val="{{ true }}">
+<div style="flex:1;min-height:0;display:flex;flex-direction:column;padding:20px 28px 0">
+  <div style="border:1px solid #e9ebee;border-radius:16px;background:#ffffff;padding:18px 20px;display:flex;align-items:center;gap:22px">
+    <div style="width:52px;height:52px;border-radius:12px;background:#eef2f6;display:flex;align-items:center;justify-content:center;font-size:19px;font-weight:600;color:#345b80;flex:none">{{ rfInitial }}</div>
+    <div style="flex:1">
+      <div style="display:flex;align-items:center;gap:10px">
+        <div style="font-size:19px;font-weight:600;letter-spacing:-0.02em">{{ rfName }}</div>
+        <sc-if value="{{ dRefunded }}" hint-placeholder-val="{{ false }}"><span style="padding:4px 11px;border-radius:10px;font-size:12px;font-weight:600;background:#f2f3f5;color:#8d949b">환불완료</span></sc-if><sc-if value="{{ dPrepaid }}" hint-placeholder-val="{{ false }}"><span style="padding:3px 9px;border-radius:10px;border:1px solid #d5d9de;font-size:11.5px;color:#5c636b">선결제권</span></sc-if>
+      </div>
+      <div style="font-size:12.5px;color:#7b828a;margin-top:4px">{{ rfPhone }} · {{ rfBirth }}</div>
+    </div>
+    <sc-if value="{{ yes }}" hint-placeholder-val="{{ true }}">
+      <div sc-camel-on-click="{{ delStart }}" style="height:30px;padding:0 10px;box-sizing:border-box;border:1px solid #e3c4c1;border-radius:6px;display:flex;align-items:center;font-size:12.5px;font-weight:600;color:#b3261e;cursor:pointer;flex:none" style-hover="background:rgba(179,38,30,0.05)">삭제</div>
+    </sc-if>
+  </div>
+
+  <div style="display:flex;gap:2px;margin-top:20px;border-bottom:1px solid #e3e6ea">
+    <sc-for list="{{ tabs }}" as="t" hint-placeholder-count="4">
+      <div sc-camel-on-click="{{ t.pick }}" style="min-width:90px;height:42px;padding:0 20px;box-sizing:border-box;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:600;color:{{ t.fg }};background:{{ t.tbg }};border:1px solid {{ t.tbd }};border-bottom:0;border-radius:10px 10px 0 0;cursor:pointer;margin-bottom:-1px" style-hover="color:#1c1f23">{{ t.label }}</div>
+    </sc-for>
+  </div>
+
+  <div style="flex:1;min-height:0;padding-top:20px">
+    <sc-if value="{{ tabStatus }}" hint-placeholder-val="{{ true }}">
+      <sc-if value="{{ hasNotice }}" hint-placeholder-val="{{ false }}">
+        <div style="display:flex;align-items:flex-start;gap:10px;padding:14px 16px;border-radius:10px;border:1px solid #345b80;background:rgba(52,91,128,0.06);margin-bottom:16px;color:#2a4b6b;font-size:14px;line-height:1.55"><svg width="20" height="20" sc-camel-view-box="0 0 24 24" fill="none" stroke="currentColor" sc-camel-stroke-width="1.5" sc-camel-stroke-linecap="round" sc-camel-stroke-linejoin="round"><circle cx="12" cy="12" r="9"></circle><path d="M12 11v5"></path><path d="M12 8h.01"></path></svg><div style="flex:1;min-width:0">{{ dNotice }}</div></div>
+      </sc-if>
+      <sc-if value="{{ cListView }}" hint-placeholder-val="{{ true }}">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+          <div style="font-size:13px;font-weight:600;color:#4a5158">계약 {{ cCount }}건</div>
+          <div sc-camel-on-click="{{ newForPatient }}" style="height:40px;padding:0 14px;border-radius:8px;display:flex;align-items:center;gap:6px;font-size:13.5px;font-weight:600;color:#345b80;cursor:pointer;border:1px solid #c9d3de;background:#ffffff" style-hover="background:#f3f6f9"><svg width="16" height="16" sc-camel-view-box="0 0 24 24" fill="none" stroke="currentColor" sc-camel-stroke-width="1.5" sc-camel-stroke-linecap="round"><path d="M12 5v14M5 12h14"></path></svg>이 환자로 새 동의서</div>
+        </div>
+        <div style="border:1px solid #e9ebee;border-radius:16px;overflow:hidden;background:#ffffff">
+          <sc-for list="{{ cRows }}" as="c" hint-placeholder-count="1">
+            <div sc-camel-on-click="{{ c.open }}" style="display:flex;align-items:center;gap:14px;padding:16px 18px 16px 22px;border-top:{{ c.sep }};cursor:pointer" style-hover="background:#fafbfc">
+              <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:4px">
+                <div style="display:flex;align-items:center;gap:8px;min-width:0"><div style="font-size:15px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ c.prog }}</div><sc-if value="{{ c.refunded }}" hint-placeholder-val="{{ false }}"><span style="padding:2px 8px;border-radius:10px;font-size:11px;font-weight:600;background:#f2f3f5;color:#8d949b;flex:none">환불완료</span></sc-if></div>
+                <div style="font-size:12.5px;color:#7b828a;font-variant-numeric:tabular-nums">{{ c.sub }}</div>
+              </div>
+              <div style="display:flex;flex-direction:column;align-items:flex-end;gap:5px;flex:none">
+                <div style="font-size:14.5px;font-weight:600;font-variant-numeric:tabular-nums">{{ c.total }}</div>
+                <span style="padding:2px 9px;border-radius:10px;font-size:11px;font-weight:600;background:{{ c.stBg }};color:{{ c.stFg }}">{{ c.st }}</span>
+              </div>
+              <div style="color:#a4abb3;display:flex;flex:none"><svg width="20" height="20" sc-camel-view-box="0 0 24 24" fill="none" stroke="currentColor" sc-camel-stroke-width="1.5" sc-camel-stroke-linecap="round" sc-camel-stroke-linejoin="round"><path d="M9 5l7 7-7 7"></path></svg></div>
+            </div>
+          </sc-for>
+        </div>
+      </sc-if>
+      <sc-if value="{{ cDetailView }}" hint-placeholder-val="{{ false }}">
+      <div sc-camel-on-click="{{ backToCList }}" style="display:inline-flex;align-items:center;gap:4px;height:40px;margin:-8px 0 6px -6px;padding:0 6px;cursor:pointer;color:#4a5158;font-size:13.5px"><svg width="18" height="18" sc-camel-view-box="0 0 24 24" fill="none" stroke="currentColor" sc-camel-stroke-width="1.5" sc-camel-stroke-linecap="round" sc-camel-stroke-linejoin="round"><path d="M15 19l-7-7 7-7"></path></svg>계약 목록</div>
+      <div style="border:1px solid #e9ebee;border-radius:16px;overflow:hidden;background:#ffffff">
+        <div style="padding:16px 22px 0;font-size:13px;font-weight:600;color:#4a5158">계약 정보</div>
+        <sc-if value="{{ yes }}" hint-placeholder-val="{{ true }}">
+        <div style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px 40px;font-size:14px;padding:14px 22px 20px">
+          <div style="grid-column:span 2;display:flex;justify-content:space-between;gap:16px"><span style="color:#7b828a;flex:none">프로그램</span><span style="text-align:right;font-variant-numeric:tabular-nums">{{ rfProg }}</span></div>
+          <div style="display:flex;justify-content:space-between;gap:16px"><span style="color:#7b828a;flex:none">등록일</span><span style="text-align:right;font-variant-numeric:tabular-nums">{{ rfDate }}</span></div><div style="display:flex;justify-content:space-between;gap:16px"><span style="color:#7b828a;flex:none">이용기간 만료</span><span style="text-align:right;font-variant-numeric:tabular-nums">{{ rfExpiry }}</span></div>
+          <div style="display:flex;justify-content:space-between;gap:16px"><span style="color:#7b828a;flex:none">납부 상태</span><span style="text-align:right;font-variant-numeric:tabular-nums">{{ rfPayState }}</span></div><div style="display:flex;justify-content:space-between;gap:16px"><span style="color:#7b828a;flex:none">결제수단</span><span style="text-align:right;font-variant-numeric:tabular-nums">{{ rfMethod }}</span></div>
+          <div style="display:flex;justify-content:space-between;gap:16px"><span style="color:#7b828a;flex:none">총 결제금액</span><span style="text-align:right;font-variant-numeric:tabular-nums">{{ rfTotal }}원</span></div><div style="display:flex;justify-content:space-between;gap:16px"><span style="color:#7b828a;flex:none">납부금액</span><span style="text-align:right;font-variant-numeric:tabular-nums">{{ rfPaid }}원</span></div>
+        </div>
+        </sc-if>
+      </div>
+      <sc-if value="{{ balShow }}" hint-placeholder-val="{{ false }}">
+        <div style="border:1px solid #e9ebee;border-radius:16px;background:#ffffff;margin-top:12px;overflow:hidden">
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:16px 22px 12px;border-bottom:1px solid #eef0f2">
+            <div style="font-size:13px;font-weight:600;color:#4a5158">잔금 결제</div>
+            <div style="font-size:12.5px;color:#7a5115;font-variant-numeric:tabular-nums">남은 잔금 {{ balRest }}원</div>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:6px;padding:12px 22px 18px">
+            <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px">
+              <sc-for list="{{ balMethods }}" as="m" hint-placeholder-count="3">
+                <div sc-camel-on-click="{{ m.pick }}" style="height:80px;box-sizing:border-box;border-radius:12px;padding:12px 14px;display:flex;flex-direction:column;justify-content:space-between;cursor:pointer;border:1.5px solid {{ m.tbd }};background:{{ m.tbg }}"><div style="height:24px;display:flex;align-items:center">{{ m.icon }}</div><span style="font-size:15px;font-weight:{{ m.fw }};color:{{ m.fg }};letter-spacing:-0.01em">{{ m.label }}</span></div>
+              </sc-for>
+            </div>
+            <sc-if value="{{ balIsCash }}" hint-placeholder-val="{{ false }}">
+              <div style="display:flex;align-items:center;gap:4px 20px;flex-wrap:wrap">
+                <span style="min-width:64px;white-space:nowrap;flex:none;font-size:13px;font-weight:600;color:#4a5158">현금영수증</span>
+                <sc-for list="{{ balRcptOpts }}" as="o" hint-placeholder-count="2">
+                  <div sc-camel-on-click="{{ o.pick }}" style="display:flex;align-items:center;gap:8px;cursor:pointer;height:44px">
+                    <div style="width:20px;height:20px;border-radius:50%;flex:none;box-sizing:border-box;border:1.5px solid {{ o.ckBd }};background:{{ o.ckBg }};color:{{ o.ckFg }};display:flex;align-items:center;justify-content:center"><svg width="12" height="12" sc-camel-view-box="0 0 24 24" fill="none" stroke="currentColor" sc-camel-stroke-width="2.6" sc-camel-stroke-linecap="round" sc-camel-stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg></div>
+                    <span style="font-size:13.5px;color:{{ o.fg }}">{{ o.label }}</span>
+                  </div>
+                </sc-for>
+              </div>
+            </sc-if>
+            <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+              <span style="min-width:64px;white-space:nowrap;flex:none;font-size:13px;font-weight:600;color:#4a5158">금액</span>
+              <input type="text" sc-camel-input-mode="numeric" placeholder="{{ balRest }}" value="{{ balAmt }}" sc-camel-on-input="{{ onBalAmt }}" style="flex:1;min-width:120px;height:40px;box-sizing:border-box;border:1px solid #d5d9de;border-radius:8px;padding:0 10px;font-family:inherit;text-align:right;background:#ffffff;font-variant-numeric:tabular-nums">
+              <span style="font-size:12.5px;color:#6d747c">원</span>
+              <input type="date" value="{{ balDate }}" sc-camel-on-input="{{ onBalDate }}" style="height:40px;box-sizing:border-box;border:1px solid #d5d9de;border-radius:8px;padding:0 10px;font-family:inherit;color:#1c1f23">
+              <div sc-camel-on-click="{{ saveBalance }}" style="height:40px;padding:0 16px;border-radius:8px;display:flex;align-items:center;font-size:13.5px;font-weight:600;color:#ffffff;cursor:pointer;background:#345b80">잔금 결제 기록</div>
+            </div>
+            <div style="font-size:12px;color:#8d949b">금액을 비워 두면 남은 잔금 전액으로 기록합니다. 카드사·승인번호 등은 아래 결제 정보에서 입력합니다.</div>
+          </div>
+        </div>
+      </sc-if>
+      <sc-if value="{{ hasPayInfo }}" hint-placeholder-val="{{ false }}">
+        <div style="border:1px solid #e9ebee;border-radius:16px;background:#ffffff;margin-top:12px;overflow:hidden">
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:16px 22px 12px;border-bottom:1px solid #eef0f2">
+            <div style="font-size:13px;font-weight:600;color:#4a5158">결제 정보</div>
+            <div style="font-size:12px;color:#8d949b">영수증 폐기 후 환불(결제 취소) 시 사용</div>
+          </div>
+          <sc-if value="{{ yes }}" hint-placeholder-val="{{ true }}">
+          <sc-for list="{{ payInfo }}" as="p" hint-placeholder-count="1">
+            <div style="padding:16px 22px;border-bottom:1px solid #eef0f2;display:flex;flex-direction:column;gap:12px">
+              <div style="display:flex;align-items:center;gap:10px">
+                <div style="font-size:14.5px;font-weight:600">{{ p.method }}</div>
+                <div style="font-size:14px;font-variant-numeric:tabular-nums;color:#4a5158">{{ p.amount }}</div>
+                <span style="flex:1"></span>
+                <span style="padding:3px 10px;border-radius:10px;font-size:11.5px;font-weight:600;background:{{ p.stateBg }};color:{{ p.stateFg }}">{{ p.stateText }}</span>
+              </div>
+              <sc-if value="{{ p.isCard }}" hint-placeholder-val="{{ false }}">
+                <div style="display:flex;flex-direction:column;gap:8px">
+                  <label style="display:grid;grid-template-columns:116px minmax(0,1fr);align-items:center;column-gap:12px;font-size:13px;color:#5c636b;text-align:right">카드사<sc-raw-select value="{{ p.bank }}" sc-camel-on-change="{{ p.onBank }}" style="text-align:left;height:40px;border:1px solid #d5d9de;border-radius:10px;padding:0 8px;font-family:inherit;color:#1c1f23;min-width:0;background:#ffffff"><sc-for list="{{ p.bankOpts }}" as="o" hint-placeholder-count="3"><option value="{{ o.v }}">{{ o.label }}</option></sc-for></sc-raw-select><sc-if value="{{ p.isBankEtc }}" hint-placeholder-val="{{ false }}"><input value="{{ p.bankEtc }}" sc-camel-on-input="{{ p.onBankEtc }}" placeholder="카드사 직접 입력" style="height:40px;border:1px solid #d5d9de;border-radius:10px;padding:0 10px;font-family:inherit;color:#1c1f23;min-width:0"></sc-if></label>
+                  <label style="display:grid;grid-template-columns:116px minmax(0,1fr);align-items:center;column-gap:12px;font-size:13px;color:#5c636b;text-align:right">카드번호 뒤 4자리<input inputmode="numeric" value="{{ p.cardNo }}" sc-camel-on-input="{{ p.onCardNo }}" placeholder="-" style="text-align:left;height:40px;border:1px solid #d5d9de;border-radius:10px;padding:0 10px;font-family:inherit;color:#1c1f23;min-width:0;font-variant-numeric:tabular-nums"></label>
+                  <label style="display:grid;grid-template-columns:116px minmax(0,1fr);align-items:center;column-gap:12px;font-size:13px;color:#5c636b;text-align:right">결제일<input type="date" value="{{ p.payDate }}" sc-camel-on-input="{{ p.onPayDate }}" style="text-align:left;height:40px;border:1px solid #d5d9de;border-radius:10px;padding:0 8px;font-family:inherit;color:#1c1f23;min-width:0;background:#ffffff"></label>
+                  <label style="display:grid;grid-template-columns:116px minmax(0,1fr);align-items:center;column-gap:12px;font-size:13px;color:#5c636b;text-align:right">승인번호<input value="{{ p.approval }}" sc-camel-on-input="{{ p.onApproval }}" placeholder="-" style="text-align:left;height:40px;border:1px solid #d5d9de;border-radius:10px;padding:0 10px;font-family:inherit;color:#1c1f23;min-width:0;font-variant-numeric:tabular-nums"></label>
+                  <label style="display:grid;grid-template-columns:116px minmax(0,1fr);align-items:center;column-gap:12px;font-size:13px;color:#5c636b;text-align:right">할부<div style="display:flex;align-items:center;gap:4px;height:40px;border-radius:20px;background:#f5f7f9;padding:0 2px"><div sc-camel-on-click="{{ p.instDec }}" style="width:40px;height:40px;flex:none;border-radius:20px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:#345b80"><svg width="18" height="18" sc-camel-view-box="0 0 24 24" fill="none" stroke="currentColor" sc-camel-stroke-width="1.5" sc-camel-stroke-linecap="round"><path d="M5 12h14"></path></svg></div><span style="flex:1;min-width:0;text-align:center;font-size:13.5px;font-weight:600;color:#1c1f23;white-space:nowrap">{{ p.inst }}</span><div sc-camel-on-click="{{ p.instInc }}" style="width:40px;height:40px;flex:none;border-radius:20px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:#345b80"><svg width="18" height="18" sc-camel-view-box="0 0 24 24" fill="none" stroke="currentColor" sc-camel-stroke-width="1.5" sc-camel-stroke-linecap="round"><path d="M12 5v14M5 12h14"></path></svg></div></div></label>
+                </div>
+              </sc-if>
+              <sc-if value="{{ p.isCash }}" hint-placeholder-val="{{ false }}">
+                <div style="font-size:13px;color:#4a5158">{{ p.rcptText }}</div>
+                <sc-if value="{{ p.needNo }}" hint-placeholder-val="{{ false }}">
+                  <div style="display:flex;flex-direction:column;gap:8px">
+                    <label style="display:grid;grid-template-columns:116px minmax(0,1fr);align-items:center;column-gap:12px;font-size:13px;color:#5c636b;text-align:right">용도<sc-raw-select value="{{ p.rcptUse }}" sc-camel-on-change="{{ p.onRcptUse }}" style="text-align:left;height:40px;border:1px solid #d5d9de;border-radius:10px;padding:0 8px;font-family:inherit;color:#1c1f23;background:#ffffff"><option value="소득공제">소득공제</option><option value="지출증빙">지출증빙</option></sc-raw-select></label>
+                    <label style="display:grid;grid-template-columns:116px minmax(0,1fr);align-items:center;column-gap:12px;font-size:13px;color:#5c636b;text-align:right">발급번호 (휴대폰 · 사업자번호)<input inputmode="numeric" value="{{ p.rcptNo }}" sc-camel-on-input="{{ p.onRcptNo }}" placeholder="-" style="text-align:left;height:40px;border:1px solid #d5d9de;border-radius:10px;padding:0 10px;font-family:inherit;color:#1c1f23;min-width:0;font-variant-numeric:tabular-nums"></label>
+                    <label style="display:grid;grid-template-columns:116px minmax(0,1fr);align-items:center;column-gap:12px;font-size:13px;color:#5c636b;text-align:right">현금영수증 승인번호<input value="{{ p.rcptAppr }}" sc-camel-on-input="{{ p.onRcptAppr }}" placeholder="-" style="text-align:left;height:40px;border:1px solid #d5d9de;border-radius:10px;padding:0 10px;font-family:inherit;color:#1c1f23;min-width:0;font-variant-numeric:tabular-nums"></label>
+                  </div>
+                </sc-if>
+              </sc-if>
+            </div>
+          </sc-for>
+          </sc-if>
+          <div style="display:flex;align-items:center;justify-content:flex-end;gap:8px;padding:12px 22px">
+            <sc-if value="{{ payDirty }}" hint-placeholder-val="{{ false }}"><div style="flex:1;font-size:12.5px;color:#345b80">변경 사항이 아직 저장되지 않았습니다</div>
+              <div sc-camel-on-click="{{ payRevert }}" style="height:40px;padding:0 12px;border-radius:8px;display:flex;align-items:center;font-size:13.5px;font-weight:600;color:#5c636b;cursor:pointer" style-hover="background:#f3f5f7">되돌리기</div></sc-if>
+            <div sc-camel-on-click="{{ payAskSave }}" style="height:40px;padding:0 16px;border-radius:8px;display:flex;align-items:center;font-size:13.5px;font-weight:600;color:#ffffff;cursor:pointer;background:{{ paySaveBg }}">저장</div>
+          </div>
+        </div>
+      </sc-if>
+      </sc-if>
+      <sc-if value="{{ payConfirm }}" hint-placeholder-val="{{ false }}">
+        <div sc-camel-on-click="{{ payCancelConfirm }}" style="position:fixed;inset:0;z-index:60;background:rgba(28,31,35,0.38);display:flex;align-items:center;justify-content:center;padding:24px">
+          <div sc-camel-on-click="{{ stop }}" style="width:420px;max-width:100%;max-height:80vh;overflow-y:auto;background:#ffffff;border-radius:12px;padding:22px 22px 16px;box-shadow:0 12px 40px rgba(28,31,35,0.2)">
+            <div style="font-size:17px;font-weight:600">결제 정보를 확인해 주세요</div>
+            <div style="font-size:13px;color:#6d747c;margin-top:6px;line-height:1.55">영수증과 한 번 더 대조한 뒤 저장해 주세요. 저장된 정보는 환불(결제 취소) 시 사용됩니다.</div>
+            <sc-for list="{{ payConfirmRows }}" as="r" hint-placeholder-count="1">
+              <div style="margin-top:14px;border:1px solid #e3e6ea;border-radius:8px;overflow:hidden">
+                <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 14px;background:#f7f8f9;border-bottom:1px solid #e3e6ea"><span style="font-size:14px;font-weight:600">{{ r.title }}</span><span style="font-size:12px;font-weight:600;color:{{ r.okFg }}">{{ r.okText }}</span></div>
+                <sc-for list="{{ r.lines }}" as="l" hint-placeholder-count="3">
+                  <div style="display:flex;justify-content:space-between;gap:12px;padding:8px 14px;font-size:13.5px;border-top:1px solid #f2f3f5"><span style="color:#7b828a">{{ l.k }}</span><span style="font-variant-numeric:tabular-nums;color:{{ l.fg }}">{{ l.v }}</span></div>
+                </sc-for>
+              </div>
+            </sc-for>
+            <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:18px">
+              <div sc-camel-on-click="{{ payCancelConfirm }}" style="height:40px;padding:0 12px;border-radius:8px;display:flex;align-items:center;font-size:13.5px;font-weight:600;color:#5c636b;cursor:pointer" style-hover="background:#f3f5f7">수정하기</div>
+              <div sc-camel-on-click="{{ payDoSave }}" style="height:40px;padding:0 16px;border-radius:8px;display:flex;align-items:center;font-size:13.5px;font-weight:600;color:#ffffff;background:#345b80;cursor:pointer">확인 후 저장</div>
+            </div>
+          </div>
+        </div>
+      </sc-if>
+    </sc-if>
+
+    <sc-if value="{{ tabDocs }}" hint-placeholder-val="{{ true }}">
+      <sc-if value="{{ hasDocs }}" hint-placeholder-val="{{ true }}">
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:16px">
+          <sc-for list="{{ docList }}" as="d" hint-placeholder-count="2">
+            <div style="border:1px solid #e3e6ea;border-radius:11px;overflow:hidden;background:#ffffff;display:flex;flex-direction:column">
+              <div style="position:relative;height:244px;background:#f5f6f8;border-bottom:1px solid #e3e6ea;display:flex;align-items:center;justify-content:center;opacity:{{ d.thumbOp }}">
+                <div sc-camel-on-click="{{ d.open }}" style="cursor:pointer;display:flex" style-hover="opacity:0.85">{{ d.thumb }}</div>
+                <div sc-camel-on-click="{{ d.del }}" title="문서 삭제" style="position:absolute;top:8px;right:8px;width:30px;height:30px;border-radius:6px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:#a4abb3;background:rgba(255,255,255,0.9)" style-hover="color:#b3261e;background:#ffffff"><svg width="15" height="15" sc-camel-view-box="0 0 24 24" fill="none" stroke="currentColor" sc-camel-stroke-width="2" sc-camel-stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"></path></svg></div>
+              </div>
+              <div style="padding:14px 16px 16px;display:flex;flex-direction:column;gap:4px;flex:1">
+                <div style="display:flex;align-items:center;gap:7px;flex-wrap:wrap"><div style="font-size:14.5px;font-weight:600;color:{{ d.titleFg }}">{{ d.title }}</div><span style="padding:2px 8px;border-radius:10px;font-size:11px;font-weight:600;background:{{ d.verBg }};color:{{ d.verFg }}">{{ d.verLabel }}</span></div>
+                <div style="font-size:12px;color:#7b828a;text-wrap:pretty">{{ d.meta }}</div>
+                <div style="display:flex;gap:7px;margin-top:10px">
+                  <div sc-camel-on-click="{{ d.open }}" style="flex:1;height:40px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:13.5px;font-weight:600;cursor:pointer;border:1px solid #c9d3de;background:#ffffff;color:#345b80" style-hover="background:#f3f6f9" style-active="background:#e8eef4">PDF 보기</div>
+                  <sc-if value="{{ d.canResign }}" hint-placeholder-val="{{ false }}"><div sc-camel-on-click="{{ d.resign }}" style="flex:1;height:40px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:13.5px;font-weight:600;cursor:pointer;color:#345b80;background:rgba(52,91,128,0.06)" style-hover="background:rgba(52,91,128,0.1)">재서명</div></sc-if>
+                </div>
+              </div>
+            </div>
+          </sc-for>
+        </div>
+        <sc-if value="{{ docPg.show }}" hint-placeholder-val="{{ false }}">
+          <div style="display:flex;align-items:center;justify-content:center;gap:4px;padding:18px 0 4px">
+            <div sc-camel-on-click="{{ docPg.prev }}" style="width:40px;height:40px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:{{ docPg.prevFg }}"><svg width="20" height="20" sc-camel-view-box="0 0 24 24" fill="none" stroke="currentColor" sc-camel-stroke-width="1.5" sc-camel-stroke-linecap="round" sc-camel-stroke-linejoin="round"><path d="M15 19l-7-7 7-7"></path></svg></div>
+            <sc-for list="{{ docPg.pages }}" as="pg" hint-placeholder-count="3">
+              <div sc-camel-on-click="{{ pg.go }}" style="min-width:40px;height:40px;padding:0 4px;box-sizing:border-box;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:14px;font-variant-numeric:tabular-nums;cursor:{{ pg.cur }};background:{{ pg.bg }};color:{{ pg.fg }}">{{ pg.label }}</div>
+            </sc-for>
+            <div sc-camel-on-click="{{ docPg.next }}" style="width:40px;height:40px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:{{ docPg.nextFg }}"><svg width="20" height="20" sc-camel-view-box="0 0 24 24" fill="none" stroke="currentColor" sc-camel-stroke-width="1.5" sc-camel-stroke-linecap="round" sc-camel-stroke-linejoin="round"><path d="M9 5l7 7-7 7"></path></svg></div>
+          </div>
+        </sc-if>
+      </sc-if>
+      <sc-if value="{{ noDocs }}" hint-placeholder-val="{{ false }}">
+        <div style="padding:56px 0;text-align:center;font-size:14px;color:#8d949b">보관된 문서가 없습니다.</div>
+      </sc-if>
+    </sc-if>
+    <sc-if value="{{ delAsk }}" hint-placeholder-val="{{ false }}">
+      <div sc-camel-on-click="{{ delCancel }}" style="position:fixed;inset:0;z-index:60;background:rgba(28,31,35,0.38);display:flex;align-items:center;justify-content:center;padding:24px">
+        <div sc-camel-on-click="{{ stop }}" style="width:360px;max-width:100%;background:#ffffff;border-radius:12px;padding:24px 24px 18px;box-shadow:0 12px 40px rgba(28,31,35,0.2)">
+          <div style="font-size:17px;font-weight:600;color:#1c1f23">삭제하시겠습니까?</div>
+          <div style="font-size:14px;color:#5c636b;line-height:1.6;margin-top:10px;text-wrap:pretty">{{ delMsg }}</div>
+          <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:22px">
+            <div sc-camel-on-click="{{ delCancel }}" style="height:42px;padding:0 18px;border-radius:8px;display:flex;align-items:center;font-size:14.5px;font-weight:600;color:#5c636b;cursor:pointer" style-hover="background:#f2f3f5">취소</div>
+            <div sc-camel-on-click="{{ delConfirm }}" style="height:42px;padding:0 20px;border-radius:8px;display:flex;align-items:center;font-size:14.5px;font-weight:600;color:#ffffff;background:#b3261e;cursor:pointer" style-hover="background:#94201a">삭제</div>
+          </div>
+        </div>
+      </div>
+    </sc-if>
+
+  </div>
+</div>
+</sc-if>
+
+<!-- ================= 환불 정산 계산 ================= -->
+<sc-if value="{{ isRefund }}" hint-placeholder-val="{{ true }}">
+<div style="flex:1;min-height:0;overflow-x:hidden;overflow-y:auto;-webkit-overflow-scrolling:touch;touch-action:pan-y;padding:22px 28px 24px;display:flex;flex-direction:column;gap:16px">
+
+  <div style="border:1px solid #e9ebee;border-radius:16px;overflow:hidden;background:#ffffff;flex:none">
+    <div style="padding:14px 18px;background:#f7f8f9;border-bottom:1px solid #e3e6ea;display:flex;justify-content:space-between;align-items:baseline">
+      <div style="font-size:13px;font-weight:600;color:#4a5158">이용 내역 입력</div>
+      
+    </div>
+    <div style="display:grid;grid-template-columns:52px minmax(0,1fr) 64px 136px 84px 92px;column-gap:8px;padding:0 18px;border-bottom:1px solid #e3e6ea">
+      <div style="font-size:12px;font-weight:600;color:#6d747c;padding:10px 0">구분</div>
+      <div style="font-size:12px;font-weight:600;color:#6d747c;padding:10px 0">항목</div>
+      <div style="font-size:12px;font-weight:600;color:#6d747c;padding:10px 0;text-align:right">등록</div>
+      <div style="font-size:12px;font-weight:600;color:#6d747c;padding:10px 0;text-align:center">이용</div>
+      <div style="font-size:12px;font-weight:600;color:#6d747c;padding:10px 0;text-align:right">1회 정상가</div>
+      <div style="font-size:12px;font-weight:600;color:#6d747c;padding:10px 0;text-align:right">차감금액</div>
+    </div>
+    <sc-for list="{{ rItems }}" as="r" hint-placeholder-count="4">
+      <div style="display:grid;grid-template-columns:52px minmax(0,1fr) 64px 136px 84px 92px;column-gap:8px;padding:0 18px;border-bottom:1px solid #eef0f2;align-items:center">
+        <div style="padding:10px 0;font-size:13px;color:#5c636b">{{ r.kind }}</div>
+        <div style="padding:10px 0;font-size:13.5px;text-wrap:pretty;display:flex;flex-direction:column;gap:6px">
+          <div>{{ r.name }}</div>
+          <sc-if value="{{ r.lesNote }}" hint-placeholder-val="{{ false }}"><div style="font-size:12px;color:#6d747c">{{ r.lesNote }}</div></sc-if>
+          <sc-if value="{{ r.isLes }}" hint-placeholder-val="{{ false }}">
+            <div style="display:flex;flex-direction:column;gap:6px">
+              <sc-for list="{{ r.lesRows }}" as="lr" hint-placeholder-count="1">
+                <div style="display:flex;align-items:center;gap:8px">
+                  <span style="font-size:12.5px;color:#5c636b;width:44px;flex:none">{{ lr.no }}</span>
+                  <sc-if value="{{ lr.isNum }}" hint-placeholder-val="{{ true }}">
+                  <input type="text" sc-camel-input-mode="numeric" placeholder="정상가" value="{{ lr.val }}" sc-camel-on-input="{{ lr.onVal }}" style="flex:1;min-width:0;max-width:140px;height:40px;box-sizing:border-box;border:1px solid {{ lr.bd }};border-radius:8px;padding:0 10px;font-family:inherit;text-align:right;background:#ffffff;font-variant-numeric:tabular-nums">
+                  <span style="font-size:12.5px;color:#6d747c">원</span>
+                  </sc-if>
+                  <sc-if value="{{ lr.isSize }}" hint-placeholder-val="{{ false }}">
+                    <div style="display:flex;flex-wrap:wrap;gap:6px;min-width:0">
+                      <sc-for list="{{ lr.sizes }}" as="sz" hint-placeholder-count="3">
+                        <div sc-camel-on-click="{{ sz.pick }}" style="height:40px;padding:0 12px;border-radius:8px;display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer;border:1px solid {{ sz.bd }};background:{{ sz.bg }};color:{{ sz.fg }}"><span>{{ sz.label }}</span><span style="font-variant-numeric:tabular-nums">{{ sz.price }}</span></div>
+                      </sc-for>
+                    </div>
+                  </sc-if>
+                  <div sc-camel-on-click="{{ lr.del }}" style="height:40px;padding:0 10px;display:flex;align-items:center;font-size:12.5px;color:#8d949b;cursor:pointer">삭제</div>
+                </div>
+              </sc-for>
+            </div>
+          </sc-if>
+          <sc-if value="{{ r.hasVar }}" hint-placeholder-val="{{ false }}">
+            <div style="display:flex;flex-wrap:wrap;gap:6px">
+              <sc-for list="{{ r.variants }}" as="vv" hint-placeholder-count="2">
+                <div sc-camel-on-click="{{ vv.pick }}" style="height:32px;padding:0 10px;border-radius:7px;display:flex;align-items:center;font-size:12.5px;cursor:pointer;border:1px solid {{ vv.bd }};background:{{ vv.bg }};color:{{ vv.fg }}">{{ vv.label }}</div>
+              </sc-for>
+            </div>
+          </sc-if>
+        </div>
+        <div style="padding:10px 0;font-size:13px;text-align:right;color:#7b828a;font-variant-numeric:tabular-nums">{{ r.reg }}</div>
+        <div style="padding:6px 0;display:flex;align-items:center;justify-content:center;gap:6px">
+          <div sc-camel-on-click="{{ r.dec }}" style="width:40px;height:40px;border-radius:8px;border:1px solid #c9d3de;display:flex;align-items:center;justify-content:center;font-size:18px;cursor:pointer;color:{{ r.decFg }}">−</div>
+          <div style="width:30px;text-align:center;font-size:15px;font-weight:600;font-variant-numeric:tabular-nums">{{ r.used }}</div>
+          <div sc-camel-on-click="{{ r.inc }}" style="width:40px;height:40px;border-radius:8px;border:1px solid #c9d3de;display:flex;align-items:center;justify-content:center;font-size:18px;cursor:pointer;color:{{ r.incFg }}">+</div>
+        </div>
+        <div style="padding:10px 0;font-size:13px;text-align:right;font-variant-numeric:tabular-nums">{{ r.price }}</div>
+        <div style="padding:10px 0;font-size:13.5px;text-align:right;font-weight:600;font-variant-numeric:tabular-nums">{{ r.amt }}</div>
+      </div>
+    </sc-for>
+    <sc-if value="{{ hasCap }}" hint-placeholder-val="{{ false }}">
+      <div style="padding:10px 18px;font-size:12.5px;color:#5c636b;border-bottom:1px solid #eef0f2">{{ rfCapNote }}</div>
+    </sc-if>
+    <sc-if value="{{ hasVisitSvc }}" hint-placeholder-val="{{ false }}">
+      <div style="padding:14px 18px;border-bottom:1px solid #eef0f2;display:flex;flex-direction:column;gap:10px">
+        <div style="display:flex;justify-content:space-between;align-items:baseline;gap:10px"><div style="font-size:13px;font-weight:600;color:#4a5158">서비스 이용 기록</div></div>
+        <sc-if value="{{ hasAcneSel }}" hint-placeholder-val="{{ false }}">
+        <div style="border:1px solid #e3e6ea;border-radius:8px;overflow:hidden">
+          <div style="display:grid;grid-template-columns:96px minmax(0,1fr) 92px 44px;background:#f7f8f9;border-bottom:1px solid #e3e6ea;font-size:12px;font-weight:600;color:#6d747c">
+            <div style="padding:9px 12px">항목</div><div style="padding:9px 12px;border-left:1px solid #eceef1">범위</div><div style="padding:9px 10px;border-left:1px solid #eceef1;text-align:center">건수</div><div style="border-left:1px solid #eceef1"></div>
+          </div>
+          <sc-for list="{{ svcGroups }}" as="g" hint-placeholder-count="3">
+            <div style="display:grid;grid-template-columns:96px minmax(0,1fr) 92px 44px;align-items:stretch;border-top:{{ g.sep }};font-size:13px">
+              <div style="padding:0 12px;display:flex;align-items:center;font-weight:600;color:#2b3036;white-space:nowrap">{{ g.title }}</div>
+              
+              <div style="border-left:1px solid #f0f1f3;padding:6px 12px;display:flex;align-items:center;flex-wrap:wrap;gap:2px 12px;min-width:0">
+                <sc-for list="{{ g.opts }}" as="o" hint-placeholder-count="2">
+                  <div sc-camel-on-click="{{ o.pick }}" style="display:flex;align-items:center;gap:6px;min-height:32px;cursor:pointer;white-space:nowrap">
+                    <div style="width:16px;height:16px;border-radius:50%;box-sizing:border-box;border:1.5px solid {{ o.bd }};display:flex;align-items:center;justify-content:center;flex:none"><div style="width:8px;height:8px;border-radius:50%;background:{{ o.dot }}"></div></div>
+                    <span style="color:{{ o.fg }}">{{ o.label }}</span><span style="color:#8d949b;font-size:12px;font-variant-numeric:tabular-nums">{{ o.price }}</span>
+                  </div>
+                </sc-for>
+              </div>
+              <div style="border-left:1px solid #f0f1f3;display:flex;align-items:center;justify-content:center">
+                <div sc-camel-on-click="{{ g.dec }}" style="width:26px;height:44px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:#6d747c">−</div>
+                <div style="min-width:20px;text-align:center;font-variant-numeric:tabular-nums">{{ g.qty }}</div>
+                <div sc-camel-on-click="{{ g.inc }}" style="width:26px;height:44px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:#6d747c">+</div>
+              </div>
+              <div sc-camel-on-click="{{ g.add }}" title="기록 추가" style="border-left:1px solid #f0f1f3;display:flex;align-items:center;justify-content:center;cursor:pointer;color:#345b80" style-hover="background:#f3f6f9"><svg width="18" height="18" sc-camel-view-box="0 0 24 24" fill="none" stroke="currentColor" sc-camel-stroke-width="1.5" sc-camel-stroke-linecap="round"><path d="M12 5v14M5 12h14"></path></svg></div>
+            </div>
+            <sc-if value="{{ g.hasRecs }}" hint-placeholder-val="{{ false }}">
+              <div style="display:grid;grid-template-columns:96px minmax(0,1fr) 92px 44px;background:#fafbfc;border-top:1px dashed #eceef1;font-size:12px">
+                <div style="padding:8px 12px;color:#8d949b;display:flex;align-items:center">기록</div>
+                <div style="border-left:1px solid #f0f1f3;padding:6px 10px;display:flex;align-items:center;flex-wrap:wrap;gap:6px">
+                  <sc-for list="{{ g.recs }}" as="r" hint-placeholder-count="0">
+                    <div style="display:flex;align-items:center;height:26px;padding:0 2px 0 9px;border-radius:13px;background:#ffffff;border:1px solid #e3e6ea;color:#4a5158;white-space:nowrap">{{ r.label }}<div sc-camel-on-click="{{ r.del }}" style="width:22px;height:26px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:#a4abb3"><svg width="10" height="10" sc-camel-view-box="0 0 24 24" fill="none" stroke="currentColor" sc-camel-stroke-width="2" sc-camel-stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"></path></svg></div></div>
+                  </sc-for>
+                </div>
+                <div style="border-left:1px solid #f0f1f3;grid-column:span 2;display:flex;align-items:center;justify-content:flex-end;padding:0 12px;font-weight:600;color:#1c1f23;font-variant-numeric:tabular-nums">{{ g.recSum }}</div>
+              </div>
+            </sc-if>
+          </sc-for>
+        </div>
+        <sc-if value="{{ oldSel }}" hint-placeholder-val="{{ false }}">
+        <div style="display:grid;grid-template-columns:minmax(0,1fr);gap:8px">
+          <label style="display:flex;flex-direction:column;gap:5px;font-size:12px;color:#6d747c;min-width:0">항목
+          <sc-raw-select value="{{ visitPick }}" sc-camel-on-change="{{ onVisitPick }}" style="width:100%;min-width:0;height:44px;border:1px solid #d5d9de;border-radius:10px;padding:0 32px 0 12px;-webkit-appearance:none;appearance:none;background:#ffffff url(data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2216%22%20height%3D%2216%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22%236d747c%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpath%20d%3D%22M6%209l6%206%206-6%22%2F%3E%3C%2Fsvg%3E) no-repeat right 10px center;font-family:inherit;color:#1c1f23">
+            <sc-for list="{{ visitOpts }}" as="o" hint-placeholder-count="3">
+              <option value="{{ o.v }}">{{ o.label }}</option>
+            </sc-for>
+          </sc-raw-select></label>
+        </div>
+        <div style="display:flex;justify-content:flex-end;gap:8px">
+          <div style="display:flex;align-items:center;border:1px solid #d5d9de;border-radius:10px;height:44px;box-sizing:border-box;flex:none">
+            <div sc-camel-on-click="{{ vQtyDec }}" style="width:36px;height:42px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:#4a5158;font-size:16px">−</div>
+            <div style="min-width:40px;text-align:center;font-size:14px;font-variant-numeric:tabular-nums">{{ vQty }}건</div>
+            <div sc-camel-on-click="{{ vQtyInc }}" style="width:36px;height:42px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:#4a5158;font-size:16px">+</div>
+          </div>
+          <div sc-camel-on-click="{{ addVisit }}" style="height:44px;padding:0 16px;border-radius:8px;background:#345b80;color:#fff;display:flex;align-items:center;font-size:14px;font-weight:600;cursor:pointer">추가</div>
+        </div>
+        </sc-if>
+        </sc-if>
+        <sc-if value="{{ oldSel }}" hint-placeholder-val="{{ false }}">
+          <div style="display:flex;flex-direction:column">
+            <sc-for list="{{ rVisits }}" as="v" hint-placeholder-count="0">
+              <div style="display:grid;grid-template-columns:0 minmax(0,1fr) 84px 36px;align-items:center;font-size:13px;border-bottom:1px solid #f2f3f5">
+                <div></div>
+                <div style="color:#2b3036">{{ v.label }}</div>
+                <div style="text-align:right;font-variant-numeric:tabular-nums;color:#1c1f23">{{ v.amt }}</div>
+                <div sc-camel-on-click="{{ v.del }}" style="height:40px;display:flex;align-items:center;justify-content:flex-end;cursor:pointer;color:#a4abb3" style-hover="color:#b3261e"><svg width="14" height="14" sc-camel-view-box="0 0 24 24" fill="none" stroke="currentColor" sc-camel-stroke-width="1.5" sc-camel-stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"></path></svg></div>
+              </div>
+            </sc-for>
+          </div>
+        </sc-if>
+      </div>
+    </sc-if>
+  </div>
+
+  <div style="display:flex;gap:16px;flex:none;align-items:flex-start">
+    <div style="flex:1;border:1px solid #e9ebee;border-radius:16px;background:#ffffff;padding:20px 22px;display:flex;flex-direction:column;gap:12px">
+      <div style="font-size:13px;font-weight:600;color:#4a5158">환불 사유</div>
+      <div style="display:flex;flex-wrap:wrap;gap:8px">
+        <sc-for list="{{ reasons }}" as="rs" hint-placeholder-count="4">
+          <div sc-camel-on-click="{{ rs.pick }}" style="height:44px;padding:0 14px;border-radius:8px;display:flex;align-items:center;font-size:13.5px;cursor:pointer;border:1px solid {{ rs.bd }};background:{{ rs.bg }};color:{{ rs.fg }}">{{ rs.label }}</div>
+        </sc-for>
+      </div>
+    </div>
+    <div style="flex:1.15;border:1px solid #c9d6e3;border-radius:16px;padding:20px 22px;background:#ffffff">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:8px">
+        <div style="font-size:14px;font-weight:500;color:#6d747c">최종 환불금액</div>
+        <div style="padding:3px 10px;border-radius:10px;background:#eef3f8;font-size:12px;font-weight:600;color:#345b80;white-space:nowrap">{{ rfStage }}</div>
+      </div>
+      <div style="margin-top:4px;font-size:26px;font-weight:700;letter-spacing:-0.03em;color:#1c1f23;font-variant-numeric:tabular-nums;line-height:1.3">{{ rfHero }}</div>
+      <div style="margin-top:14px;display:flex;flex-direction:column;gap:11px;font-size:13.5px">
+        <div style="display:flex;justify-content:space-between"><span style="color:#5c636b">납부금액</span><span style="font-variant-numeric:tabular-nums">{{ rfPaid }}원</span></div>
+        <div style="display:flex;justify-content:space-between"><span style="color:#5c636b">위약금 (총 계약금액 × 10%)</span><span style="font-variant-numeric:tabular-nums;color:#b4483f">− {{ rfPen }}원</span></div>
+        <div style="display:flex;justify-content:space-between"><span style="color:#5c636b">이용금액 (정상가)</span><span style="font-variant-numeric:tabular-nums;color:#b4483f">− {{ rfUsedAmt }}원</span></div>
+        <div style="height:1px;background:#d9e2ea"></div>
+        <div style="display:flex;justify-content:space-between;align-items:baseline"><span style="font-size:14px;font-weight:600">= 최종 환불금액</span><span style="font-size:17px;font-weight:700;font-variant-numeric:tabular-nums;color:#345b80">{{ rfRefund }}원</span></div>
+      </div>
+      <sc-if value="{{ rfMulti }}" hint-placeholder-val="{{ false }}"><div style="margin-top:16px;padding-top:14px;border-top:1px solid #d9e2ea;display:flex;flex-direction:column;gap:10px">
+        <div style="font-size:13px;font-weight:600;color:#345b80">결제수단별 환불</div>
+        <sc-for list="{{ rfPayRows }}" as="p" hint-placeholder-count="2">
+          <div style="display:flex;flex-direction:column;gap:6px;padding:10px 12px;border:1px solid #e3e8ee;border-radius:8px;background:#ffffff">
+            <div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px;font-size:13.5px">
+              <span style="font-weight:600;white-space:nowrap">{{ p.method }}</span>
+              <span style="font-size:12.5px;color:#6d747c;font-variant-numeric:tabular-nums;white-space:nowrap">원결제 {{ p.paid }}</span>
+            </div>
+            <div style="display:flex;align-items:center;gap:8px">
+              <span style="font-size:12.5px;color:#6d747c;flex:none">환불</span>
+              <input type="text" sc-camel-input-mode="numeric" placeholder="0" value="{{ p.val }}" sc-camel-on-input="{{ p.onVal }}" style="flex:1;min-width:0;height:40px;box-sizing:border-box;border:1px solid {{ p.bd }};border-radius:8px;padding:0 10px;font-family:inherit;text-align:right;background:#ffffff;font-variant-numeric:tabular-nums">
+              <span style="font-size:12.5px;color:#6d747c;flex:none">원</span>
+            </div>
+            <div style="font-size:12px;color:#6d747c;text-align:right;font-variant-numeric:tabular-nums">남은 금액 {{ p.left }}</div>
+            <sc-if value="{{ p.err }}" hint-placeholder-val="{{ false }}"><div style="font-size:12px;color:#d64545;text-align:right">{{ p.errText }}</div></sc-if>
+          </div>
+        </sc-for>
+        <div style="display:flex;justify-content:space-between;align-items:center;padding-top:8px;border-top:1px dashed #d9e2ea;font-size:13.5px">
+          <span style="font-size:12.5px;color:{{ rfAllocFg }}">{{ rfAllocMsg }}</span>
+          <span style="font-weight:600;font-variant-numeric:tabular-nums">환불 합계 {{ rfAllocSum }}</span>
+        </div>
+      </div></sc-if>
+    </div>
+  </div>
+</div>
+</sc-if>
+
+<!-- ================= 정산서 서명 ================= -->
+<sc-if value="{{ isRefundSign }}" hint-placeholder-val="{{ true }}">
+<div style="position:fixed;top:0;left:0;width:820px;height:100vh;height:100dvh;background:#ffffff;overflow:hidden;z-index:20">
+  <div style="position:absolute;inset:0;overflow:hidden;background:#fff">
+    <div style="width:100%;height:100%;box-sizing:border-box;padding-bottom:100px;overflow-x:hidden;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;touch-action:pan-y;background:#fff">
+      <div style="width:820px;overflow:hidden">
+      <div ref="{{ sgRef }}" style="width:740px;transform:translateZ(0) scale(1.1081);transform-origin:top left;will-change:transform;backface-visibility:hidden;margin-bottom:{{ sgMb }}px">
+        <div style="width:740px;max-width:740px;overflow:hidden;min-height:0px;padding:24px 34px;box-sizing:border-box;display:flex;flex-direction:column;--lh:1.72;--sg:11px;--bg:4px;--tt:14px;--tb:4px;--cp:16px 20px;word-break:keep-all;overflow-wrap:break-word;font-family:'Noto Serif KR',serif;color:#1c1f23">
+          <div style="text-align:center;font-size:23px;font-weight:600;letter-spacing:0.06em">환불 정산서</div>
+          <div style="text-align:center;font-size:11.5px;color:#7b828a;margin-top:7px;font-family:Pretendard,sans-serif">다채움피부과의원 · 정산일 {{ rfToday }}</div>
+          <div style="height:1.5px;background:#1c1f23;margin:9px 0 10px"></div>
+          <div style="display:grid;grid-template-columns:132px 1fr 132px 1fr;border-top:1px solid #d5d9de;font-size:var(--tbl,11.5px);line-height:1.5;white-space:nowrap">
+            <div style="padding:6px 14px;background:#f7f8f9;border-bottom:1px solid #d5d9de;font-weight:500">성명</div><div style="padding:6px 14px;border-bottom:1px solid #d5d9de">{{ rfName }}</div>
+            <div style="padding:6px 14px;background:#f7f8f9;border-bottom:1px solid #d5d9de;font-weight:500">생년월일</div><div style="padding:6px 14px;border-bottom:1px solid #d5d9de">{{ rfBirth }}</div>
+            <div style="padding:6px 14px;background:#f7f8f9;border-bottom:1px solid #d5d9de;font-weight:500">연락처</div><div style="padding:6px 14px;border-bottom:1px solid #d5d9de">{{ rfPhone }}</div>
+            <div style="padding:6px 14px;background:#f7f8f9;border-bottom:1px solid #d5d9de;font-weight:500">결제수단</div><div style="padding:6px 14px;border-bottom:1px solid #d5d9de">{{ rfMethod }}</div>
+          </div>
+          <div style="margin-top:13px;font-size:12px;font-weight:600">1. 원 동의서 내용</div>
+          <div style="margin-top:7px;display:grid;grid-template-columns:132px 1fr 132px 1fr;border-top:1px solid #d5d9de;font-size:11.5px;line-height:1.5">
+            <div style="padding:6px 14px;background:#f7f8f9;border-bottom:1px solid #d5d9de;font-weight:500">프로그램명</div><div style="padding:6px 14px;border-bottom:1px solid #d5d9de;grid-column:span 3;text-wrap:pretty">{{ rfProg }}</div>
+            <div style="padding:6px 14px;background:#f7f8f9;border-bottom:1px solid #d5d9de;font-weight:500">등록일</div><div style="padding:6px 14px;border-bottom:1px solid #d5d9de">{{ rfDate }}</div>
+            <div style="padding:6px 14px;background:#f7f8f9;border-bottom:1px solid #d5d9de;font-weight:500">이용기간 만료일</div><div style="padding:6px 14px;border-bottom:1px solid #d5d9de">{{ rfExpiry }}</div>
+            <div style="padding:6px 14px;background:#f7f8f9;border-bottom:1px solid #d5d9de;font-weight:500">총 결제금액</div><div style="padding:6px 14px;border-bottom:1px solid #d5d9de">{{ rfTotal }}원</div>
+            <div style="padding:6px 14px;background:#f7f8f9;border-bottom:1px solid #d5d9de;font-weight:500">납부금액</div><div style="padding:6px 14px;border-bottom:1px solid #d5d9de">{{ rfPaid }}원 ({{ rfPayState }})</div>
+            <div style="padding:6px 14px;background:#f7f8f9;border-bottom:1px solid #d5d9de;font-weight:500">해지 구분</div><div style="padding:6px 14px;border-bottom:1px solid #d5d9de">{{ rfStage }}</div>
+            <div style="padding:6px 14px;background:#f7f8f9;border-bottom:1px solid #d5d9de;font-weight:500">환불 사유</div><div style="padding:6px 14px;border-bottom:1px solid #d5d9de">{{ rfReason }}</div>
+          </div>
+          <div style="margin-top:7px;font-size:10.5px;color:#7b828a;font-family:Pretendard,sans-serif">※ <span style="background:#fdf3b5;padding:1px 3px;color:#2b2f34">등록 당시 금액 및 규정</span>을 기준으로 정산하며, <b style="font-weight:700;color:#111418">이후의 가격 변경과 무관합니다</b>.</div>
+          <div style="margin-top:16px;font-size:12px;font-weight:600">2. 이용내역 (공제 근거)</div>
+          <div style="margin-top:7px;display:grid;grid-template-columns:132px 1fr 58px 58px 92px 100px;border-top:1.2px solid #1c1f23;font-size:var(--tbl,11.5px);line-height:1.5;font-variant-numeric:tabular-nums">
+            <div style="padding:6px 14px;background:#f7f8f9;border-bottom:1px solid #d5d9de;font-weight:500">구분</div><div style="padding:6px 14px;background:#f7f8f9;border-bottom:1px solid #d5d9de;font-weight:500">항목</div><div style="padding:6px 14px;background:#f7f8f9;border-bottom:1px solid #d5d9de;font-weight:500;text-align:right">등록</div><div style="padding:6px 14px;background:#f7f8f9;border-bottom:1px solid #d5d9de;font-weight:500;text-align:right">진행</div><div style="padding:6px 14px;background:#f7f8f9;border-bottom:1px solid #d5d9de;font-weight:500;text-align:right">1회 정상가</div><div style="padding:6px 14px;background:#f7f8f9;border-bottom:1px solid #d5d9de;font-weight:500;text-align:right">차감금액</div>
+            <sc-for list="{{ rDocRows }}" as="r" hint-placeholder-count="4">
+            <div style="padding:6px 14px;border-bottom:1px solid #e3e6ea">{{ r.kind }}</div><div style="padding:6px 14px;border-bottom:1px solid #e3e6ea;text-wrap:pretty">{{ r.name }}</div><div style="padding:6px 14px;border-bottom:1px solid #e3e6ea;text-align:right">{{ r.reg }}</div><div style="padding:6px 14px;border-bottom:1px solid #e3e6ea;text-align:right">{{ r.used }}</div><div style="padding:6px 14px;border-bottom:1px solid #e3e6ea;text-align:right">{{ r.price }}</div><div style="padding:6px 14px;border-bottom:1px solid #e3e6ea;text-align:right">{{ r.amt }}</div>
+            </sc-for>
+            <div style="padding:7px 14px;border-bottom:1.2px solid #1c1f23;grid-column:span 5;font-weight:600">이용금액 합계</div><div style="padding:7px 14px;border-bottom:1.2px solid #1c1f23;text-align:right;font-weight:600">{{ rfUsedAmt }}</div>
+          </div>
+          <sc-if value="{{ hasCap }}" hint-placeholder-val="{{ false }}"><div style="margin-top:6px;font-size:10.4px;color:#5c636b;font-family:Pretendard,sans-serif">{{ rfCapNote }}</div></sc-if>
+          <div style="margin-top:16px;font-size:12px;font-weight:600">3. 정산 계산</div>
+          <div style="margin-top:7px;display:grid;grid-template-columns:1fr 130px;border-top:1.2px solid #1c1f23;font-size:11.5px">
+            <div style="padding:6px 14px;border-bottom:1px solid #e3e6ea">납부금액</div><div style="padding:6px 14px;border-bottom:1px solid #e3e6ea;text-align:right">{{ rfPaid }}원</div>
+            <div style="padding:6px 14px;border-bottom:1px solid #e3e6ea">− 위약금 (총 계약금액 {{ rfTotal }}원 × 10%)</div><div style="padding:6px 14px;border-bottom:1px solid #e3e6ea;text-align:right">{{ rfPen }}원</div>
+            <div style="padding:6px 14px;border-bottom:1px solid #e3e6ea">− 이용금액 ({{ rfUsedBreak }})</div><div style="padding:6px 14px;border-bottom:1px solid #e3e6ea;text-align:right">{{ rfUsedAmt }}원</div>
+            <div style="padding:9px 14px;border-bottom:1.2px solid #1c1f23;font-weight:600">= 최종 환불금액</div><div style="padding:9px 14px;border-bottom:1.2px solid #1c1f23;text-align:right;font-weight:600"><span style="background:linear-gradient(100deg, rgba(255,236,120,0) 0%, rgba(255,236,120,0.55) 2%, rgba(255,232,110,0.5) 50%, rgba(255,236,120,0.55) 97%, rgba(255,236,120,0) 100%) 0 62% / 100% 68% no-repeat;padding:0 2px;margin:0 -1px;border-radius:2px 5px 3px 6px;-webkit-box-decoration-break:clone;box-decoration-break:clone;color:#1f2226">{{ rfRefund }}원</span></div>
+          </div>
+          <div style="margin-top:16px;font-size:12px;font-weight:600">4. 확인 사항</div>
+          <div style="margin-top:7px;display:flex;flex-direction:column;gap:9px;font-size:10.4px;line-height:1.6;letter-spacing:-0.017em;text-wrap:pretty;color:#2b2f34">
+            <div>· 위약금은 납부액이 아닌 <span style="background:linear-gradient(100deg, rgba(255,236,120,0) 0%, rgba(255,236,120,0.55) 2%, rgba(255,232,110,0.5) 50%, rgba(255,236,120,0.55) 97%, rgba(255,236,120,0) 100%) 0 62% / 100% 68% no-repeat;padding:0 2px;margin:0 -1px;border-radius:2px 5px 3px 6px;-webkit-box-decoration-break:clone;box-decoration-break:clone;color:#1f2226">총 결제금액의 10%</span>, 이용금액은 <b style="font-weight:700;color:#111418">실제 이용한 수량·범위·기간</b>에 따라 <span style="background:linear-gradient(100deg, rgba(255,236,120,0) 0%, rgba(255,236,120,0.55) 2%, rgba(255,232,110,0.5) 50%, rgba(255,236,120,0.55) 97%, rgba(255,236,120,0) 100%) 0 62% / 100% 68% no-repeat;padding:0 2px;margin:0 -1px;border-radius:2px 5px 3px 6px;-webkit-box-decoration-break:clone;box-decoration-break:clone;color:#1f2226">등록 당시 정상가</span> 기준으로 산정되었습니다.</div>
+            <div>· 계산 결과가 0원 이하인 경우 <b style="font-weight:700;color:#111418">추가 금액은 청구하지 않습니다</b>.</div>
+            <div>· 환불은 <b style="font-weight:700;color:#111418">원결제 수단</b>을 기준으로 처리하며, 카드 결제의 경우 원결제 거래 기준으로 취소합니다. 환불 반영 시점은 카드사별로 다를 수 있습니다.</div>
+          </div>
+          <div style="margin-top:16px;font-size:11.5px;line-height:1.7">본인은 위 정산 내역을 확인하였으며, 해당 금액으로 환불 정산에 동의합니다.</div>
+          <div style="margin-top:14px;display:flex;justify-content:center;align-items:flex-end;gap:18px;font-size:11.5px">
+            <div>{{ rfTodayKo }}</div>
+            <div>환자 성명 <span style="display:inline-block;width:88px;border-bottom:1px solid #1c1f23;text-align:center">{{ rfName }}</span></div>
+            <div sc-camel-on-click="{{ openSigPad }}" style="cursor:pointer">서명 <span style="display:inline-block;width:100px;height:26px;border-bottom:1px solid #1c1f23;position:relative;vertical-align:bottom">
+              <sc-if value="{{ hasSigImg }}" hint-placeholder-val="{{ false }}">
+                {{ sigEl }}
+              </sc-if>
+              <sc-if value="{{ noSigImg }}" hint-placeholder-val="{{ true }}">
+                <span style="position:absolute;left:0;right:0;bottom:4px;text-align:center;font-size:9.5px;color:#9aa0a7;font-family:Pretendard,sans-serif">터치하여 서명</span>
+              </sc-if>
+            </span></div>
+          </div>
+        </div>
+      </div>
+      </div>
+    </div>
+  </div>
+  <div sc-camel-on-click="{{ exitRefundSign }}" style="position:absolute;left:14px;bottom:14px;width:34px;height:34px;border-radius:17px;background:rgba(28,31,35,.06);display:flex;align-items:center;justify-content:center;font-size:11px;color:#9aa0a7;font-family:Pretendard,sans-serif;cursor:pointer">직원</div>
+
+  <sc-if value="{{ sigOpen }}" hint-placeholder-val="{{ false }}">
+    <div style="position:absolute;inset:0;background:rgba(20,24,28,.46);display:flex;align-items:flex-end;justify-content:center;z-index:40">
+      <div style="width:820px;background:#fff;border-radius:22px 22px 0 0;padding:20px 26px 26px;box-sizing:border-box;font-family:Pretendard,sans-serif;box-shadow:0 -6px 30px rgba(20,24,28,.18)">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+          <div style="font-size:17px;font-weight:700;letter-spacing:-0.01em">환자 서명</div>
+          <div sc-camel-on-click="{{ clearSig }}" style="font-size:13px;color:#4a5158;padding:6px 14px;border:1px solid #d5d9de;border-radius:10px;cursor:pointer">다시 쓰기</div>
+        </div>
+        <div style="width:768px;height:230px;border:1.5px dashed #c9ced4;border-radius:12px;background:#fff;position:relative">
+          <canvas ref="{{ sigRef }}" width="768" height="230" sc-camel-on-pointer-down="{{ sigDown }}" sc-camel-on-pointer-move="{{ sigMove }}" sc-camel-on-pointer-up="{{ sigUp }}" style="width:768px;height:230px;display:block;border-radius:12px;cursor:crosshair;touch-action:none"></canvas>
+          <sc-if value="{{ noSig }}" hint-placeholder-val="{{ true }}">
+            <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none;font-size:15px;color:#b6bcc2">여기에 서명해 주세요</div>
+          </sc-if>
+        </div>
+        <div style="margin-top:16px;display:flex;align-items:center;gap:12px">
+          <div style="flex:1"></div>
+          <div sc-camel-on-click="{{ closeSigPad }}" style="height:52px;padding:0 22px;border-radius:8px;display:flex;align-items:center;font-size:15px;font-weight:600;color:#345b80;background:transparent;cursor:pointer">취소</div>
+          <div sc-camel-on-click="{{ confirmSigPad }}" style="height:52px;padding:0 30px;border-radius:8px;display:flex;align-items:center;font-size:15.5px;font-weight:700;cursor:pointer;background:{{ okBg }};color:{{ okFg }}">서명 완료</div>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ hasSigImg }}" hint-placeholder-val="{{ false }}">
+    <div style="position:absolute;right:20px;bottom:20px;display:flex;align-items:center;gap:12px;font-family:Pretendard,sans-serif">
+      <div sc-camel-on-click="{{ openSigPad }}" style="height:48px;padding:0 18px;box-sizing:border-box;border:1px solid #c9d3de;border-radius:8px;display:flex;align-items:center;font-size:14px;font-weight:600;color:#345b80;background:#fff;cursor:pointer">서명 다시</div>
+      <div sc-camel-on-click="{{ saveRefund }}" style="height:56px;padding:0 30px;border-radius:8px;display:flex;align-items:center;font-size:16px;font-weight:700;background:#345b80;color:#fff;cursor:pointer;box-shadow:0 4px 16px rgba(52,91,128,.28)">서명 완료 · 저장</div>
+    </div>
+  </sc-if>
+</div>
+</sc-if>
+
+</div>
+
+<!-- ================= 하단 고정 버튼줄 ================= -->
+<sc-if value="{{ showBar }}" hint-placeholder-val="{{ true }}">
+<div style="height:88px;flex:none;border-top:1px solid #e3e6ea;background:#ffffff;display:flex;align-items:center;justify-content:space-between;padding:0 28px">
+  <div><sc-if value="{{ isList }}" hint-placeholder-val="{{ true }}"><a href="./가격%20관리%20v3.dc.html" title="가격 관리" style="width:44px;height:44px;margin-left:-10px;border-radius:22px;display:flex;align-items:center;justify-content:center;color:#b3b9c0;text-decoration:none" style-hover="color:#5c636b;background:#f3f5f7"><svg width="22" height="22" sc-camel-view-box="0 0 24 24" fill="none" stroke="currentColor" sc-camel-stroke-width="1.6" sc-camel-stroke-linecap="round" sc-camel-stroke-linejoin="round"><circle cx="12" cy="12" r="9.5"></circle><circle cx="12" cy="9.5" r="3.2"></circle><path d="M5.8 18.6c1.4-2 3.6-3.1 6.2-3.1s4.8 1.1 6.2 3.1"></path></svg></a></sc-if></div>
+  <div style="display:flex;gap:10px">
+    <sc-if value="{{ hasSecondary }}" hint-placeholder-val="{{ true }}">
+      <div sc-camel-on-click="{{ onSecondary }}" style="height:44px;padding:0 18px;box-sizing:border-box;border-radius:8px;display:flex;align-items:center;justify-content:center;gap:8px;font-size:14px;font-weight:600;cursor:pointer;white-space:nowrap;flex:none;border:1px solid #c9d3de;background:#ffffff;color:#345b80" style-hover="background:#f3f6f9" style-active="background:#e8eef4">{{ secondary }}</div>
+    </sc-if>
+    <sc-if value="{{ hasPrimary }}" hint-placeholder-val="{{ true }}"><div sc-camel-on-click="{{ onPrimary }}" style="height:44px;padding:0 18px;box-sizing:border-box;border-radius:8px;display:flex;align-items:center;justify-content:center;gap:8px;font-size:14px;font-weight:600;cursor:pointer;white-space:nowrap;flex:none;background:#345b80;color:#ffffff" style-hover="background:#2a4b6b" style-active="background:#1f3a55">{{ primary }}</div></sc-if>
+  </div>
+</div>
+</sc-if>
+
+<sc-if value="{{ pdfOpen }}" hint-placeholder-val="{{ false }}">
+<div style="position:fixed;top:0;left:0;width:820px;height:100vh;height:100dvh;background:#e9ecef;z-index:60;display:flex;flex-direction:column">
+  <div style="height:64px;flex:none;display:flex;align-items:center;gap:12px;padding:0 20px;background:#ffffff;border-bottom:1px solid #e3e6ea">
+    <div sc-camel-on-click="{{ closePdf }}" style="width:40px;height:40px;margin-left:-8px;border-radius:20px;display:flex;align-items:center;justify-content:center;color:#4a5158;cursor:pointer;flex:none"><svg width="20" height="20" sc-camel-view-box="0 0 24 24" fill="none" stroke="currentColor" sc-camel-stroke-width="1.5" sc-camel-stroke-linecap="round" sc-camel-stroke-linejoin="round"><path d="M15 18l-6-6 6-6"></path></svg></div>
+    <div style="flex:1;min-width:0">
+      <div style="display:flex;align-items:center;gap:8px"><div style="font-size:16px;font-weight:600">{{ pdfTitle }}</div><span style="padding:2px 9px;border-radius:10px;font-size:11.5px;font-weight:600;background:{{ pdfVerBg }};color:{{ pdfVerFg }}">{{ pdfVerLabel }}</span></div>
+      <div style="font-size:12px;color:#7b828a;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ pdfFile }}</div>
+    </div>
+    <div sc-camel-on-click="{{ sharePdf }}" style="height:44px;padding:0 16px;box-sizing:border-box;border-radius:8px;display:flex;align-items:center;justify-content:center;gap:8px;font-size:14.5px;font-weight:600;cursor:pointer;white-space:nowrap;flex:none;background:#345b80;color:#ffffff;opacity:{{ pdfBtnOp }}" style-hover="background:#2a4b6b" style-active="background:#1f3a55"><svg width="18" height="18" sc-camel-view-box="0 0 24 24" fill="none" stroke="currentColor" sc-camel-stroke-width="1.5" sc-camel-stroke-linecap="round" sc-camel-stroke-linejoin="round"><path d="M12 15V3"></path><path d="M7 8l5-5 5 5"></path><path d="M5 13v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6"></path></svg>{{ pdfBtnLabel }}</div>
+  </div>
+  <div style="flex:1;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:24px 0 40px;display:flex;justify-content:center;align-items:flex-start">{{ pdfEl }}</div>
+</div>
+</sc-if>
+
+
+<!-- ================= 저장 완료 토스트 ================= -->
+<sc-if value="{{ toast }}" hint-placeholder-val="{{ false }}">
+<div style="position:absolute;left:50%;bottom:120px;transform:translateX(-50%);background:#1c1f23;color:#fff;padding:14px 24px;border-radius:10px;font-size:14px;font-weight:500;z-index:40;box-shadow:0 6px 20px rgba(28,31,35,.2)">{{ toast }}</div>
+</sc-if>
+
+</div>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script="" data-props="{&quot;$preview&quot;:{&quot;width&quot;:820,&quot;height&quot;:1180},&quot;testFill&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;section&quot;:&quot;테스트&quot;,&quot;label&quot;:&quot;환자정보 자동입력 (1단계 건너뛰기)&quot;},&quot;padTextScale&quot;:{&quot;editor&quot;:&quot;range&quot;,&quot;default&quot;:1,&quot;min&quot;:1,&quot;max&quot;:1.4,&quot;step&quot;:0.05,&quot;unit&quot;:&quot;×&quot;,&quot;section&quot;:&quot;패드 서명 화면&quot;,&quot;label&quot;:&quot;추가 확대 배율&quot;}}">/*@@APP@@*/</script>
+
+
+</body></html>

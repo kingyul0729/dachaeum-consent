@@ -1,0 +1,50 @@
+// 다채움피부과 서비스 기준 (동의서 v3 · 가격 관리 v3 공용). 가격 데이터 자체는 programs.json 한 곳에만 있습니다.
+(function (g) {
+  const EXCLUDED_SVC = /약\s?처방|염증주사/;
+  // 리프팅 교체용 추가 후보: 해당 프로그램의 첫 구성 1회
+  const SWAP_EXTRAS = [['PGM-0085A', '인모드 FX'], ['PGM-T1-16', '스타룩스 1540'], ['PGM-0119', '주름 보톡스 1부위 (뉴럭스)']];
+  const isEditableSvc = i => i.kind === '서비스권' && !EXCLUDED_SVC.test(i.name);
+  // 포함 서비스 교체·추가 후보: 리프팅 프로그램 포함 서비스(정산단가 있는 것) + 이벤트 서비스 + 교체용 추가 후보
+  function svcPool(db) {
+    const m = {}, progs = (db && db.programs) || [];
+    progs.filter(p => p.cat === '리프팅').forEach(p => (p.items || []).forEach(i => {
+      if (isEditableSvc(i) && (i.settleUnit || i.unitPrice) && !m[i.name]) m[i.name] = i; }));
+    ((db && db.events) || []).forEach(e => { if (e.item && !m[e.item.name]) m[e.item.name] = e.item; });
+    SWAP_EXTRAS.forEach(([pid, nm]) => {
+      const p = progs.find(x => x.id === pid), it = p && (p.items || [])[0];
+      if (it && !m[nm]) m[nm] = { ...it, id: 'SWAP_' + it.id, name: nm, kind: '서비스권', qty: '1', settleType: 'S/V' }; });
+    return Object.values(m);
+  }
+  // 가격 관리 override: 직원이 바꾼 항목만 저장 → 실행 시 최신 programs.json과 합침
+  const OV_KEY = 'dachaeum.priceOverride';
+  const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+  function diffOverride(base, db) {
+    const ov = { programs: {}, added: [], deleted: [], events: {} };
+    const bp = {}; (base.programs || []).forEach(p => { bp[p.id] = p; });
+    (db.programs || []).forEach(p => { const o = bp[p.id];
+      if (!o) { ov.added.push(p); return; }
+      const ch = {}; Object.keys(p).forEach(k => { if (!same(p[k], o[k])) ch[k] = p[k]; });
+      if (Object.keys(ch).length) ov.programs[p.id] = ch; });
+    const ids = new Set((db.programs || []).map(p => p.id));
+    ov.deleted = (base.programs || []).filter(p => !ids.has(p.id)).map(p => p.id);
+    const be = {}; (base.events || []).forEach(e => { be[e.id] = e; });
+    (db.events || []).forEach(e => { const o = be[e.id]; if (!o) return;
+      const ch = {}; Object.keys(e).forEach(k => { if (!same(e[k], o[k])) ch[k] = e[k]; });
+      if (Object.keys(ch).length) ov.events[e.id] = ch; });
+    const n = Object.keys(ov.programs).length + ov.added.length + ov.deleted.length + Object.keys(ov.events).length;
+    return n ? ov : null;
+  }
+  function applyOverride(base, ov) {
+    const d = JSON.parse(JSON.stringify(base));
+    if (!ov) return d;
+    const del = new Set(ov.deleted || []);
+    d.programs = (d.programs || []).filter(p => !del.has(p.id)).map(p => ov.programs && ov.programs[p.id] ? { ...p, ...ov.programs[p.id] } : p);
+    (ov.added || []).forEach(p => { if (!d.programs.some(x => x.id === p.id)) d.programs.push(p); });
+    d.events = (d.events || []).map(e => ov.events && ov.events[e.id] ? { ...e, ...ov.events[e.id] } : e);
+    if (ov.at) d.version = (base.version || '') + ' · 변경 ' + ov.at;
+    return d;
+  }
+  const readOverride = () => { try { return JSON.parse(localStorage.getItem(OV_KEY) || 'null'); } catch (e) { return null; } };
+  const withOverride = base => applyOverride(base, readOverride());
+  g.DachaeumCatalog = { EXCLUDED_SVC, SWAP_EXTRAS, isEditableSvc, svcPool, OV_KEY, diffOverride, applyOverride, readOverride, withOverride };
+})(typeof window !== 'undefined' ? window : globalThis);

@@ -1,0 +1,13 @@
+{
+  "name": "dachaeum-consent",
+  "private": true,
+  "description": "다채움피부과 이용·환불 동의서 앱",
+  "scripts": {
+    "unpack": "python3 tools/unpack.py",
+    "build": "python3 tools/build.py",
+    "test": "node --test test/refund.test.cjs test/flow.test.cjs"
+  },
+  "devDependencies": {
+    "playwright": "^1.47.0"
+  }
+}
