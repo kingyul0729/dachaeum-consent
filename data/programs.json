@@ -399,12 +399,12 @@
           "id": "pig-co2-fullface",
           "name": "얼굴 전체 CO₂ 제거",
           "price": "110000",
-          "qty": "",
-          "unitPrice": "",
+          "qty": "1",
+          "unitPrice": "110000",
           "basis": "",
           "saleAmount": "110000",
           "listPrice": "",
-          "settleUnit": "",
+          "settleUnit": "110000",
           "settleType": "유상"
         }
       ],
@@ -651,12 +651,12 @@
           "id": "pig-co2-fullface",
           "name": "얼굴 전체 CO₂ 제거",
           "price": "110000",
-          "qty": "",
-          "unitPrice": "",
+          "qty": "1",
+          "unitPrice": "110000",
           "basis": "",
           "saleAmount": "110000",
           "listPrice": "",
-          "settleUnit": "",
+          "settleUnit": "110000",
           "settleType": "유상"
         },
         {
@@ -870,12 +870,12 @@
           "id": "pig-co2-fullface",
           "name": "얼굴 전체 CO₂ 제거",
           "price": "110000",
-          "qty": "",
-          "unitPrice": "",
+          "qty": "1",
+          "unitPrice": "110000",
           "basis": "",
           "saleAmount": "110000",
           "listPrice": "",
-          "settleUnit": "",
+          "settleUnit": "110000",
           "settleType": "유상"
         }
       ],
@@ -1090,12 +1090,12 @@
           "id": "pig-co2-fullface",
           "name": "얼굴 전체 CO₂ 제거",
           "price": "110000",
-          "qty": "",
-          "unitPrice": "",
+          "qty": "1",
+          "unitPrice": "110000",
           "basis": "",
           "saleAmount": "110000",
           "listPrice": "",
-          "settleUnit": "",
+          "settleUnit": "110000",
           "settleType": "유상"
         },
         {

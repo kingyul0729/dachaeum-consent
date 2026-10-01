@@ -129,3 +129,13 @@ test('서비스 기록 단가 없음(이전 계약): 0원 처리하지 않고 �
   assert.equal(fixed.error, ''); assert.equal(fixed.svcAmt, 15000);
   assert.equal(RF.settle(base, { visits: [] }).error, '', '기록이 없으면 차단 없음');
 });
+
+test('가격 데이터: 얼굴 전체 CO₂ 추가옵션 4개 프로그램 1회·110,000원 명시, 턱밑라인은 정상가 확인 필요 유지', () => {
+  const d = require('../data/programs.json');
+  const adds = d.programs.flatMap(p => (p.adds || []).filter(a => a.id === 'pig-co2-fullface').map(a => [p.id, a.price, a.qty, a.unitPrice, a.settleUnit]));
+  assert.deepEqual(adds, ['PGM-0004', 'PGM-0006', 'PGM-0008', 'PGM-0010'].map(id => [id, '110000', '1', '110000', '110000']));
+  for (const id of ['PGM-0037', 'PGM-0106']) {
+    const it = d.programs.find(p => p.id === id).items[0];
+    assert.deepEqual([it.unitPrice, it.settleUnit, it.priceState], ['', '', '정상가 확인 필요'], id);
+  }
+});

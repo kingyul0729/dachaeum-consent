@@ -943,16 +943,19 @@ class Component extends DCLogic {
     // 정상가 보완: 당시 동의서·가격표 등 근거를 확인한 값만 입력. 원 계약 항목·서명 문서는 그대로 두고 별도 기록(근거·금액·일시)
     const supplyPrices = () => {
       if (C.refund) return;
+      // 취소·빈 값·문자·0원·음수·소수는 저장하지 않음. 여러 항목 중 하나라도 취소·오류면 전부 저장하지 않음
       const add = [];
       for (const m of RS.missing) {
-        const v = window.prompt('‘' + m.label + '’ 1회 정상가(원)\n당시 동의서·가격표 등 근거를 확인한 금액만 입력하세요.', '');
-        if (v == null) break;
-        const price = Number(String(v).replace(/[^0-9]/g, '')) || 0;
-        if (!price) { this.flash('금액을 입력해 주세요'); break; }
+        const v = window.prompt('‘' + m.label + '’ 1회 정상가(원)\n당시 동의서·가격표 등 근거를 확인한 금액만 숫자로 입력하세요.', '');
+        if (v == null) return this.flash('보완을 취소했습니다. 저장된 내용은 없습니다');
+        const raw = String(v).trim();
+        if (!/^[0-9][0-9,\s]*원?$/.test(raw)) return this.flash('금액은 숫자로만 입력해 주세요 (예: 110,000). 저장된 내용은 없습니다');
+        const price = Number(raw.replace(/[^0-9]/g, ''));
+        if (!(price > 0)) return this.flash('0원은 정상가로 저장할 수 없습니다. 저장된 내용은 없습니다');
         const basis = window.prompt('확인 근거를 적어 주세요 (예: 2026-03-02 서명 동의서, 당시 가격표)', '');
-        if (!basis || !basis.trim()) { this.flash('확인 근거가 있어야 보완할 수 있습니다'); break; }
-        if (!confirm('‘' + m.label + '’ 1회 정상가 ' + won(price) + '원\n근거: ' + basis.trim() + '\n\n원래 서명 문서와 계약 항목은 바뀌지 않고, 보완 기록으로 따로 저장됩니다.')) break;
-        add.push({ key: m.key, label: m.label, price, basis: basis.trim(), at: new Date().toISOString() });
+        if (basis == null || !String(basis).trim()) return this.flash('확인 근거가 있어야 보완할 수 있습니다. 저장된 내용은 없습니다');
+        if (!confirm('‘' + m.label + '’ 1회 정상가 ' + won(price) + '원\n근거: ' + String(basis).trim() + '\n\n원래 서명 문서와 계약 항목은 바뀌지 않고, 보완 기록으로 따로 저장됩니다.')) return this.flash('보완을 취소했습니다. 저장된 내용은 없습니다');
+        add.push({ key: m.key, label: m.label, price, basis: String(basis).trim(), at: new Date().toISOString() });
       }
       if (add.length) { this.saveContract({ ...C, priceFixes: (C.priceFixes || []).concat(add) }); this.flash('정상가 보완 기록이 저장되었습니다'); }
     };
@@ -1008,7 +1011,7 @@ class Component extends DCLogic {
       svcOff: [], svcSwap: {}, oGrp: '', disc: 'none', preTier: '', retPeriod: '', preBal: '', priorDep: '', amounts: {}, units: {}, lesions: null,
       unitFix: {}, tried3: false, evFirst: '', forceFull: false, dupPick: '', dupOff: '', pvOn: false, sig: false, tried1: false, pendingSign: false, ckRefund: false };
     const bars = {
-      list: { note: '기록은 이 기기에만 저장됩니다. 7일마다 백업하세요.', primary: '새 동의서 작성', secondary: '백업 · 복원', onP: () => this.setState({ screen: 'new', step: 1, ...NEW_RESET, ...((this.props.testFill ?? false) ? { step: 2, patient: { name: '테스트', birth: '900101', phone: '010-1234-5678' } } : { patient: { name: '', birth: '', phone: '' } }) }), onS: () => this.setState({ bkOpen: true, bkMsg: '', bkPlan: null, bkPw: '', bkPw2: '', bkPwR: '' }) },
+      list: { note: '기록은 이 기기에만 저장됩니다. 7일마다 백업하세요.', primary: '새 동의서 작성', secondary: '백업 · 복원', onP: () => this.setState({ screen: 'new', step: 1, ...NEW_RESET, ...((this.props.testFill ?? false) ? { step: 2, patient: { name: '테스트', birth: '900101', phone: '010-1234-5678' } } : { patient: { name: '', birth: '', phone: '' } }) }), onS: () => this.setState({ bkOpen: true, bkMsg: '', bkPlan: null, bkReady: '', bkPw: '', bkPw2: '', bkPwR: '' }) },
       new: { note: s.step === 3 ? '환자에게 iPad를 전달해 서명을 받습니다.' : '단계를 모두 채우면 환자 확인 화면으로 넘어갑니다.',
              primary: s.step === 3 ? '동의서 미리보기 · 서명' : '다음 단계', secondary: s.step === 1 ? '취소' : '이전',
              onP: () => {
@@ -1329,7 +1332,7 @@ class Component extends DCLogic {
         const cur = { contracts: (s.contracts || []).filter(c => !c.sample).length, docs: (s.docs || []).length };
         const msg = (t, err) => this.setState({ bkMsg: t, bkErr: !!err, bkBusy: false });
         const plan = s.bkPlan;
-        return { bkOpen: !!s.bkOpen, bkClose: () => !s.bkBusy && this.setState({ bkOpen: false, bkPlan: null, bkPw: '', bkPw2: '', bkPwR: '' }),
+        return { bkOpen: !!s.bkOpen, bkClose: () => { if (s.bkBusy) return; this._bkFile = null; this.setState({ bkOpen: false, bkPlan: null, bkReady: '', bkPw: '', bkPw2: '', bkPwR: '' }); },
           bkLast: last ? '마지막 백업 ' + last.slice(0, 16).replace('T', ' ') : '아직 이 기기에서 백업한 기록이 없습니다',
           bkCur: '현재 기기: 계약 ' + Math.max(0, cur.contracts) + '건 · 문서 ' + Math.max(0, cur.docs) + '건',
           bkPw: s.bkPw || '', bkPw2: s.bkPw2 || '', bkPwR: s.bkPwR || '',
@@ -1337,25 +1340,41 @@ class Component extends DCLogic {
           hasBkMsg: !!s.bkMsg, bkMsg: s.bkMsg || '', bkMsgFg: s.bkErr ? '#b3261e' : '#2f6b45',
           bkExport: async () => {
             if (s.bkBusy) return;
+            if (!(window.crypto && crypto.subtle)) return msg('이 브라우저 환경에서는 암호화 백업을 만들 수 없습니다. https 주소(병원 페이지)에서 열어 주세요', true);
             if (String(s.bkPw || '').length < 6) return msg('비밀번호를 6자 이상 입력해 주세요', true);
             if (s.bkPw !== s.bkPw2) return msg('비밀번호 확인이 일치하지 않습니다', true);
-            this.setState({ bkBusy: true, bkMsg: '백업 파일을 만드는 중입니다…', bkErr: false });
+            this._bkFile = null;
+            this.setState({ bkBusy: true, bkReady: '', bkMsg: '백업 파일을 만드는 중입니다…', bkErr: false });
             try {
               const out = await this.exportBackup(s.bkPw);
-              const file = new File([out.text], out.name, { type: 'application/json' });
-              if (navigator.canShare && navigator.canShare({ files: [file] })) await navigator.share({ files: [file], title: out.name }).catch(() => {});
-              else { const url = URL.createObjectURL(file), a = document.createElement('a'); a.href = url; a.download = out.name; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(url), 60000); }
-              try { localStorage.setItem('dachaeum.v3.lastBackup', new Date().toISOString()); } catch (e) {}
-              this.setState({ bkPw: '', bkPw2: '' });
-              msg('백업 파일을 저장했습니다 (계약 ' + out.counts.contracts + '건 · 문서 ' + out.counts.docs + '건). 비밀번호를 잊으면 복원할 수 없습니다.');
+              this._bkFile = { file: new File([out.text], out.name, { type: 'application/json' }), counts: out.counts };
+              this.setState({ bkPw: '', bkPw2: '', bkReady: out.name, bkBusy: false,
+                bkMsg: '백업 파일을 만들었습니다 (계약 ' + out.counts.contracts + '건 · 문서 ' + out.counts.docs + '건). [파일 저장]을 눌러 iPad의 ‘파일’ 등에 저장해 주세요.', bkErr: false });
             } catch (e) { msg('백업 파일을 만들지 못했습니다', true); }
+          },
+          hasBkReady: !!s.bkReady, bkReadyName: s.bkReady || '',
+          // 공유 시트는 탭 직후에 바로 호출해야 함(Safari). 공유를 취소하면 저장된 것으로 기록하지 않음
+          bkSave: () => {
+            const B = this._bkFile; if (!B) return msg('백업 파일을 먼저 만들어 주세요', true);
+            const done = () => { try { localStorage.setItem('dachaeum.v3.lastBackup', new Date().toISOString()); } catch (e) {}
+              this.setState({ bkReady: '' }); this._bkFile = null; msg('백업 파일을 저장했습니다. 비밀번호를 잊으면 복원할 수 없습니다.'); };
+            const download = () => { const url = URL.createObjectURL(B.file), a = document.createElement('a'); a.href = url; a.download = B.file.name;
+              document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(url), 60000); done(); };
+            if (navigator.canShare && navigator.share && navigator.canShare({ files: [B.file] })) {
+              navigator.share({ files: [B.file], title: B.file.name }).then(done).catch(err => {
+                if (err && err.name === 'AbortError') msg('저장을 취소했습니다. 백업 파일은 아직 저장되지 않았습니다', true);
+                else download(); });
+            } else download();
           },
           onBkFile: async e => {
             const f = e.target.files && e.target.files[0]; e.target.value = '';
             if (!f || s.bkBusy) return;
+            if (!(window.crypto && crypto.subtle)) return msg('이 브라우저 환경에서는 암호화 백업을 열 수 없습니다. https 주소(병원 페이지)에서 열어 주세요', true);
             if (!s.bkPwR) return msg('백업 비밀번호를 먼저 입력해 주세요', true);
             this.setState({ bkBusy: true, bkMsg: '백업 파일을 검사하는 중입니다…', bkErr: false, bkPlan: null });
-            try { const r = await this.readBackup(await f.text(), s.bkPwR); this.setState({ bkPlan: { ...r, fileName: f.name }, bkBusy: false, bkMsg: '' }); }
+            // Blob.text()가 없는 이전 Safari 대비 FileReader 사용
+            const readText = file => file.text ? file.text() : new Promise((ok, no) => { const r = new FileReader(); r.onload = () => ok(String(r.result)); r.onerror = () => no(r.error); r.readAsText(file); });
+            try { const r = await this.readBackup(await readText(f), s.bkPwR); this.setState({ bkPlan: { ...r, fileName: f.name }, bkBusy: false, bkMsg: '' }); }
             catch (err) { msg(err.message || '백업 파일을 읽지 못했습니다', true); }
           },
           hasBkPlan: !!plan,

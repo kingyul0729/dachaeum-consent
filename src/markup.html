@@ -1477,12 +1477,15 @@ body,body *{word-break:keep-all;overflow-wrap:break-word;line-break:strict}
       <div style="font-size:13.5px;font-weight:600;color:#1c1f23">백업 파일 저장</div>
       <input type="password" placeholder="비밀번호 (6자 이상)" value="{{ bkPw }}" sc-camel-on-input="{{ onBkPw }}" style="height:42px;box-sizing:border-box;border:1px solid #d5d9de;border-radius:8px;padding:0 12px;font-family:inherit;font-size:14px">
       <input type="password" placeholder="비밀번호 확인" value="{{ bkPw2 }}" sc-camel-on-input="{{ onBkPw2 }}" style="height:42px;box-sizing:border-box;border:1px solid #d5d9de;border-radius:8px;padding:0 12px;font-family:inherit;font-size:14px">
-      <div sc-camel-on-click="{{ bkExport }}" style="height:42px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:600;color:#ffffff;background:#345b80;cursor:pointer">백업 파일 저장</div>
+      <div sc-camel-on-click="{{ bkExport }}" style="height:42px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:600;color:#ffffff;background:#345b80;cursor:pointer">백업 파일 만들기</div>
+      <sc-if value="{{ hasBkReady }}" hint-placeholder-val="{{ false }}">
+        <div sc-camel-on-click="{{ bkSave }}" style="height:42px;border-radius:8px;display:flex;align-items:center;justify-content:center;gap:6px;font-size:14px;font-weight:600;color:#345b80;border:1.5px solid #345b80;background:#f3f7fb;cursor:pointer">파일 저장 · {{ bkReadyName }}</div>
+      </sc-if>
     </div>
     <div style="display:flex;flex-direction:column;gap:8px;padding:14px;border:1px solid #e9ebee;border-radius:12px">
       <div style="font-size:13.5px;font-weight:600;color:#1c1f23">백업 파일에서 복원</div>
       <input type="password" placeholder="백업할 때 정한 비밀번호" value="{{ bkPwR }}" sc-camel-on-input="{{ onBkPwR }}" style="height:42px;box-sizing:border-box;border:1px solid #d5d9de;border-radius:8px;padding:0 12px;font-family:inherit;font-size:14px">
-      <label style="height:42px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:600;color:#345b80;border:1px solid #c9d3de;background:#ffffff;cursor:pointer">백업 파일 선택<input type="file" accept=".json,application/json" sc-camel-on-change="{{ onBkFile }}" style="display:none"></label>
+      <label style="position:relative;height:42px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:600;color:#345b80;border:1px solid #c9d3de;background:#ffffff;cursor:pointer">백업 파일 선택<input type="file" accept=".json,application/json" sc-camel-on-change="{{ onBkFile }}" style="position:absolute;width:1px;height:1px;opacity:0;overflow:hidden;pointer-events:none"></label>
       <sc-if value="{{ hasBkPlan }}" hint-placeholder-val="{{ false }}">
         <div style="display:flex;flex-direction:column;gap:8px;padding:12px;border-radius:10px;background:#fffaf0;border:1px solid #f0d9a8">
           <div style="font-size:13px;color:#2b3036;font-variant-numeric:tabular-nums">{{ bkPlanText }}</div>
