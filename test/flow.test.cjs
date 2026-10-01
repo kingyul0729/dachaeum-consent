@@ -129,3 +129,39 @@ test('잔금 결제: 실제 납부액·결제내역 누적, 초과 차단, 완�
   assert.deepEqual((await body(p)).match(/원결제 [\d,]+원/g), ['원결제 100,000원', '원결제 500,000원', '원결제 400,000원']);
   assert.deepEqual(p.errors, []);
 });
+
+test('새 동의서 작성: 이전 환자의 기납부 예약금·결제수단이 다음 환자에게 남지 않음', async () => {
+  const p = await open();
+  const start = async name => {
+    await click(p, '새 동의서 작성'); const ins = p.locator('input');
+    await ins.nth(0).fill(name); await ins.nth(1).fill('880101'); await ins.nth(2).fill('01011112222');
+    await click(p, '다음 단계'); await click(p, '스킨부스터'); await click(p, '정상가'); await click(p, '3회'); await click(p, '다음 단계');
+  };
+  await start('환자A');
+  const dep = p.locator('xpath=//span[text()="기납부 예약금"]/following-sibling::span//input');
+  await dep.fill('100000'); await click(p, '현금');
+  assert.match(await body(p), /230,000원을 결제할게요/);
+  await p.mouse.click(38, 32); await p.waitForTimeout(300);
+  await start('환자B');
+  assert.match(await body(p), /330,000원을 결제할게요/);
+  assert.equal(await dep.inputValue(), '');
+  assert.deepEqual(p.errors, []);
+});
+
+test('결제 정보 수정 중에는 잔금 결제 기록 차단 (수정본 저장 시 잔금 기록 유실 방지)', async () => {
+  const p = await open([mk('CT1', '프로그램 A', { total: 1000000, paid: 100000, pay: 'deposit', priorDep: 0, payments: [{ method: '카드', amount: 100000, payDate: '2026-09-01' }] })]);
+  await click(p, '프로그램 A'); await p.getByText('프로그램 A').last().click(); await p.waitForTimeout(300);
+  await p.locator('select').first().selectOption('신한');
+  const card = p.locator('xpath=//div[text()="잔금 결제"]/ancestor::div[2]');
+  await card.getByText('현금', { exact: true }).click(); await click(p, '잔금 결제 기록');
+  assert.match(await body(p), /결제 정보 수정 중입니다/);
+  assert.equal((await contracts(p))[0].paid, 100000);
+});
+
+test('환불 정산 입력 직후 바로 새로고침해도 작성 중 값 유지', async () => {
+  const p = await open([mk('CT1', '프로그램 A')]);
+  await click(p, '프로그램 A'); await click(p, '환불 정산');
+  await p.getByText('+', { exact: true }).nth(0).click();
+  await p.reload(); await p.waitForTimeout(2000);
+  assert.deepEqual((await contracts(p))[0].refundDraft.used, [1, 0]);
+});

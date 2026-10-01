@@ -31,9 +31,13 @@ class Component extends DCLogic {
     });
   }
   // 작성 중 환불 정산 입력값을 계약에 자동 저장 → 화면을 나갔다 다시 들어와도 이어서 입력 (계약 상태는 바꾸지 않음)
+  // 기기 저장은 즉시(동기) 기록 → 입력 직후 새로고침·앱 닫기에도 남음
   saveDraft() {
     const s = this.state, c = s.contract; if (!c || !c.id || c.refund) return;
-    this.saveContract({ ...c, refundDraft: { used: s.rfUsed || null, visits: s.rfVisits || null, les: s.rfLes || null, vars: s.rfVar || null, alloc: s.rfAlloc || null, reason: s.rfReason || '' } });
+    const nc = { ...c, refundDraft: { used: s.rfUsed || null, visits: s.rfVisits || null, les: s.rfLes || null, vars: s.rfVar || null, alloc: s.rfAlloc || null, reason: s.rfReason || '' } };
+    const contracts = (s.contracts || []).map(x => x.id && x.id === nc.id ? nc : x);
+    try { localStorage.setItem('dachaeum.v3.contracts', JSON.stringify(contracts.filter(x => !x.sample))); } catch (e) { return; }
+    this.setState({ contracts, contract: nc });
   }
 
   flash(t) { this.setState({ toast: t }); clearTimeout(this._t); this._t = setTimeout(() => this.setState({ toast: '' }), 1800); }
@@ -308,6 +312,10 @@ class Component extends DCLogic {
   }
 
   componentDidMount() {
+    // 환불 정산 작성 중 화면을 닫거나 다른 앱으로 전환하면 바로 저장
+    const flushDraft = () => { if (this.state.screen === 'refund' || this.state.screen === 'refundSign') { clearTimeout(this._draftT); this.saveDraft(); } };
+    window.addEventListener('pagehide', flushDraft);
+    document.addEventListener('visibilitychange', () => { if (document.hidden) flushDraft(); });
     try { const d = JSON.parse(localStorage.getItem('dachaeum.v3.docs') || '[]'); if (d.length) this.setState({ docs: d }); } catch (e) {}
     try { const k = JSON.parse(localStorage.getItem('dachaeum.v3.contracts') || '[]'); this.setState(st => ({ contracts: (st.contracts || []).filter(c => c.sample).concat(k) })); } catch (e) {}
     try {
@@ -889,8 +897,12 @@ class Component extends DCLogic {
       rfToday: todayStr, rfTodayKo: koDate(todayStr)
     };
 
+    // 새 동의서 작성 시작: 이전 작성분(할인·선결제권·기납부 예약금·결제수단·분할금액·구성 선택 등)이 다음 환자에게 남지 않도록 초기화
+    const NEW_RESET = { prog: -1, progId: '', hairIds: [], method: '', mSel: [], split1: '', cashRcpt: '', pay: 'full', addArea: '', addSel: [], addSvc: [], addSvN: {},
+      svcOff: [], svcSwap: {}, oGrp: '', disc: 'none', preTier: '', retPeriod: '', preBal: '', priorDep: '', amounts: {}, units: {}, lesions: null,
+      evFirst: '', forceFull: false, dupPick: '', dupOff: '', pvOn: false, sig: false, tried1: false, pendingSign: false, ckRefund: false };
     const bars = {
-      list: { note: '기록은 이 기기에만 저장됩니다. 7일마다 백업하세요.', primary: '새 동의서 작성', secondary: '', onP: () => this.setState({ screen: 'new', step: 1, prog: -1, progId: '', method: '', pay: 'full', addArea: '', lesions: null, sig: false, tried1: false, pendingSign: false, ckRefund: false, ...((this.props.testFill ?? false) ? { step: 2, patient: { name: '테스트', birth: '900101', phone: '010-1234-5678' } } : { patient: { name: '', birth: '', phone: '' } }) }), onS: () => this.flash('백업이 완료되었습니다') },
+      list: { note: '기록은 이 기기에만 저장됩니다. 7일마다 백업하세요.', primary: '새 동의서 작성', secondary: '', onP: () => this.setState({ screen: 'new', step: 1, ...NEW_RESET, ...((this.props.testFill ?? false) ? { step: 2, patient: { name: '테스트', birth: '900101', phone: '010-1234-5678' } } : { patient: { name: '', birth: '', phone: '' } }) }), onS: () => this.flash('백업이 완료되었습니다') },
       new: { note: s.step === 3 ? '환자에게 iPad를 전달해 서명을 받습니다.' : '단계를 모두 채우면 환자 확인 화면으로 넘어갑니다.',
              primary: s.step === 3 ? '동의서 미리보기 · 서명' : '다음 단계', secondary: s.step === 1 ? '취소' : '이전',
              onP: () => {
@@ -1083,7 +1095,7 @@ class Component extends DCLogic {
       isBrief, notBrief: !isBrief, briefOK, briefPriorDate: isResign ? (C.priorDate || '') : (priorFull ? priorFull.date : ''),
       briefLabel: s.forceFull ? '전체 동의서' : '간이 동의서 · ' + (isResign ? (C.priorDate || '') : (priorFull ? priorFull.date : '')) + ' 약관', briefBtn: s.forceFull ? '간이 동의서로' : '전체 동의서로',
       toggleForceFull: () => this.setState({ forceFull: !s.forceFull }),
-      newForPatient: () => this.setState({ screen: 'new', step: 2, patient: { ...C.patient }, prog: -1, progId: '', mSel: [], method: '', cashRcpt: '', split1: '', pay: 'full', forceFull: false, cSel: false }),
+      newForPatient: () => this.setState({ ...NEW_RESET, screen: 'new', step: 2, patient: { ...C.patient }, cSel: false }),
       isSplit, hasCash, splitA: selM[0] || '', splitB: selM[1] || '', split1: s.split1 || '', split2Text: won(Math.max(0, nowNum - a1)) + '원',
       onSplit1: e => { const v = e.target.value.replace(/[^0-9]/g, ''); this.setState({ split1: v ? Number(v).toLocaleString('ko-KR') : '' }); },
       rcptOpts: ['발급', '미발급'].map(v => ({ label: v, ...ck(rcpt === v), fg: rcpt === v ? '#1c1f23' : '#5c636b', pick: () => this.setState({ cashRcpt: v }) })),
@@ -1137,6 +1149,8 @@ class Component extends DCLogic {
         const amt = numOf(s.balAmt) || rest, date = s.balDate || todayStr;
         const save = () => {
           if (this._saving) return;
+          // 결제 정보 수정 중(저장 전)에 잔금을 기록하면, 이후 [저장] 시 수정본이 결제내역을 덮어써 잔금 기록이 사라짐 → 먼저 저장·되돌리기
+          if (s.payDraft) return this.flash('결제 정보 수정 중입니다. 먼저 저장하거나 되돌려 주세요');
           if (!bm) return this.flash('결제수단을 선택해 주세요');
           if (amt > rest) return this.flash('남은 잔금(' + won(rest) + '원)보다 많이 기록할 수 없습니다');
           if (!confirm(bm + ' ' + won(amt) + '원을 ' + date + ' 잔금 결제로 기록합니다.')) return;

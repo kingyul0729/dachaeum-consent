@@ -4,6 +4,8 @@
 (function (g) {
   const PENALTY_RATE = 0.1;
   const num = v => Number(String(v || '').replace(/[^0-9]/g, '')) || 0;
+  // 금액 값: 숫자는 그대로, 문자열('1,000,000')·빈 값은 숫자로 변환 → NaN·문자열 이어붙이기 방지 (계산식은 그대로)
+  const amt = v => typeof v === 'number' && Number.isFinite(v) ? v : num(v);
 
   // 병변 단위 정산 항목
   // · CO₂(actual): 제거한 병변마다 개별 정상가 입력 → 합계 (계약 1회 정상가 = 최소 기준)
@@ -26,23 +28,23 @@
   const usedCounts = (C, used, rfLes) => (used || C.items.map(() => 0)).map((x, k) => isActual(C.items[k]) ? ((rfLes || {})[k] || []).length : x);
 
   // 환불: 실제 결제금액 − 위약금(총 계약금액 × 10%) − 이용금액, 0원 미만은 0원. 단가는 계약 스냅샷(C.items[].price)
-  const amtOf = (it, u) => it.lesionUnit ? (u > 0 ? it.price : 0) : u * it.price;
+  const amtOf = (it, u) => it.lesionUnit ? (u > 0 ? amt(it.price) : 0) : u * amt(it.price);
   function refund(C, used, visits, extraPaid, lesAmt) {
     const U = used || [], V = visits || [], L = lesAmt || [];
     const a = (it, k) => L[k] != null ? L[k] : amtOf(it, U[k] || 0);
     const trtAmt = C.items.reduce((t, it, k) => t + (it.kind === '서비스' ? 0 : a(it, k)), 0);
-    const svcAmt = C.items.reduce((t, it, k) => t + (it.kind === '서비스' ? a(it, k) : 0), 0) + V.reduce((t, v) => t + v.price, 0);
+    const svcAmt = C.items.reduce((t, it, k) => t + (it.kind === '서비스' ? a(it, k) : 0), 0) + V.reduce((t, v) => t + amt(v.price), 0);
     const usedAmt = trtAmt + svcAmt;
-    const penNum = Math.round(C.total * PENALTY_RATE);
-    const paidEff = C.paid + (extraPaid || 0);
+    const penNum = Math.round(amt(C.total) * PENALTY_RATE);
+    const paidEff = amt(C.paid) + (extraPaid || 0);
     return { trtAmt, svcAmt, usedAmt, penNum, paidEff, refundNum: Math.max(0, paidEff - penNum - usedAmt) };
   }
 
   // 결제수단별 환불: 원결제 수단(선결제권 잔액 사용분 포함). 직원이 수단별 금액을 직접 입력
   // 납부금액(C.paid)에는 기납부 예약금이 포함되지만 payments에는 기록되지 않으므로, 차액을 별도 수단으로 추가해 배분 가능하게 함
   const refundPays = C => {
-    const pays = C.payments && C.payments.length ? C.payments : [{ method: C.method || '카드', amount: C.paid }];
-    const gap = Number(C.paid || 0) - pays.reduce((t, p) => t + Number(p.amount || 0), 0);
+    const pays = (C.payments && C.payments.length ? C.payments : [{ method: C.method || '카드', amount: C.paid }]).map(p => ({ ...p, amount: amt(p.amount) }));
+    const gap = amt(C.paid) - pays.reduce((t, p) => t + p.amount, 0);
     return gap > 0 ? pays.concat([{ method: '기납부 예약금', amount: gap, priorDep: true }]) : pays;
   };
   // 참고용 기본 배분(원결제 순서·한도). 화면에서는 자동 배분하지 않음
@@ -50,7 +52,7 @@
   // 검증: 수단별 금액 ≤ 원결제 금액, 합계 = 최종 환불금액 (결제수단 1개면 해당 수단 = 최종 환불금액, 원결제 한도만 검증)
   function checkAlloc(pays, alloc, refundNum) {
     const amounts = pays.length <= 1 ? [refundNum] : pays.map((_, i) => num((alloc || {})[i]));
-    const over = pays.map((p, i) => amounts[i] > Number(p.amount || 0));
+    const over = pays.map((p, i) => amounts[i] > amt(p.amount));
     const allocSum = amounts.reduce((t, x) => t + x, 0), allocOver = over.some(Boolean);
     const allocOk = !allocOver && allocSum === refundNum;
     const allocDiff = refundNum - allocSum;
@@ -74,6 +76,6 @@
     return { ...R, U, lesAmt, lesBad, pays, ...A, error: validate({ lesBad, allocOk: A.allocOk, allocOver: A.allocOver }) };
   }
 
-  g.DachaeumRefund = { PENALTY_RATE, BS_ADD_ID, num, isBlackspotAdd, isActual, tiersOf, tierPrice, lesionValue, lesionRowBad, lesions, usedCounts,
+  g.DachaeumRefund = { PENALTY_RATE, BS_ADD_ID, num, amt, isBlackspotAdd, isActual, tiersOf, tierPrice, lesionValue, lesionRowBad, lesions, usedCounts,
     amtOf, refund, refundPays, allocDefault, checkAlloc, validate, MSG, settle };
 })(typeof window !== 'undefined' ? window : globalThis);

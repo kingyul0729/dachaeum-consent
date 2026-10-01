@@ -95,3 +95,11 @@ test('할인: 지인 5% · 재티켓팅 10% · 선결제권 300/400/500', () => 
   assert.equal(PR.discount({ ...base, disc: 'pre', preTier: '500' }).totalNum, 800000);
   assert.equal(PR.discount({ ...base, cur: { ...base.cur, event: 'E1' }, disc: 'ref' }).totalNum, 1000000);
 });
+
+test('금액이 빠졌거나 문자열이어도 NaN·문자열 이어붙이기 없이 계산 (계산식 동일)', () => {
+  const it = [{ kind: '시술', name: 'A', qty: 5, price: '200,000' }];
+  const r = RF.settle({ total: '1,000,000', paid: '1,000,000', items: it, payments: [{ method: '카드', amount: '1,000,000' }] }, { used: [1], visits: [{ label: '약처방', price: '15,000' }] });
+  assert.equal(r.penNum, 100000); assert.equal(r.usedAmt, 215000); assert.equal(r.refundNum, 685000); assert.equal(r.allocOk, true);
+  const missing = RF.settle({ total: 1000000, items: [{ kind: '시술', name: 'A', qty: 5, price: 200000 }] }, { used: [1] });
+  assert.ok(Number.isFinite(missing.refundNum)); assert.equal(missing.refundNum, 0);
+});
