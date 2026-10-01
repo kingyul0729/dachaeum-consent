@@ -139,3 +139,13 @@ test('가격 데이터: 얼굴 전체 CO₂ 추가옵션 4개 프로그램 1회�
     assert.deepEqual([it.unitPrice, it.settleUnit, it.priceState], ['', '', '정상가 확인 필요'], id);
   }
 });
+
+test('PGM-0041 흑자 1cm 1개(330,000원): 시작 전 297,000원, 시작 후 병변 금액 전액 차감 → 0원', () => {
+  const C = { total: 330000, paid: 330000, items: [{ kind: '시술', lesionUnit: true, qty: 5, price: 330000 }] };
+  assert.equal(RF.refund(C, [0]).refundNum, 297000);                         // 330,000 − 33,000
+  assert.equal(RF.refund(C, [1]).usedAmt, 330000);                            // 1회 시작 = 병변 금액 전액 (66,000 아님)
+  assert.equal(RF.refund(C, [1]).refundNum, 0);                               // 330,000 − 33,000 − 330,000 < 0 → 0
+  const d = require('../data/programs.json').programs.find(x => x.id === 'PGM-0041');
+  assert.equal(d.total, '330000');
+  assert.deepEqual(d.lesionTiers.map(t => t.price), [330000, 440000, 550000]);
+});

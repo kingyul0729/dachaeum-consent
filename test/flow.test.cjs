@@ -384,3 +384,31 @@ test('정상가 보완 입력: 취소·빈값·문자·0원·음수·소수·근
   assert.ok(!c.refund && (c.status || '등록완료') === '등록완료', '보완만으로 환불 확정되지 않음');
   assert.equal(await finalRefund(p), String((660000 - 66000 - 110000 - 99000).toLocaleString('ko-KR')));
 });
+
+test('PGM-0041 흑자 1cm 1개: 총 등록금액 330,000원 표시·저장, 병변 금액 전액 차감 유지, 기존 계약 값 불변', async () => {
+  const old = mk('c-old-bs', '흑자 제거', { cat: '색소', total: 440000, paid: 440000, priorDep: 0, payments: [{ method: '카드', amount: 440000 }],
+    items: [{ kind: '시술', lesionUnit: true, qty: 5, price: 440000, name: '흑자 1 · 이마 2cm (2cm 이하)' }],
+    priceSnap: { ver: 'old', programId: 'PGM-0041', total: null, at: '2026-09-01' } });
+  const p = await open([old]);
+  const before = JSON.stringify((await contracts(p))[0]);
+  await click(p, '새 동의서 작성'); const ins = p.locator('input');
+  await ins.nth(0).fill('흑자테스트'); await ins.nth(1).fill('880101'); await ins.nth(2).fill('01011112222');
+  await click(p, '다음 단계'); await click(p, '전체');
+  await p.locator('input[placeholder*="검색"]').fill('PGM-0041'); await p.waitForTimeout(300);
+  assert.match(await body(p), /1개 330,000원~/);
+  await click(p, '흑자 제거');
+  await p.locator('input[placeholder="치료 부위 입력"]').first().fill('왼쪽 볼');
+  await p.locator('input[placeholder="크기"]').first().fill('1'); await p.locator('input[placeholder="크기"]').first().blur(); await p.waitForTimeout(300);
+  await click(p, '다음 단계'); await click(p, '카드');
+  assert.match(await body(p), /330,000/);
+  await signAndSave(p);
+  const all = await contracts(p);
+  const c = all.find(x => x.id !== 'c-old-bs');
+  assert.equal(c.total, 330000);
+  assert.equal(c.paid, 330000);
+  assert.deepEqual(c.items.map(i => [i.kind, !!i.lesionUnit, i.qty, i.price]), [['시술', true, 5, 330000]]);
+  assert.equal(c.priceSnap.programId, 'PGM-0041');
+  assert.equal(c.priceSnap.total, 330000);
+  assert.equal(JSON.stringify(all.find(x => x.id === 'c-old-bs')), before, '기존 계약 값 불변');
+  assert.deepEqual(p.errors, []);
+});
