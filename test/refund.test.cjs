@@ -180,3 +180,20 @@ test('가격 관리 기록: 총 등록금액만 기록·제거, 다른 변경 �
   assert.deepEqual(CT.applyOverride(base, ov3).programs.map(p => p.total), ['100', '200', '9']);
   assert.deepEqual(CT.setProgramTotal(null, 'A', 120).programs, { A: { total: '120' } });
 });
+
+test('1회 정상가 기록: 총 등록금액 기록과 별도, 해당 시술만 반영·제거', () => {
+  const CT = globalThis.DachaeumCatalog;
+  const base = { version: 'v1', programs: [{ id: 'A', total: '1000', items: [{ id: 'x', unitPrice: '100', settleUnit: '100', listPrice: '100' }, { id: 'y', unitPrice: '200', settleUnit: '200' }] }], events: [] };
+  const ov = CT.setProgramTotal(null, 'A', 1500);
+  const uo = CT.setUnit(null, 'A', 'x', 150, '2026-10-01 11:00');
+  const d = CT.applyUnits(CT.applyOverride(base, ov), uo);
+  assert.equal(d.programs[0].total, '1500');
+  assert.deepEqual(d.programs[0].items.map(i => [i.unitPrice, i.settleUnit]), [['150', '150'], ['200', '200']]);
+  assert.equal(base.programs[0].items[0].unitPrice, '100', '원본 가격 데이터는 그대로');
+  assert.deepEqual(CT.applyUnits(CT.applyOverride(base, null), uo).programs[0].total, '1000', '1회 정상가 변경이 총 등록금액을 바꾸지 않음');
+  assert.deepEqual(CT.applyUnits(CT.applyOverride(base, ov), null).programs[0].items[0].settleUnit, '100', '총 등록금액 변경이 1회 정상가를 바꾸지 않음');
+  const uo2 = CT.clearUnit(uo, 'A', 'x', 't');
+  assert.deepEqual(uo2.items, {});
+  assert.equal(CT.applyUnits(base, uo2).programs[0].items[0].settleUnit, '100');
+  assert.match(d.version, /정상가 변경 2026-10-01 11:00/);
+});

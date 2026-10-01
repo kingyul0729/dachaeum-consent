@@ -45,7 +45,25 @@
     return d;
   }
   const readOverride = () => { try { return JSON.parse(localStorage.getItem(OV_KEY) || 'null'); } catch (e) { return null; } };
-  const withOverride = base => applyOverride(base, readOverride());
+  // 시술별 환불용 1회 정상가 변경: 총 등록금액 기록(dachaeum.priceOverride)과 별도 키에 저장 → 서로 덮어쓰지 않음
+  // 형식 { items: { '프로그램ID|시술ID': { price: '350000' } }, at } · 새 계약 작성 시에만 반영, 저장된 계약은 계약 당시 단가 유지
+  const UNIT_KEY = 'dachaeum.unitOverride';
+  const unitKey = (pid, iid) => pid + '|' + iid;
+  const readUnits = () => { try { return JSON.parse(localStorage.getItem(UNIT_KEY) || 'null'); } catch (e) { return null; } };
+  function applyUnits(d0, uo) {
+    const map = (uo && uo.items) || {};
+    if (!Object.keys(map).length) return d0;
+    const d = JSON.parse(JSON.stringify(d0));
+    d.programs = (d.programs || []).map(p => !(p.items || []).some(i => map[unitKey(p.id, i.id)]) ? p : { ...p, items: p.items.map(i => {
+      const u = map[unitKey(p.id, i.id)]; if (!u || !(Number(u.price) > 0)) return i;
+      const v = String(Number(u.price)); return { ...i, unitPrice: v, settleUnit: v, listPrice: v }; }) });
+    if (uo.at) d.version = (d.version || '') + ' · 정상가 변경 ' + uo.at;
+    return d;
+  }
+  const copyUo = uo => JSON.parse(JSON.stringify(uo || { items: {} }));
+  function setUnit(uo, pid, iid, price, at) { const o = copyUo(uo); o.items = o.items || {}; o.items[unitKey(pid, iid)] = { price: String(price) }; if (at) o.at = at; return o; }
+  function clearUnit(uo, pid, iid, at) { const o = copyUo(uo); if (!o.items || !o.items[unitKey(pid, iid)]) return o; delete o.items[unitKey(pid, iid)]; if (at) o.at = at; return o; }
+  const withOverride = base => applyUnits(applyOverride(base, readOverride()), readUnits());
   // 가격 관리 화면: 프로그램 총 등록금액(total)만 기록·제거. 같은 기록 안의 다른 변경(다른 필드·추가·삭제·이벤트)은 그대로 둠
   const copyOv = ov => JSON.parse(JSON.stringify(ov || { programs: {}, added: [], deleted: [], events: {} }));
   function setProgramTotal(ov, id, total, at) {
@@ -58,5 +76,5 @@
     delete p.total; if (!Object.keys(p).length) delete o.programs[id]; if (at) o.at = at; return o;
   }
   g.DachaeumCatalog = { EXCLUDED_SVC, SWAP_EXTRAS, isEditableSvc, svcPool, OV_KEY, diffOverride, applyOverride, readOverride, withOverride,
-    setProgramTotal, clearProgramTotal };
+    setProgramTotal, clearProgramTotal, UNIT_KEY, unitKey, readUnits, applyUnits, setUnit, clearUnit };
 })(typeof window !== 'undefined' ? window : globalThis);

@@ -402,7 +402,7 @@ class Component extends DCLogic {
           if (key === this._dbKey) return; this._dbKey = key; this.setState({ db: this.applyEvents(d) }); };
         this._dbKey = JSON.stringify(db).length + '|' + (db.version || '');
         this._reload = reload;
-        window.addEventListener('storage', e => { if (e.key === window.DachaeumCatalog.OV_KEY) reload(); });
+        window.addEventListener('storage', e => { if (e.key === window.DachaeumCatalog.OV_KEY || e.key === window.DachaeumCatalog.UNIT_KEY) reload(); });
         window.addEventListener('focus', reload);
         window.addEventListener('pageshow', reload);
         document.addEventListener('visibilitychange', () => { if (!document.hidden) reload(); });
@@ -1395,23 +1395,47 @@ class Component extends DCLogic {
       // 저장된 계약은 계약 당시 금액을 따로 가지고 있으므로 바뀌지 않고, 새 계약부터 적용됨
       ...(() => {
         const CT = window.DachaeumCatalog, base = this._base;
-        const close = () => this.setState({ pmOpen: false, pmQ: '', pmEdit: {}, pmMsg: '' });
-        const out = { pmShow: () => this.setState({ pmOpen: true, pmQ: '', pmEdit: {}, pmMsg: '' }), pmOpen: !!s.pmOpen, pmClose: close,
+        const close = () => this.setState({ pmOpen: false, pmQ: '', pmEdit: {}, pmEditU: {}, pmMsg: '' });
+        const out = { pmShow: () => this.setState({ pmOpen: true, pmQ: '', pmEdit: {}, pmEditU: {}, pmMsg: '' }), pmOpen: !!s.pmOpen, pmClose: close,
           pmQ: s.pmQ || '', onPmQ: e => this.setState({ pmQ: e.target.value }), pmReady: !!(CT && base), pmLoading: !(CT && base),
           pmRows: [], pmHint: '', pmChanged: [], pmHasChanged: false, pmOther: '', pmHasOther: false,
           hasPmMsg: !!s.pmMsg, pmMsg: s.pmMsg || '', pmMsgFg: s.pmErr ? '#b3261e' : '#2f6b45' };
         if (!s.pmOpen || !CT || !base) return out;
-        const ov = CT.readOverride();
-        const cur = CT.applyOverride(base, ov);
+        const ov = CT.readOverride(), uo = CT.readUnits();
+        const cur = CT.applyUnits(CT.applyOverride(base, ov), uo);
         const baseOf = {}; (base.programs || []).forEach(p => { baseOf[p.id] = p; });
         const added = new Set(((ov && ov.added) || []).map(p => p.id));
         const msg = (t, err) => this.setState({ pmMsg: t, pmErr: !!err });
-        const write = (next, done) => {
-          try { localStorage.setItem(CT.OV_KEY, JSON.stringify(next)); } catch (e) { return msg('기기 저장 공간이 부족해 저장하지 못했습니다. 기존 가격은 그대로입니다', true); }
+        const write = (next, done, key) => {
+          try { localStorage.setItem(key || CT.OV_KEY, JSON.stringify(next)); } catch (e) { return msg('기기 저장 공간이 부족해 저장하지 못했습니다. 기존 가격은 그대로입니다', true); }
           this._dbKey = null; if (this._reload) this._reload();
-          const ed = { ...(s.pmEdit || {}) }; delete ed[done.id];
-          this.setState({ pmEdit: ed }); msg(done.text);
+          const ed = { ...(s.pmEdit || {}) }, eu = { ...(s.pmEditU || {}) }; delete ed[done.id]; delete eu[done.uk];
+          this.setState({ pmEdit: ed, pmEditU: eu }); msg(done.text);
         };
+        const parse = raw => { raw = String(raw).trim();
+          if (!/^[0-9][0-9,\s]*원?$/.test(raw)) { msg('금액은 숫자로만 입력해 주세요 (예: 330,000)', true); return 0; }
+          const price = Number(raw.replace(/[^0-9]/g, '')); if (!(price > 0)) { msg('0원은 저장할 수 없습니다', true); return 0; } return price; };
+        // 시술별 환불용 1회 정상가: 기본값(가격 데이터) 있는 시술 항목만 수정. 정상가 확인 필요·개당 정산·서비스·조건별 금액은 수정 칸 없음
+        const unitRows = (p, b) => (p.items || []).map((i, k) => {
+          const bi = b && (b.items || []).find(x => x.id === i.id);
+          const baseU = bi ? Number(bi.settleUnit || 0) || Number(bi.unitPrice || 0) : 0;
+          const curU = Number(i.settleUnit || 0) || Number(i.unitPrice || 0);
+          const uk = CT.unitKey(p.id, i.id), changed = !!(uo && uo.items && uo.items[uk]);
+          const svc = i.kind === '서비스권' || i.kind === '서비스';
+          const ok = !svc && !p.lesion && !i.unitFromTotal && !Number(i.perPiece || 0) && baseU > 0 && (p.items || []).findIndex(x => x.id === i.id) === k;
+          const note = svc ? '' : p.lesion ? '' : Number(i.perPiece || 0) ? '개당 정산 항목' : !baseU ? (i.priceState || '정상가 확인 필요') + ' · 등록 시 입력' : '';
+          if (!ok && !note) return null;
+          const val = (s.pmEditU || {})[uk] ?? '';
+          const save = () => { const price = parse(val); if (!price) return;
+            if (price === curU) return msg('현재 적용 중인 1회 정상가와 같습니다', true);
+            if (!confirm('[' + p.id + '] ' + p.name + '\n' + i.name + ' 환불용 1회 정상가 ' + won(curU) + '원 → ' + won(price) + '원\n\n총 등록금액은 바뀌지 않습니다. 새 계약부터 적용되고, 이미 저장된 계약의 1회 정상가는 바뀌지 않습니다.')) return;
+            write(price === baseU ? CT.clearUnit(uo, p.id, i.id, stamp()) : CT.setUnit(uo, p.id, i.id, price, stamp()),
+              { uk, text: i.name + ' 1회 정상가를 ' + won(price) + '원으로 저장했습니다 (새 계약부터 적용)' }, CT.UNIT_KEY); };
+          const reset = () => { if (!confirm('[' + p.id + '] ' + p.name + '\n' + i.name + ' 1회 정상가 변경(' + won(curU) + '원)을 지우고 기본 ' + won(baseU) + '원으로 되돌립니다.\n이미 저장된 계약은 바뀌지 않습니다.')) return;
+            write(CT.clearUnit(uo, p.id, i.id, stamp()), { uk, text: i.name + ' 1회 정상가를 기본 ' + won(baseU) + '원으로 되돌렸습니다' }, CT.UNIT_KEY); };
+          return { name: i.name, qty: i.qty ? i.qty + (i.unit || '회') : '', curText: curU ? won(curU) + '원' : '—', baseText: baseU ? '기본 ' + won(baseU) + '원' : '',
+            changed: changed && ok, editable: ok, notEditable: !ok, note, val, onVal: e => this.setState({ pmEditU: { ...(s.pmEditU || {}), [uk]: e.target.value } }), save, reset };
+        }).filter(Boolean);
         const stamp = () => { const d = new Date(), z = n => String(n).padStart(2, '0');
           return d.getFullYear() + '-' + z(d.getMonth() + 1) + '-' + z(d.getDate()) + ' ' + z(d.getHours()) + ':' + z(d.getMinutes()); };
         const row = p => {
@@ -1420,10 +1444,7 @@ class Component extends DCLogic {
           const note = p.lesion ? '병변 크기별 금액으로 계산 (여기서 수정하지 않음)' : added.has(p.id) ? '가격 관리에서 추가된 항목' : !Number((b || p).total || 0) ? '조건별 금액 (등록 시 입력)' : '';
           const val = (s.pmEdit || {})[p.id] ?? '';
           const save = () => {
-            const raw = String(val).trim();
-            if (!/^[0-9][0-9,\s]*원?$/.test(raw)) return msg('금액은 숫자로만 입력해 주세요 (예: 330,000)', true);
-            const price = Number(raw.replace(/[^0-9]/g, ''));
-            if (!(price > 0)) return msg('0원은 저장할 수 없습니다', true);
+            const price = parse(val); if (!price) return;
             if (price === Number(p.total || 0)) return msg('현재 적용 가격과 같습니다', true);
             if (!confirm('[' + p.id + '] ' + p.name + '\n총 등록금액 ' + won(p.total) + '원 → ' + won(price) + '원\n\n새 계약부터 적용되고, 이미 저장된 계약 금액은 바뀌지 않습니다.')) return;
             const next = price === Number(b.total || 0) ? CT.clearProgramTotal(ov, p.id, stamp()) : CT.setProgramTotal(ov, p.id, price, stamp());
@@ -1435,7 +1456,8 @@ class Component extends DCLogic {
           };
           return { id: p.id, name: p.name, cat: p.cat || '', curText: Number(p.total || 0) ? won(p.total) + '원' : '—',
             baseText: b && Number(b.total || 0) ? '기본 ' + won(b.total) + '원' : '', changed: !!ovT && editable, notChanged: !(ovT && editable),
-            editable, notEditable: !editable, note, val, onVal: e => this.setState({ pmEdit: { ...(s.pmEdit || {}), [p.id]: e.target.value } }), save, reset };
+            editable, notEditable: !editable, note, val, onVal: e => this.setState({ pmEdit: { ...(s.pmEdit || {}), [p.id]: e.target.value } }), save, reset,
+            units: unitRows(p, b), hasUnits: unitRows(p, b).length > 0 };
         };
         const q = String(s.pmQ || '').trim().toLowerCase();
         const hit = p => [p.id, p.name, p.cat, p.g, p.r, p.o].concat((p.items || []).map(i => i.name + ' ' + i.id)).some(t => String(t || '').toLowerCase().includes(q));
@@ -1450,11 +1472,20 @@ class Component extends DCLogic {
           return { id, name: (p || b || {}).name || id,
             text: (hasT ? '총 등록금액 ' + (b && Number(b.total || 0) ? won(b.total) + '원 → ' : '') + won(ovp[id].total) + '원' : '') + (others.length ? (hasT ? ' · ' : '') + '기타 변경 ' + others.join(', ') : ''),
             canReset: !!(r && r.changed), reset: r ? r.reset : () => {} }; });
+        const um = (uo && uo.items) || {};
+        Object.keys(um).forEach(k => { const [pid, iid] = k.split('|'); const p = (cur.programs || []).find(x => x.id === pid), b = baseOf[pid];
+          const it = p && (p.items || []).find(x => x.id === iid), bi = b && (b.items || []).find(x => x.id === iid);
+          const baseU = bi ? Number(bi.settleUnit || 0) || Number(bi.unitPrice || 0) : 0;
+          const r = p && it ? unitRows(p, b).find(u => u.name === it.name) : null;
+          out.pmChanged.push({ id: pid, name: (p || b || {}).name || pid,
+            text: '1회 정상가 · ' + ((it || bi || {}).name || iid) + ' ' + (baseU ? won(baseU) + '원 → ' : '') + won(um[k].price) + '원',
+            canReset: !!(r && r.changed), reset: r ? r.reset : () => {} }); });
         out.pmHasChanged = out.pmChanged.length > 0;
         const oth = [ov && ov.added && ov.added.length ? '추가 ' + ov.added.length + '건' : '', ov && ov.deleted && ov.deleted.length ? '숨김 ' + ov.deleted.length + '건' : '',
           ov && ov.events && Object.keys(ov.events).length ? '이벤트 변경 ' + Object.keys(ov.events).length + '건' : ''].filter(Boolean);
         out.pmOther = oth.length ? '그 밖의 기존 변경 기록: ' + oth.join(' · ') + ' (그대로 유지)' : ''; out.pmHasOther = !!oth.length;
-        out.pmVer = ov && ov.at ? '마지막 변경 ' + ov.at : '변경 기록 없음 · 기본 가격 사용 중';
+        const lastAt = [ov && ov.at, uo && uo.at].filter(Boolean).sort().pop();
+        out.pmVer = lastAt ? '마지막 변경 ' + lastAt : '변경 기록 없음 · 기본 가격 사용 중';
         return out;
       })()
     };
