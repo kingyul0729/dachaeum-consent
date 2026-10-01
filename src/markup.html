@@ -1439,7 +1439,7 @@ body,body *{word-break:keep-all;overflow-wrap:break-word;line-break:strict}
 <!-- ================= 하단 고정 버튼줄 ================= -->
 <sc-if value="{{ showBar }}" hint-placeholder-val="{{ true }}">
 <div style="height:88px;flex:none;border-top:1px solid #e3e6ea;background:#ffffff;display:flex;align-items:center;justify-content:space-between;padding:0 28px">
-  <div><sc-if value="{{ isList }}" hint-placeholder-val="{{ true }}"><a href="./가격%20관리%20v3.dc.html" title="가격 관리" style="width:44px;height:44px;margin-left:-10px;border-radius:22px;display:flex;align-items:center;justify-content:center;color:#b3b9c0;text-decoration:none" style-hover="color:#5c636b;background:#f3f5f7"><svg width="22" height="22" sc-camel-view-box="0 0 24 24" fill="none" stroke="currentColor" sc-camel-stroke-width="1.6" sc-camel-stroke-linecap="round" sc-camel-stroke-linejoin="round"><circle cx="12" cy="12" r="9.5"></circle><circle cx="12" cy="9.5" r="3.2"></circle><path d="M5.8 18.6c1.4-2 3.6-3.1 6.2-3.1s4.8 1.1 6.2 3.1"></path></svg></a></sc-if></div>
+  <div></div>
   <div style="display:flex;gap:10px">
     <sc-if value="{{ hasSecondary }}" hint-placeholder-val="{{ true }}">
       <div sc-camel-on-click="{{ onSecondary }}" style="height:44px;padding:0 18px;box-sizing:border-box;border-radius:8px;display:flex;align-items:center;justify-content:center;gap:8px;font-size:14px;font-weight:600;cursor:pointer;white-space:nowrap;flex:none;border:1px solid #c9d3de;background:#ffffff;color:#345b80" style-hover="background:#f3f6f9" style-active="background:#e8eef4">{{ secondary }}</div>

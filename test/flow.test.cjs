@@ -412,3 +412,20 @@ test('PGM-0041 흑자 1cm 1개: 총 등록금액 330,000원 표시·저장, 병�
   assert.equal(JSON.stringify(all.find(x => x.id === 'c-old-bs')), before, '기존 계약 값 불변');
   assert.deepEqual(p.errors, []);
 });
+
+test('가격 관리 버튼 숨김: 링크 없음(404 방지), 하단 버튼·가격 변경 기록 적용·저장 자료 유지', async () => {
+  const ov = JSON.stringify({ programs: { 'PGM-0001': { total: '1111000' } } });
+  const p = await open([mk('c-keep', '기존 계약')], { storage: { 'dachaeum.priceOverride': ov } });
+  const before = await p.evaluate(() => [localStorage.getItem('dachaeum.v3.contracts'), localStorage.getItem('dachaeum.priceOverride')]);
+  assert.equal(await p.locator('a[href*="dc.html"], [title="가격 관리"]').count(), 0);
+  assert.match(await body(p), /새 동의서 작성/);
+  await click(p, '새 동의서 작성'); const ins = p.locator('input');
+  await ins.nth(0).fill('버튼테스트'); await ins.nth(1).fill('880101'); await ins.nth(2).fill('01011112222');
+  await click(p, '다음 단계'); await click(p, '전체');
+  await p.locator('input[placeholder*="검색"]').fill('PGM-0001'); await p.waitForTimeout(300);
+  assert.match(await body(p), /1,111,000원/, '가격 변경 기록(override)은 그대로 적용');
+  assert.equal(await p.locator('a[href*="dc.html"]').count(), 0);
+  const after = await p.evaluate(() => [localStorage.getItem('dachaeum.v3.contracts'), localStorage.getItem('dachaeum.priceOverride')]);
+  assert.deepEqual(after, before);
+  assert.deepEqual(p.errors, []);
+});

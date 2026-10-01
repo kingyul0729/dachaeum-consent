@@ -149,3 +149,18 @@ test('PGM-0041 흑자 1cm 1개(330,000원): 시작 전 297,000원, 시작 후 �
   assert.equal(d.total, '330000');
   assert.deepEqual(d.lesionTiers.map(t => t.price), [330000, 440000, 550000]);
 });
+
+test('인모드 FX 3회: 정상 440,000 / 리프팅 1년 혜택가 330,000, 선결제권은 정상가 440,000 기준 (현재 로직 고정)', () => {
+  const all = require('../data/programs.json').programs;
+  const run = (id, disc, preTier = '') => { const cur = all.find(p => p.id === id);
+    return PR.discount({ cur, held: false, hairParts: [], hairRate: 0, listNum: Number(cur.total), optAddSum: 0, all, disc, preTier }).totalNum; };
+  assert.equal(run('PGM-0085', 'none'), 440000);
+  assert.equal(run('PGM-0085B', 'none'), 330000);
+  for (const [t, v] of [['300', 396000], ['400', 374000], ['500', 352000]]) {
+    assert.equal(run('PGM-0085', 'pre', t), v);
+    assert.equal(run('PGM-0085B', 'pre', t), v, '혜택가에 추가 할인하지 않고 정상가 기준');
+  }
+  // PGM-0085B 혜택가 + 지인 소개 5% / 재티켓팅 10% 중복 여부는 운영 기준 확인 필요 (현재 동작만 기록, 정책 확정 아님)
+  assert.equal(run('PGM-0085B', 'ref'), 313500);
+  assert.equal(run('PGM-0085B', 'ret'), 297000);
+});
