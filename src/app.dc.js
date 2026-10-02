@@ -1282,7 +1282,8 @@ class Component extends DCLogic {
       hasNeed: needNum > 0, noNeed: needNum <= 0,
       sumRows: (() => {
         const partial = preNew && !preRcvFull, rest = Math.max(0, needNum - nowNum);
-        const rows = [{ k: '오늘 수납', v: won(nowNum) + '원' + (nowNum > 0 && selM.length ? ' · ' + selM.join(' + ') : ''), big: true },
+        const rows = [{ k: '오늘 수납', v: won(nowNum) + '원', big: true },
+          ...(nowNum > 0 && selM.length ? [{ k: '결제수단', v: payments.map(x => x.method + (isSplit ? ' ' + won(x.amount) + '원' : '')).join(' · ') + (hasCash ? ' (현금영수증 ' + rcpt + ')' : '') }] : []),
           ...(preNew ? [{ k: '선결제권 구매 수납', v: won(preRcvAmt) + '원' + (preBuyM ? ' · ' + preBuyM : '') }] : []),
           ...(partial && preBuy > preRcvAmt ? [{ k: '선결제권 미수', v: won(preBuy - preRcvAmt) + '원', warn: true }] : []),
           ...(rest > 0 ? [{ k: '미수', v: won(rest) + '원', warn: true }] : []),

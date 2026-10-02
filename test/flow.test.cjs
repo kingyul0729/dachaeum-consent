@@ -1045,7 +1045,7 @@ test('iPad 세로 전체 흐름 ①: 기납부 예약금 + 예약금 결제 → 
   await p.locator('xpath=//*[text()="이미 받은 예약금"]/following-sibling::span//input').fill('50000');
   await click(p, '예약금 결제'); await click(p, '카드');
   const b = await body(p);
-  for (const re of [/오늘 수납\s*49,000원 · 카드/, /미수\s*891,000원/, /이미 받은 예약금\s*50,000원/]) assert.match(b, re);
+  for (const re of [/오늘 수납\s*49,000원\s*결제수단\s*카드/, /미수\s*891,000원/, /이미 받은 예약금\s*50,000원/]) assert.match(b, re);
   await click(p, '동의서 미리보기 · 서명'); await noHScroll(p, '동의서 서명 화면');
   await signSave(p, '동의하고 저장');
   const [c] = await contracts(p);
