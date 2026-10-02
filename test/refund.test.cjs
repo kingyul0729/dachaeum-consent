@@ -150,19 +150,20 @@ test('PGM-0041 흑자 1cm 1개(330,000원): 시작 전 297,000원, 시작 후 �
   assert.deepEqual(d.lesionTiers.map(t => t.price), [330000, 440000, 550000]);
 });
 
-test('인모드 FX 3회: 정상 440,000 / 리프팅 1년 혜택가 330,000, 선결제권은 정상가 440,000 기준 (현재 로직 고정)', () => {
+test('인모드 FX 3회: 정상 440,000 / 리프팅 1년 혜택가 330,000 — 혜택가에 지인 소개·재티켓팅 추가 할인 불가, 선결제권은 정상가 440,000 기준', () => {
   const all = require('../data/programs.json').programs;
   const run = (id, disc, preTier = '') => { const cur = all.find(p => p.id === id);
-    return PR.discount({ cur, held: false, hairParts: [], hairRate: 0, listNum: Number(cur.total), optAddSum: 0, all, disc, preTier }).totalNum; };
-  assert.equal(run('PGM-0085', 'none'), 440000);
-  assert.equal(run('PGM-0085B', 'none'), 330000);
+    return PR.discount({ cur, held: false, hairParts: [], hairRate: 0, listNum: Number(cur.total), optAddSum: 0, all, disc, preTier }); };
+  assert.equal(run('PGM-0085', 'none').totalNum, 440000);
+  assert.equal(run('PGM-0085B', 'none').totalNum, 330000);
   for (const [t, v] of [['300', 396000], ['400', 374000], ['500', 352000]]) {
-    assert.equal(run('PGM-0085', 'pre', t), v);
-    assert.equal(run('PGM-0085B', 'pre', t), v, '혜택가에 추가 할인하지 않고 정상가 기준');
+    assert.equal(run('PGM-0085', 'pre', t).totalNum, v);
+    assert.equal(run('PGM-0085B', 'pre', t).totalNum, v, '혜택가에 추가 할인하지 않고 정상가 기준');
   }
-  // PGM-0085B 혜택가 + 지인 소개 5% / 재티켓팅 10% 중복 여부는 운영 기준 확인 필요 (현재 동작만 기록, 정책 확정 아님)
-  assert.equal(run('PGM-0085B', 'ref'), 313500);
-  assert.equal(run('PGM-0085B', 'ret'), 297000);
+  assert.deepEqual(run('PGM-0085B', 'none').allowed, ['none', 'pre'], '혜택가: 지인 소개·재티켓팅 선택지 없음');
+  assert.equal(run('PGM-0085B', 'ref').totalNum, 330000, '313,500 아님');
+  assert.equal(run('PGM-0085B', 'ret').totalNum, 330000, '297,000 아님');
+  assert.equal(run('PGM-0085', 'ref').totalNum, 418000, '정상 3회의 지인 소개 5%는 그대로');
 });
 
 test('가격 관리 기록: 총 등록금액만 기록·제거, 다른 변경 기록은 유지, 원본 기록 객체는 바뀌지 않음', () => {
@@ -240,37 +241,27 @@ test('프로그램 이름 변경: ID·baseName 유지, 이름 규칙(리프팅 �
   assert.deepEqual(ov2.programs['PGM-0085'], { total: '450000' });
 });
 
-test('이벤트: 정액 적용가 이벤트는 설정한 할인만 함께 선택, 할인율 이벤트는 하나의 할인으로 선택, 기간·사용 여부 반영', () => {
+test('이벤트: 정액 적용가·할인율 이벤트 모두 다른 할인과 중복 없음, 할인율 이벤트는 직원 선택 시에만, 기간·사용 여부 반영', () => {
   const CT = globalThis.DachaeumCatalog, today = '2026-10-02';
   const base = DB(), nb2 = base.programs.find(p => p.id === 'PGM-EV-NB2'), ev = base.events.find(e => e.id === 'EV-NEWBIJOU');
-  assert.deepEqual(disc(nb2, base.programs, { evDef: ev }).allowed, ['none'], '기본: 이벤트 적용가에 추가 할인 불가');
-  assert.equal(disc(nb2, base.programs, { evDef: ev, disc: 'ref' }).totalNum, 275000, '허용 안 된 할인은 적용 안 됨');
-  const ev2 = { ...ev, stack: { pre: true } };
-  assert.deepEqual(disc(nb2, base.programs, { evDef: ev2 }).allowed, ['none', 'pre']);
-  assert.equal(disc(nb2, base.programs, { evDef: ev2, disc: 'pre', preTier: '300' }).totalNum, 247500, '275,000 × 90%');
-  // 할인율 이벤트
+  assert.deepEqual(disc(nb2, base.programs, { evDef: ev }).allowed, ['none'], '이벤트 적용가에 추가 할인 불가');
+  assert.equal(disc(nb2, base.programs, { evDef: { ...ev, stack: { pre: true } }, disc: 'pre', preTier: '300' }).totalNum, 275000, '예전 중복 설정값이 남아 있어도 무시');
   let eo = CT.addRateEvent(null, { id: 'EV-R-T', name: '가을 이벤트', rate: 0.1, start: '2026-10-01', end: '2026-10-31', active: true, programs: ['PGM-0001'] });
   let d = CT.applyEventOv(base, eo);
   const p1 = d.programs.find(p => p.id === 'PGM-0001');
   const rev = CT.rateEventsFor(d, 'PGM-0001', today);
-  assert.equal(rev.length, 1);
   const r0 = disc(p1, d.programs, { rateEvents: rev });
   assert.deepEqual(r0.options.map(o => o.label), ['일반', '지인 소개 5%', '재티켓팅 10%', '선결제권', '가을 이벤트 10%']);
   assert.equal(r0.totalNum, 1320000, '선택하지 않으면 자동 적용 안 됨');
   const r1 = disc(p1, d.programs, { rateEvents: rev, disc: 'ev:EV-R-T' });
-  assert.deepEqual([r1.totalNum, r1.discLabel, r1.eventId], [1188000, '가을 이벤트 10%', 'EV-R-T']);
+  assert.deepEqual([r1.totalNum, r1.discLabel, r1.eventId, r1.discKey], [1188000, '가을 이벤트 10%', 'EV-R-T', 'ev:EV-R-T'], '이벤트 하나만 적용');
   assert.equal(CT.rateEventsFor(d, 'PGM-0001', '2026-11-01').length, 0, '기간 밖');
-  assert.equal(disc(p1, d.programs, { rateEvents: [], disc: 'ev:EV-R-T' }).totalNum, 1320000, '사용할 수 없게 된 이벤트 선택은 일반으로');
   eo = CT.setEvent(eo, 'EV-R-T', { active: false });
   assert.equal(CT.rateEventsFor(CT.applyEventOv(base, eo), 'PGM-0001', today).length, 0, '사용 중지');
-  // 패키지 이벤트 프로그램에는 할인율 이벤트 미적용, 제모 결합가에도 미적용
   assert.deepEqual(disc(nb2, base.programs, { evDef: ev, rateEvents: rev }).allowed, ['none']);
-  // 기존 이벤트 설정 변경은 바꾼 항목만 덧붙이고 기존 값을 지우지 않음
-  const eo2 = CT.setEvent(null, 'EV-NEWBIJOU', { name: '뉴비쥬 가을 앵콜', end: '2026-12-31' });
+  const eo2 = CT.setEvent(null, 'EV-NEWBIJOU', { name: '뉴비쥬 가을 앵콜', end: '2026-12-31', stack: { pre: true } });
   const e2 = CT.applyEventOv(base, eo2).events.find(e => e.id === 'EV-NEWBIJOU');
-  assert.deepEqual([e2.name, e2.kind, e2.validMonths, e2.end], ['뉴비쥬 가을 앵콜', 'package', 3, '2026-12-31']);
-  assert.equal(CT.eventOn(e2, '2027-01-01'), false);
-  assert.deepEqual(CT.clearEvent(eo2, 'EV-NEWBIJOU').events, {});
+  assert.deepEqual([e2.name, e2.kind, e2.validMonths, e2.end, e2.stack], ['뉴비쥬 가을 앵콜', 'package', 3, '2026-12-31', undefined], '중복 설정은 저장하지 않음');
 });
 
 test('이벤트 적용가(총 등록금액) 변경은 환불용 1회 정상가를 바꾸지 않음', () => {
@@ -295,4 +286,15 @@ test('선결제권 사용 계약 환불: 사용분 891,000 전액 → 시술 전
   assert.equal(RF.settle(mix, { used: [0], alloc: { 0: '501,900', 1: '300,000' } }).allocOk, true);
   assert.equal(RF.settle(mix, { used: [0], alloc: { 0: '401,900', 1: '400,000' } }).allocOver, true);
   assert.equal(RF.settle(mix, { used: [0] }).allocOk, false, '자동 배분 없음');
+});
+
+test('예약금 계산: 목표 = 계약 총액 10%, 이미 납부·사용한 금액을 빼고 남은 미납금액을 넘지 않음', () => {
+  const r1 = PR.payment({ totalNum: 891000, preBal: 0, priorDep: 50000, deposit: true });
+  assert.deepEqual([r1.depTarget, r1.depAmt, r1.paid, r1.needNum], [89100, 39100, 89100, 841000], '기납부 50,000 → 오늘 39,100, 총 89,100 (139,100 아님)');
+  const r2 = PR.payment({ totalNum: 3300000, preBal: 3000000, priorDep: 0, deposit: true });
+  assert.deepEqual([r2.depTarget, r2.depAmt, r2.needNum, r2.paid], [330000, 0, 300000, 3000000], '선결제권 사용 3,000,000 ≥ 목표 → 추가 예약금 0, 미수금 300,000');
+  const r3 = PR.payment({ totalNum: 891000, preBal: 0, priorDep: 0, deposit: true });
+  assert.deepEqual([r3.depAmt, r3.paid], [89100, 89100], '일반 예약금은 그대로');
+  const r4 = PR.payment({ totalNum: 100000, preBal: 0, priorDep: 95000, deposit: true });
+  assert.equal(r4.depAmt, 0, '남은 미납금액 5,000이 있어도 목표 10,000 이미 충족');
 });

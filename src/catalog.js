@@ -92,7 +92,7 @@
   // 기존 이벤트(가격 데이터 + 기존 priceOverride.events)는 읽어서 쓰고, 여기에는 바꾼 항목만 덧붙임 → 기존 설정을 초기화하지 않음
   // 정액 적용가 이벤트(패키지)의 금액은 해당 이벤트 프로그램의 총 등록금액(priceOverride)으로 관리 — 환불용 1회 정상가와 별개
   const EVENT_KEY = 'dachaeum.eventOverride';
-  const EV_FIELDS = ['name', 'active', 'start', 'end', 'rate', 'programs', 'stack'];
+  const EV_FIELDS = ['name', 'active', 'start', 'end', 'rate', 'programs'];
   const readEvents = () => { try { return JSON.parse(localStorage.getItem(EVENT_KEY) || 'null'); } catch (e) { return null; } };
   const pickEv = o => { const r = {}; EV_FIELDS.forEach(k => { if (o && Object.prototype.hasOwnProperty.call(o, k)) r[k] = o[k]; }); return r; };
   function applyEventOv(d0, eo) {

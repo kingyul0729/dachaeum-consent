@@ -40,6 +40,20 @@ class Component extends DCLogic {
     this.setState({ contracts, contract: nc });
   }
 
+  // 새 동의서 임시 저장: 계약이 아니라 작성 중인 입력값만 보관 (예: 선결제권 신규 구매 부분 수납) → 추가 수납 후 이어서 작성
+  static DRAFT_KEY = 'dachaeum.v3.newDrafts';
+  static DRAFT_FIELDS = ['patient', 'step', 'pcat', 'psub', 'paxis', 'pq', 'prog', 'progId', 'hairIds', 'method', 'mSel', 'split1', 'cashRcpt', 'pay',
+    'addArea', 'addSel', 'addSvc', 'addSvN', 'svcOff', 'svcSwap', 'oGrp', 'disc', 'preTier', 'retPeriod', 'preBal', 'priorDep', 'preNew', 'preRcvAmt', 'preBuyM',
+    'amounts', 'units', 'lesions', 'unitFix', 'evFirst', 'forceFull', 'dupPick', 'dupOff'];
+  readDrafts() { try { const d = JSON.parse(localStorage.getItem(Component.DRAFT_KEY) || '[]'); return Array.isArray(d) ? d : []; } catch (e) { return []; } }
+  writeDrafts(list) { try { localStorage.setItem(Component.DRAFT_KEY, JSON.stringify(list)); } catch (e) { this.flash('기기 저장 공간이 부족합니다'); return false; } this.setState({ drafts: list }); return true; }
+  saveNewDraft(info) {
+    const s = this.state, id = s.draftId || 'DR' + Date.now(), state = {};
+    Component.DRAFT_FIELDS.forEach(k => { if (s[k] !== undefined) state[k] = s[k]; });
+    const d = { id, at: new Date().toISOString(), name: (s.patient || {}).name || '', ...(info || {}), state };
+    if (this.writeDrafts(this.readDrafts().filter(x => x.id !== id).concat([d]))) { this.setState({ draftId: id }); this.flash('임시 저장했습니다. 목록에서 이어서 작성할 수 있습니다'); }
+  }
+
   // ---- 백업·복원 ----
   // 대상: 이 앱이 기기에 저장한 자료(dachaeum.* — 계약·계약 당시 단가·결제내역·이용기록·작성 중/확정 환불·서명 문서와 버전·가격 관리 설정)만.
   // 재고관리 등 다른 앱 자료는 읽지도 바꾸지도 않음. 파일은 비밀번호로 암호화(PBKDF2-SHA256 → AES-GCM 256)
@@ -381,6 +395,7 @@ class Component extends DCLogic {
     window.addEventListener('pagehide', flushDraft);
     document.addEventListener('visibilitychange', () => { if (document.hidden) flushDraft(); });
     try { const d = JSON.parse(localStorage.getItem('dachaeum.v3.docs') || '[]'); if (d.length) this.setState({ docs: d }); } catch (e) {}
+    this.setState({ drafts: this.readDrafts() });
     try { const k = JSON.parse(localStorage.getItem('dachaeum.v3.contracts') || '[]'); this.setState(st => ({ contracts: (st.contracts || []).filter(c => c.sample).concat(k) })); } catch (e) {}
     try {
       const m = (location.hash || '').match(/sel=([^&]+)/);
@@ -678,7 +693,7 @@ class Component extends DCLogic {
     // 이벤트 설정(가격 관리 → 이벤트)을 할인 선택·금액·결제 안내가 함께 참조
     const evDefCur = cur && cur.event ? ((db && db.events) || []).find(e => e.id === cur.event) || null : null;
     const rateEvs = cur ? CAT.rateEventsFor(db, cur.id, Component.today()) : [];
-    const { isEvProg, isYearSB, noPreHair, noRet, discOk, discKey, preTier, preBase, discRate, discBase, totalNum, discLabel, options: discOptions, eventId: discEventId, stack: evStack } =
+    const { isEvProg, isYearSB, noPreHair, noRet, discOk, discKey, preTier, preBase, discRate, discBase, totalNum, discLabel, options: discOptions, eventId: discEventId } =
       PR.discount({ cur, held, hairParts: hairPs, hairRate, listNum, optAddSum, all: dbAll, disc: s.disc, preTier: s.preTier, evDef: evDefCur, rateEvents: rateEvs });
     const DK = PR.DISCOUNTS;
     const chip = on => ({ bd: on ? '#345b80' : '#d5d9de', bg: on ? '#345b80' : '#ffffff', fg: on ? '#ffffff' : '#2b3036' });
@@ -687,7 +702,7 @@ class Component extends DCLogic {
       // 제모: 여러 부위를 한 번에 선택 (누르면 추가/해제)
       const hair = p.cat === '제모' && !!p.id;
       const on = hair ? hairIds.includes(p.id) : (s.progId ? p.id === s.progId : s.prog === i);
-      const reset = { addArea: '', addSel: [], addSvc: [], addSvN: {}, svcOff: [], svcSwap: {}, oGrp: '', disc: 'none', preTier: '', retPeriod: '', preBal: '', preMode: '', preRcv: false, preBuyM: '' };
+      const reset = { addArea: '', addSel: [], addSvc: [], addSvN: {}, svcOff: [], svcSwap: {}, oGrp: '', disc: 'none', preTier: '', retPeriod: '', preBal: '', preNew: false, preRcvAmt: '', preBuyM: '' };
       return { ...p, on, hair, pick: hair
         ? () => this.setState(st => { const h = st.hairIds || []; return { ...reset, prog: -1, progId: '', hairIds: h.includes(p.id) ? h.filter(x => x !== p.id) : h.concat(p.id) }; })
         : () => this.setState({ ...reset, prog: i, progId: p.id || '', hairIds: [] }),
@@ -743,7 +758,7 @@ class Component extends DCLogic {
           opts: A.members.map(m => ({ label: oLab(m), sub: m.price, pick: () => m.hair
               // 제모: 같은 부위는 횟수 하나만, 다른 부위는 계속 추가
               ? this.setState(st => { const ids = A.members.map(x => x.id), h = (st.hairIds || []).filter(x => !ids.includes(x));
-                  return { prog: -1, progId: '', addArea: '', disc: 'none', preTier: '', preMode: '', preRcv: false, preBuyM: '', oGrp: key, hairIds: m.on ? h : h.concat(m.id) }; })
+                  return { prog: -1, progId: '', addArea: '', disc: 'none', preTier: '', preNew: false, preRcvAmt: '', preBuyM: '', oGrp: key, hairIds: m.on ? h : h.concat(m.id) }; })
               : m.on ? unpick({ oGrp: key }) : (m.pick(), this.setState({ oGrp: key })),
             bd: m.on ? '#345b80' : '#c9d3de', bg: m.on ? '#345b80' : '#ffffff', fg: m.on ? '#ffffff' : '#345b80' })) };
       });
@@ -787,20 +802,25 @@ class Component extends DCLogic {
     const dep = s.pay === 'deposit';
     // 3단계: 확정된 최종 계약금액 − 기존 선결제권 잔액 − 기납부 예약금 = 당일 결제 필요금액
     const numOf = v => Number(String(v || '').replace(/[^0-9]/g, '')) || 0;
-    // 선결제권: 할인(선결제권 기준 300·400·500)과 결제 재원(신규 구매분 / 보유 잔액)을 구분
-    // · 신규 구매(new): 구매 예정금액에서 이번 계약 적용가를 사용. 직원이 구매금액 수납을 확인해야 서명 가능 (선택만으로 수납 처리 안 함)
-    //   구매금액 자체는 계약 납부액이 아님 → 계약 납부액에는 이번 계약에 사용한 금액만 들어감
-    // · 보유 잔액 사용(bal): 직원이 확인한 기존 잔액에서 사용. 선결제권 기준 금액을 잔액에 더하지 않음
-    const preMode = discKey === 'pre' ? (s.preMode || '') : (numOf(s.preBal) > 0 ? 'bal' : '');
-    const preBuy = discKey === 'pre' && preMode === 'new' && preTier ? Number(preTier) * 10000 : 0;
-    const preRcv = preMode === 'new' && !!s.preRcv;
-    const preBuyM = preMode === 'new' ? (s.preBuyM || '') : '';
-    const preSrc = preMode === 'new' ? preBuy : preMode === 'bal' ? numOf(s.preBal) : 0;
-    const PAY = PR.payment({ totalNum, preBal: preSrc, priorDep: s.priorDep, deposit: dep });
-    const { preBal, priorDep, needNum, leftNum, depAmt } = PAY;
-    const preUse = Math.min(preBal, totalNum), preLeft = preBal - preUse;
+    // 선결제권: 할인 기준(300·400·500)과 결제 재원을 구분. 직원이 확인·입력한 값만 사용 (다른 계약 금액으로 추정하지 않음)
+    // · 보유 잔액: 직원이 확인한 기존 잔액 → 먼저 사용
+    // · 신규 구매(선결제권 할인 선택 시): 구매금액 = 선택한 기준(300 → 3,000,000). 실제 수납액을 입력하고, 전액 수납 전에는 서명 불가(임시 저장 가능)
+    //   전액 수납 전 금액은 '예상'으로만 안내. 계약 납부액에는 이 계약에 실제 사용한 금액만 포함 (구매금액 전체 아님)
+    // · 기존 잔액과 신규 구매금액을 합쳐 할인 기준을 올리지 않음 (선택한 기준 그대로)
+    const preNew = discKey === 'pre' && !!preTier && !!s.preNew;
+    const preBuy = preNew ? Number(preTier) * 10000 : 0;
+    const preRcvAmt = preNew ? numOf(s.preRcvAmt) : 0;
+    const preRcvFull = preNew && preRcvAmt === preBuy, preRcvOver = preNew && preRcvAmt > preBuy;
+    const preBuyM = preNew ? (s.preBuyM || '') : '';
+    const balIn = numOf(s.preBal);
+    const balUse = Math.min(balIn, totalNum), balAfter = balIn - balUse;
+    const newUse = preNew ? Math.min(preBuy, totalNum - balUse) : 0, newLeft = preBuy - newUse;   // 전액 수납 전에는 예상값
+    const PAY = PR.payment({ totalNum, preBal: balUse + newUse, priorDep: s.priorDep, deposit: dep });
+    const { preBal, priorDep, needNum, leftNum, depAmt, depTarget } = PAY;
+    const preUse = balUse + newUse, preLeft = balAfter + newLeft;
     const pdUse = Math.min(priorDep, Math.max(0, totalNum - preUse)), pdOver = priorDep - pdUse;
-    const preLabel = preMode === 'new' ? '선결제권 (신규 구매 ' + preTier + ')' : '선결제권 잔액';
+    const newLabel = '선결제권 (신규 구매 ' + preTier + ')';
+    const preLabel = balUse > 0 && newUse > 0 ? '선결제권' : newUse > 0 ? newLabel : '선결제권 잔액';
     const payLabels = { label: dep ? '예약금' : '당일 결제',
       now: won(dep ? depAmt : needNum) + '원',
       rest: won(dep ? needNum - depAmt : 0) + '원' };
@@ -836,10 +856,12 @@ class Component extends DCLogic {
     const buildContract = () => !cur ? null : {
       docMode: isBrief ? 'brief' : 'full', termsVer: TERMS_VER, priorDate: isBrief && priorFull ? priorFull.date : null,
       // 기존 선결제권 잔액 사용분도 결제수단으로 기록 → 환불 시 잔액으로 복구 (사용액 한도)
-      payments: payments.concat(preUse > 0 ? [{ method: preLabel, amount: preUse, prepaid: true, ...(preMode === 'new' ? { newPurchase: true } : {}) }] : []),
-      // 선결제권 정산 기록: 구매(또는 보유) 금액 · 이번 계약 사용액 · 사용 후 잔액을 따로 보관 (계약 납부액에는 사용액만 포함)
-      prepaid: preMode ? { mode: preMode, tier: preTier || null, purchase: preMode === 'new' ? preBuy : null, purchaseMethod: preMode === 'new' ? preBuyM : null,
-        received: preMode === 'new' ? preRcv : null, balBefore: preBal, use: preUse, balAfter: preLeft } : null,
+      payments: payments.concat(balUse > 0 ? [{ method: '선결제권 잔액', amount: balUse, prepaid: true }] : [])
+        .concat(newUse > 0 ? [{ method: newLabel, amount: newUse, prepaid: true, newPurchase: true }] : []),
+      // 선결제권 기록: 확인한 기존 잔액 · 신규 구매·실제 수납 · 이 계약 사용액(각각) · 차감 후 잔액. 계약 납부액에는 사용액만 포함
+      prepaid: balIn > 0 || preNew ? { tier: discKey === 'pre' ? preTier || null : null, balBefore: balIn, balUse,
+        purchase: preNew ? preBuy : 0, received: preNew ? preRcvAmt : 0, purchaseMethod: preNew ? preBuyM : null, newUse,
+        use: preUse, balAfter: preLeft } : null,
       event: cur.event || null, firstDate: isEventCur ? evFirst : null,
       patient: { ...P },
       program: progTitle(cur), cat: cur.cat, date: todayStr, expiry: isEventCur ? evExpiry : addYear(todayStr),
@@ -847,8 +869,8 @@ class Component extends DCLogic {
       priceSnap: { ver: (db && db.version) || todayStr, programId: cur.id, total: Number(cur.total || 0) || null, at: todayStr },
       total: totalNum, paid: PAY.paid, pay: s.pay, method: methodStr,
       // 할인·선결제권 (서명 시 고정). 선결제권 기준(할인율)과 잔액은 별도 값
-      listTotal: discKey === 'pre' ? preBase : listNum, hairCombo: hairRate ? { parts: hairElig.length, rate: hairRate, sum: hairSum, off: hairOff } : null, disc: { kind: discKey, label: discLabel, rate: discRate, retPeriod: discKey === 'ret' ? (s.retPeriod || '1개월 이내') : null, preTier: preTier || null, eventId: discEventId || null, eventStack: isEvProg && discKey !== 'none' ? discKey : null },
-      preBal, priorDep,
+      listTotal: discKey === 'pre' ? preBase : listNum, hairCombo: hairRate ? { parts: hairElig.length, rate: hairRate, sum: hairSum, off: hairOff } : null, disc: { kind: discKey, label: discLabel, rate: discRate, retPeriod: discKey === 'ret' ? (s.retPeriod || '1개월 이내') : null, preTier: preTier || null, eventId: discEventId || null, },
+      preBal: balIn, priorDep,
       cap: capped ? Number(capN) : null, svcVisit: svcNote,
       items: isLesion ? lesionRows.map(r => ({ kind: '시술', lesionUnit: true, qty: 5, price: r.price,
           name: '흑자 ' + r.no + ' · ' + r.site + ' ' + r.sizeText + ' (' + r.tier + ')' })) :
@@ -1038,7 +1060,7 @@ class Component extends DCLogic {
 
     // 새 동의서 작성 시작: 이전 작성분(할인·선결제권·기납부 예약금·결제수단·분할금액·구성 선택 등)이 다음 환자에게 남지 않도록 초기화
     const NEW_RESET = { prog: -1, progId: '', hairIds: [], method: '', mSel: [], split1: '', cashRcpt: '', pay: 'full', addArea: '', addSel: [], addSvc: [], addSvN: {},
-      svcOff: [], svcSwap: {}, oGrp: '', disc: 'none', preTier: '', retPeriod: '', preBal: '', priorDep: '', preMode: '', preRcv: false, preBuyM: '', amounts: {}, units: {}, lesions: null,
+      svcOff: [], svcSwap: {}, oGrp: '', disc: 'none', preTier: '', retPeriod: '', preBal: '', priorDep: '', preNew: false, preRcvAmt: '', preBuyM: '', draftId: '', amounts: {}, units: {}, lesions: null,
       unitFix: {}, tried3: false, evFirst: '', forceFull: false, dupPick: '', dupOff: '', pvOn: false, sig: false, tried1: false, pendingSign: false, ckRefund: false };
     const bars = {
       list: { note: '기록은 이 기기에만 저장됩니다. 7일마다 백업하세요.', primary: '새 동의서 작성', secondary: '백업 · 복원', onP: () => this.setState({ screen: 'new', step: 1, ...NEW_RESET, ...((this.props.testFill ?? false) ? { step: 2, patient: { name: '테스트', birth: '900101', phone: '010-1234-5678' } } : { patient: { name: '', birth: '', phone: '' } }) }), onS: () => this.setState({ bkOpen: true, bkMsg: '', bkPlan: null, bkReady: '', bkPw: '', bkPw2: '', bkPwR: '' }) },
@@ -1047,10 +1069,10 @@ class Component extends DCLogic {
              onP: () => {
                if (s.step === 3) {
                  if (discKey === 'pre' && !preTier) return this.flash('선결제권 기준을 선택해 주세요');
-                 if (discKey === 'pre' && !preMode) return this.flash('선결제권을 신규 구매하는지, 보유 잔액을 사용하는지 선택해 주세요');
-                 if (preMode === 'new' && !preBuyM) return this.flash('선결제권 구매 결제수단을 선택해 주세요');
-                 if (preMode === 'new' && !preRcv) return this.flash('선결제권 구매금액 ' + won(preBuy) + '원 수납을 확인해 주세요');
-                 if (discKey === 'pre' && preMode === 'bal' && !preBal) return this.flash('보유 선결제권 잔액을 확인해 입력해 주세요');
+                 if (discKey === 'pre' && !preNew && !balIn) return this.flash('선결제권 할인은 확인한 보유 잔액이 있거나 신규 구매할 때만 적용할 수 있습니다');
+                 if (preNew && !preBuyM) return this.flash('선결제권 구매 결제수단을 선택해 주세요');
+                 if (preRcvOver) return this.flash('실제 수납액이 구매금액 ' + won(preBuy) + '원보다 큽니다');
+                 if (preNew && !preRcvFull) return this.flash('선결제권 구매금액 전액 수납 후 서명할 수 있습니다 (임시 저장 후 이어서 진행)');
                  if (nowNum > 0 && !selM.length) return this.flash('결제수단을 선택해 주세요');
                  if (isSplit && (!a1 || a1 >= nowNum)) return this.flash('분할결제 금액을 입력해 주세요');
                  if (!totalNum) return this.flash('총 등록금액을 입력해 주세요');
@@ -1167,39 +1189,41 @@ class Component extends DCLogic {
       // 할인 선택지: 현재 프로그램·이벤트 설정에서 허용되는 것만 (정액 이벤트는 설정된 중복 허용 할인만, 할인율 이벤트는 하나의 할인으로 선택)
       discShow: !!cur, discLocked: isEvProg && discOptions.length <= 1, discOpen: !!cur && discOptions.length > 1,
       discLockedText: (evDefCur && evDefCur.name ? evDefCur.name + ' ' : '이벤트가 ') + '적용 · 추가 할인 불가',
-      discOpts: discOptions.map(d => ({ label: d.label, ...chip(discKey === d.key), pick: () => this.setState({ disc: d.key, preTier: d.key === 'pre' ? s.preTier : '', preMode: d.key === 'pre' ? s.preMode : '', preRcv: false }) })),
+      discOpts: discOptions.map(d => ({ label: d.label, ...chip(discKey === d.key), pick: () => this.setState({ disc: d.key, preTier: d.key === 'pre' ? s.preTier : '', preNew: d.key === 'pre' ? s.preNew : false }) })),
       isPreDisc: discKey === 'pre', isRetDisc: discKey === 'ret',
       tierOpts: Object.keys(PR.PREPAID_TIER).map(t => ({ label: t, ...chip(preTier === t), pick: () => this.setState({ preTier: t }) })),
       retOpts: PR.RET_PERIODS.map(t => ({ label: t, ...chip((s.retPeriod || '1개월 이내') === t), pick: () => this.setState({ retPeriod: t }) })),
-      discNote: isYearSB ? (discKey === 'pre' ? '선결제권 사용 · 1년 이내 혜택가 제외, 정상가 기준 계산' : '리프팅 후 1년 이내 혜택가') : noPreHair ? (hairRate ? '제모 결합할인 적용' : '지정 결합가') + ' · 추가 할인 불가' : noRet ? '여드름 4주 프로그램 · 재티켓팅 제외' : '',
+      discNote: isYearSB ? (discKey === 'pre' ? '선결제권 사용 · 1년 이내 혜택가 제외, 정상가 기준 계산' : '리프팅 후 1년 이내 혜택가 · 지인 소개·재티켓팅 추가 할인 불가') : noPreHair ? (hairRate ? '제모 결합할인 적용' : '지정 결합가') + ' · 추가 할인 불가' : noRet ? '여드름 4주 프로그램 · 재티켓팅 제외' : '',
       hasDiscNote: !!cur && (isYearSB || noPreHair || noRet),
       hasHairOff: hairRate > 0, hairOffLabel: '제모 결합 ' + hairElig.length + '부위 ' + Math.round(hairRate * 100) + '%', hairOffText: '− ' + won(hairOff) + '원', hairSumText: won(hairSum) + '원',
       hasDisc: !!discRate, discLabel, discBaseText: won(discBase) + '원',
       discDocText: [hairRate ? '제모 결합 ' + hairElig.length + '부위 ' + Math.round(hairRate * 100) + '% (정상가 합계 ' + won(hairSum) + '원)' : '', discRate ? discLabel + ' (기준 ' + won(discBase) + '원)' : ''].filter(Boolean).join(' · '),
       hasDiscDoc: !!discRate || hairRate > 0,
       preBalIn: s.preBal ? won(numOf(s.preBal)) : '', onPreBal: e => this.setState({ preBal: e.target.value.replace(/[^0-9]/g, '') }),
-      // 선결제권 결제 안내
-      preModeOpts: [['new', '신규 구매'], ['bal', '보유 잔액 사용']].map(([k, l]) => ({ label: l, ...chip(preMode === k), pick: () => this.setState({ preMode: k, preRcv: false, preBuyM: '', preBal: k === 'new' ? '' : s.preBal }) })),
-      isPreNew: preMode === 'new', isPreBalMode: discKey === 'pre' && preMode === 'bal',
-      preBuyText: won(preBuy) + '원', preBuyMOpts: ['카드', '현금', '계좌이체'].map(m => ({ label: m, ...chip(preBuyM === m), pick: () => this.setState({ preBuyM: m }) })),
-      preRcvOn: preRcv, preRcvBd: ck(preRcv).ckBd, preRcvBg: ck(preRcv).ckBg, preRcvFg: ck(preRcv).ckFg, togglePreRcv: () => this.setState({ preRcv: !preRcv }),
-      preRcvLabel: '선결제권 구매금액 ' + won(preBuy) + '원을 받았습니다' + (preBuyM ? ' (' + preBuyM + ')' : ''),
-      hasPreLines: !!preMode, preLines: !preMode ? [] : [
-        preMode === 'new' ? { k: '신규 구매금액' + (preRcv ? ' (수납 확인)' : ' (구매 예정 · 수납 전)'), v: won(preBuy) + '원' } : { k: '보유 선결제권 잔액 (직원 확인)', v: won(preBal) + '원' },
-        { k: '프로그램 적용가 (최종 계약금액)', v: won(totalNum) + '원' },
-        { k: '이번 계약에 선결제권 사용', v: won(preUse) + '원' },
-        { k: preMode === 'new' ? (preRcv ? '차감 후 선결제권 잔액' : '차감 후 예상 잔액 (수납 확인 후 확정)') : '사용 후 선결제권 잔액', v: won(preLeft) + '원', strong: true },
-        ...(priorDep > 0 ? [{ k: '기납부 예약금 (이미 받은 금액)', v: won(pdUse) + '원' }] : []),
+      // 선결제권 결제 안내 (입력: 보유 잔액 · 신규 구매 여부·실제 수납액 / 계산: 사용액·잔액·추가 결제·미수금)
+      preNewOn: preNew, preNewLabel: '신규 구매 ' + (preTier ? won(Number(preTier) * 10000) + '원' : ''), preNewBd: chip(!!s.preNew).bd, preNewBg: chip(!!s.preNew).bg, preNewFg: chip(!!s.preNew).fg,
+      togglePreNew: () => this.setState({ preNew: !s.preNew, preRcvAmt: '', preBuyM: '' }),
+      preBuyMOpts: ['카드', '현금', '계좌이체'].map(m => ({ label: m, ...chip(preBuyM === m), pick: () => this.setState({ preBuyM: m }) })),
+      preRcvIn: s.preRcvAmt ? won(numOf(s.preRcvAmt)) : '', onPreRcv: e => this.setState({ preRcvAmt: e.target.value.replace(/[^0-9]/g, '') }),
+      preNeedDraft: preNew && !preRcvFull, saveNewDraft: () => this.saveNewDraft({ prog: cur ? progTitle(cur) : '', note: '선결제권 구매 ' + won(preBuy) + '원 중 ' + won(preRcvAmt) + '원 수납 · 미수금 ' + won(Math.max(0, preBuy - preRcvAmt)) + '원' }),
+      hasPreLines: balIn > 0 || preNew, preLines: !(balIn > 0 || preNew) ? [] : [
+        ...(balIn > 0 ? [{ k: '보유 잔액 (직원 확인)', v: won(balIn) + '원' }, { k: '└ 이 계약에 사용', v: won(balUse) + '원' }] : []),
+        ...(preNew ? [{ k: '신규 구매 예정금액', v: won(preBuy) + '원' }, { k: '└ 실제 수납액', v: won(preRcvAmt) + '원' },
+          ...(preRcvFull ? [] : [{ k: '└ 구매 미수금 · 전액 수납 확인 필요', v: won(Math.max(0, preBuy - preRcvAmt)) + '원', warn: true }]),
+          { k: '└ 이 계약에 사용' + (preRcvFull ? '' : ' (예상)'), v: won(newUse) + '원' }] : []),
+        { k: '차감 후 남은 선결제권 잔액' + (preNew && !preRcvFull ? ' (예상)' : ''), v: won(preLeft) + '원', strong: true },
+        ...(priorDep > 0 ? [{ k: '기납부 예약금 (이 계약에 이미 받은 금액)', v: won(pdUse) + '원' }] : []),
         { k: '추가 결제 필요금액', v: won(needNum) + '원', strong: true }
-      ].map(l => ({ ...l, fw: l.strong ? 600 : 400 })),
-      showBalIn: discKey !== 'pre' || preMode === 'bal',
+      ].map(l => ({ ...l, fw: l.strong ? 600 : 400, fg: l.warn ? '#b3261e' : '#2b3036' })),
+      showBalIn: true,
       priorDepIn: s.priorDep ? won(numOf(s.priorDep)) : '', onPriorDep: e => this.setState({ priorDep: e.target.value.replace(/[^0-9]/g, '') }),
       hasPreBal: preBal > 0, preBalText: '− ' + won(Math.min(preBal, totalNum)) + '원',
       hasPriorDep: priorDep > 0, priorDepText: '− ' + won(Math.min(priorDep, Math.max(0, totalNum - preBal))) + '원',
       hasLeft: pdOver > 0, leftText: won(pdOver) + '원', hasRest: dep && needNum - depAmt > 0,
-      hasDepNote: dep && priorDep > 0 && depAmt > 0, depNote: '기납부 예약금 ' + won(priorDep) + '원은 이미 받은 금액이며, 오늘 예약금 ' + won(depAmt) + '원은 별도로 받습니다',
-      hasPreDoc: preUse > 0, preDocText: (preMode === 'new' ? '신규 구매 ' + won(preBuy) + '원 중 ' : '보유 잔액 ' + won(preBal) + '원 중 ') + won(preUse) + '원 사용 · '
-        + (preMode === 'new' ? '차감 후 잔액 ' : '사용 후 잔액 ') + won(preLeft) + '원',
+      // 예약금 목표(계약 총액 10%)를 이미 납부·사용한 금액으로 채운 경우: 추가 예약금 0원이어도 미수금은 그대로 표시
+      hasDepNote: dep && (priorDep > 0 || preUse > 0), depNote: '예약금 목표 ' + won(depTarget) + '원 중 이미 납부·사용 ' + won(Math.min(totalNum, preUse + pdUse)) + '원 → 오늘 추가 예약금 ' + won(depAmt) + '원 · 남는 미수금 ' + won(needNum - depAmt) + '원',
+      hasPreDoc: preUse > 0, preDocText: [balUse > 0 ? '보유 잔액 ' + won(balIn) + '원 중 ' + won(balUse) + '원' : '', newUse > 0 ? '신규 구매 ' + won(preBuy) + '원 중 ' + won(newUse) + '원' : ''].filter(Boolean).join(' + ')
+        + ' 사용 · 차감 후 잔액 ' + won(preLeft) + '원',
       totalText: won(totalNum) + '원',
       progName: cur ? progTitle(cur) : '',
       docKind: dep ? '예약금용' : '완납용',
@@ -1210,7 +1234,8 @@ class Component extends DCLogic {
       fullBd: dep ? '#e3e6ea' : '#345b80', fullBg: dep ? '#ffffff' : '#f6f9fc',
       depCk: ck(dep), fullCk: ck(!dep), depFg: dep ? '#1c1f23' : '#5c636b', fullFg: dep ? '#5c636b' : '#1c1f23',
       depText: won(depAmt) + '원', fullText: won(needNum) + '원',
-      payHero: preMode === 'new' && !preRcv ? '선결제권 ' + won(preBuy) + '원 수납 확인이 필요해요' : (dep ? depAmt : needNum) > 0 ? won(dep ? depAmt : needNum) + '원을 결제할게요' : '추가 결제 없이 등록할게요',
+      payHero: preNew && !preRcvFull ? '선결제권 구매금액 전액 수납 확인이 필요해요' : (dep ? depAmt : needNum) > 0 ? won(dep ? depAmt : needNum) + '원을 결제할게요'
+        : dep && needNum > 0 ? '추가 예약금 없이 등록할게요 (미수금 ' + won(needNum) + '원)' : '추가 결제 없이 등록할게요',
       payLabel: payLabels.label, payNow: payLabels.now, payRest: payLabels.rest,
       tabStatus: s.tab === 'status', tabDocs: s.tab === 'docs',
       dRefunded: s.cStatus === '환불완료', dStatus: s.cStatus, dStatusBg: this.chip(s.cStatus)[0], dStatusFg: this.chip(s.cStatus)[1],
@@ -1231,6 +1256,7 @@ class Component extends DCLogic {
         if (s.signFrom === 'resign' && !sameAsContract()) return this.flash(RESIGN_MSG);
         this._saving = true; setTimeout(() => { this._saving = false; }, 1500);
         const nc = s.signFrom === 'new' ? { id: 'CT' + Date.now(), ...buildContract(), status: '등록완료' } : null;
+        if (nc && s.draftId) this.writeDrafts(this.readDrafts().filter(x => x.id !== s.draftId));
         if (nc) { const contracts = (s.contracts || []).concat([nc]); this.setState({ contracts, cSel: false });
           try { localStorage.setItem('dachaeum.v3.contracts', JSON.stringify(contracts.filter(x => !x.sample))); } catch (e) { this.flash('기기 저장 공간이 부족합니다'); } }
         this.addDoc('이용동의서', ((nc || C).event ? '이벤트 ' : '') + '프로그램 이용 동의서' + ((nc || C).docMode === 'brief' ? ' (재등록)' : ''), nc || C);
@@ -1381,6 +1407,10 @@ class Component extends DCLogic {
       pdfBtnOp: s.pdfReady === true ? 1 : 0.55,
       hasPrimary: !!bar.primary,
       toast: s.toast,
+      hasDrafts: S === 'list' && (s.drafts || []).length > 0,
+      draftRows: (s.drafts || []).map(d => ({ name: d.name || '-', prog: d.prog || '-', note: d.note || '',
+        resume: () => this.setState({ screen: 'new', ...NEW_RESET, ...(d.state || {}), draftId: d.id }),
+        del: () => { if (confirm('임시 저장한 작성 내용을 삭제합니다. (서명된 계약·문서가 아닙니다)')) this.writeDrafts(this.readDrafts().filter(x => x.id !== d.id)); } })),
       ...(() => {
         const last = (() => { try { return localStorage.getItem('dachaeum.v3.lastBackup') || ''; } catch (e) { return ''; } })();
         const cur = { contracts: (s.contracts || []).filter(c => !c.sample).length, docs: (s.docs || []).length };
@@ -1580,13 +1610,12 @@ class Component extends DCLogic {
         const today = Component.today(), evE = s.evEdit || {};
         const baseEvs = {}; (CT.applyOverride(base, ov).events || []).forEach(e => { baseEvs[e.id] = e; });
         const addedEv = new Set(((eo && eo.added) || []).map(e => e.id));
-        const STACK = [['ref', '지인 소개 5%'], ['ret', '재티켓팅 10%'], ['pre', '선결제권']];
         const progById = id => (cur.programs || []).find(p => p.id === id);
         out.evCards = (cur.events || []).map(e => {
           const ed = evE[e.id] || {}, v = k => Object.prototype.hasOwnProperty.call(ed, k) ? ed[k] : e[k];
           const kind = e.kind === 'rate' ? 'rate' : e.kind === 'service' ? 'service' : 'package';
           const set = (k, val) => this.setState({ evEdit: { ...evE, [e.id]: { ...ed, [k]: val } } });
-          const active = v('active') !== false, stack = v('stack') || {}, progs = v('programs') || [];
+          const active = v('active') !== false, progs = v('programs') || [];
           const pct = Object.prototype.hasOwnProperty.call(ed, 'ratePct') ? ed.ratePct : (e.rate ? String(Math.round(Number(e.rate) * 100)) : '');
           const on = CT.eventOn(e, today);
           const save = () => {
@@ -1595,11 +1624,10 @@ class Component extends DCLogic {
             if ([start, end].some(d => d && !/^\d{4}-\d{2}-\d{2}$/.test(d))) return msg('날짜 형식을 확인해 주세요', true);
             if (start && end && start > end) return msg('종료일이 시작일보다 빠릅니다', true);
             const patch = { name, active, start, end };
-            if (kind === 'package') patch.stack = STACK.reduce((o, [k]) => (stack[k] ? { ...o, [k]: true } : o), {});
             if (kind === 'rate') {
               if (!/^\d{1,2}$/.test(String(pct)) || Number(pct) < 1 || Number(pct) > 90) return msg('할인율은 1~90 사이 정수(%)로 입력해 주세요', true);
               patch.rate = Number(pct) / 100; patch.programs = progs; }
-            const dflt = { active: true, start: '', end: '', stack: {} };
+            const dflt = { active: true, start: '', end: '' };
             const ch = {}; Object.keys(patch).forEach(k => { const was = e[k] === undefined ? dflt[k] : e[k]; if (JSON.stringify(patch[k]) !== JSON.stringify(was)) ch[k] = patch[k]; });
             if (!Object.keys(ch).length) return msg('바뀐 내용이 없습니다', true);
             if (!confirm('이벤트 「' + name + '」 설정을 저장합니다.\n새 계약부터 적용되고, 이미 저장된 계약·서명 문서는 바뀌지 않습니다.\n환불용 1회 정상가는 바뀌지 않습니다.')) return;
@@ -1613,15 +1641,12 @@ class Component extends DCLogic {
           const matched = kind === 'service' && e.matchRe ? (cur.programs || []).filter(p => !p.event && new RegExp(e.matchRe).test(p.baseName || p.name)) : [];
           const addPid = String((s.evAdd || {})[e.id] || '').trim().toUpperCase();
           return { id: e.id, kindText: kind === 'rate' ? '할인율 이벤트 · 할인 항목에서 직원이 선택 (다른 할인과 중복 불가)'
-              : kind === 'service' ? '서비스 제공 이벤트 · 해당 프로그램에 서비스권 추가' : '정액 적용가 이벤트 · 이벤트 프로그램의 총 등록금액이 적용가',
+              : kind === 'service' ? '서비스 제공 이벤트 · 해당 프로그램에 서비스권 추가' : '정액 적용가 이벤트 · 이벤트 프로그램의 총 등록금액이 적용가 (다른 할인과 중복 불가)',
             statusText: !active ? '사용 중지' : on ? '사용 중' : '적용 기간 아님', statusFg: !active ? '#8d949b' : on ? '#2f6b45' : '#7a5115',
             nameVal: v('name') || '', onName: ev => set('name', ev.target.value),
             startVal: v('start') || '', endVal: v('end') || '', onStart: ev => set('start', ev.target.value), onEnd: ev => set('end', ev.target.value),
             activeOpts: [[true, '사용'], [false, '중지']].map(([k, l]) => ({ label: l, bd: active === k ? '#345b80' : '#d5d9de', bg: active === k ? '#345b80' : '#ffffff', fg: active === k ? '#ffffff' : '#2b3036', pick: () => set('active', k) })),
             isPackage: kind === 'package', isRate: kind === 'rate', isService: kind === 'service',
-            stackOpts: STACK.map(([k, l]) => ({ label: l, bd: stack[k] ? '#345b80' : '#d5d9de', bg: stack[k] ? '#345b80' : '#ffffff', fg: stack[k] ? '#ffffff' : '#2b3036',
-              pick: () => set('stack', { ...stack, [k]: !stack[k] }) })),
-            stackNote: STACK.some(([k]) => stack[k]) ? '체크한 할인만 이벤트 적용가에 더해 선택할 수 있습니다' : '추가 할인 불가 (기본)',
             pctVal: pct, onPct: ev => set('ratePct', ev.target.value.replace(/[^0-9]/g, '')),
             progRows: kind === 'package' ? (cur.programs || []).filter(p => p.event === e.id).map(p => ({ ...row(p), listText: p.listTotal ? '정상가 ' + won(p.listTotal) + '원' : '' })) : [],
             rateProgs: progs.map(id => { const p = progById(id); return { id, name: p ? p.name : '(없는 프로그램)', price: p && Number(p.total || 0) ? won(p.total) + '원' : '',

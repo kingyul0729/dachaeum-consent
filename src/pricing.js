@@ -26,11 +26,11 @@
     || all.find(p => p.id !== cur.id && p.cat === cur.cat && nm(p) === nm(cur).replace(/\s*[·(]\s*리프팅 (할인가|적용가)\)?\s*$/, ''))) || null;
 
   // 2단계: 할인 하나 선택 → 최종 계약금액
-  // evDef: 현재 프로그램의 정액 적용가(패키지) 이벤트 — stack 설정에 있는 할인만 함께 선택 가능 (기본: 추가 할인 불가)
-  // rateEvents: 현재 프로그램에 쓸 수 있는 할인율 이벤트 — 할인 항목 중 하나로 직원이 선택 (다른 할인과 중복 없음)
+  // 할인은 한 가지만: 이벤트(정액 적용가·할인율)는 다른 할인과 중복 없음
+  // rateEvents: 현재 프로그램에 쓸 수 있는 할인율 이벤트 — 할인 항목 중 하나로 직원이 선택 (자동 적용 없음)
+  // 리프팅 후 1년 이내 혜택가: 지인 소개·재티켓팅 추가 할인 불가, 선결제권은 정상가 기준
   function discount({ cur, held, hairParts, hairRate, listNum, optAddSum, all, disc, preTier, evDef, rateEvents }) {
     const isEvProg = !!(cur && cur.event);
-    const stack = (isEvProg && evDef && evDef.stack) || {};
     const isYearSB = isYearSkinBooster(cur);
     const isComboFixed = held ? !!(cur && cur.cat === '제모' && hairFixed(cur)) : (hairParts || []).some(hairFixed);
     const noPreHair = isComboFixed || hairRate > 0;
@@ -38,7 +38,7 @@
     const RE = (!isEvProg && !noPreHair && cur ? (rateEvents || []) : []);
     const evOf = k => String(k).startsWith('ev:') ? RE.find(e => 'ev:' + e.id === k) || null : null;
     const discOk = k => k === 'none' || (String(k).startsWith('ev:') ? !!evOf(k)
-      : (!isEvProg || !!stack[k]) && !(k === 'ret' && noRet) && !noPreHair);
+      : !isEvProg && !(k === 'ret' && noRet) && !(isYearSB && (k === 'ref' || k === 'ret')) && !noPreHair);
     const discKey = discOk(disc || 'none') ? (disc || 'none') : 'none';
     const tier = discKey === 'pre' && PREPAID_TIER[preTier] ? preTier : '';
     const normal = isYearSB ? findNormalOf(cur, all) : null;
@@ -52,7 +52,7 @@
     const options = DISCOUNTS.filter(d => discOk(d[0])).map(d => ({ key: d[0], label: d[1] }))
       .concat(RE.map(e => ({ key: 'ev:' + e.id, label: e.name + ' ' + Math.round(Number(e.rate) * 100) + '%', eventId: e.id })));
     return { isEvProg, isYearSB, isComboFixed, noPreHair, noRet, discOk, discKey, preTier: tier, preBase, discRate, discBase, totalNum, discLabel,
-      allowed: options.map(o => o.key), options, eventId: evSel ? evSel.id : null, stack, listTotal: discKey === 'pre' ? preBase : listNum };
+      allowed: options.map(o => o.key), options, eventId: evSel ? evSel.id : null, listTotal: discKey === 'pre' ? preBase : listNum };
   }
 
   // 3단계: 최종 계약금액 − 기존 선결제권 잔액(직원 입력, 없으면 0) − 기납부 예약금
@@ -60,9 +60,11 @@
     const bal = num(preBal), pd = num(priorDep);
     const needNum = Math.max(0, totalNum - bal - pd);
     const leftNum = Math.max(0, bal + pd - totalNum);
-    const depAmt = Math.min(needNum, Math.round(totalNum * DEPOSIT_RATE));
+    // 예약금: 목표 = 계약 총액 × 10%. 이 계약에 이미 납부·사용된 금액(기납부 예약금 + 선결제권 사용분)을 빼고, 남은 미납금액을 넘지 않음
+    const depTarget = Math.round(totalNum * DEPOSIT_RATE), already = Math.min(totalNum, bal + pd);
+    const depAmt = Math.min(needNum, Math.max(0, depTarget - already));
     const nowNum = deposit ? depAmt : needNum;
-    return { preBal: bal, priorDep: pd, needNum, leftNum, depAmt, nowNum, restNum: deposit ? needNum - depAmt : 0,
+    return { preBal: bal, priorDep: pd, needNum, leftNum, depAmt, depTarget, already, nowNum, restNum: deposit ? needNum - depAmt : 0,
       paid: nowNum + Math.min(totalNum, bal + pd) };
   }
 
