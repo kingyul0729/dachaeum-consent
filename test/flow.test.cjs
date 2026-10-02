@@ -643,3 +643,212 @@ test('백업·복원: 1회 정상가 변경(unitOverride)·총 등록금액 변�
   assert.equal(c.items.find(i => /레블라이트/.test(i.name)).price, 250000, '복원된 1회 정상가가 새 계약에 저장');
   assert.deepEqual(src.errors.concat(dst.errors, bad.errors), []);
 });
+
+// ---- 프로그램 이름 · 이벤트 · 선결제권 결제 안내 · 환불 정산 연결 ----
+const pmOpen = async p => { await p.locator('[title="가격 관리"]').click(); await p.waitForTimeout(400); };
+const pmSearch = async (p, q) => { await p.locator('input[placeholder^="프로그램·시술 검색"]').fill(q); await p.waitForTimeout(300); };
+const pmClose = async p => { await p.getByText('닫기', { exact: true }).last().click(); await p.waitForTimeout(300); };
+const lsJ = (p, k) => p.evaluate(k => JSON.parse(localStorage.getItem(k) || 'null'), k);
+const toStep3 = async (p, id, label, who = '결제테스트') => {
+  await click(p, '새 동의서 작성'); const ins = p.locator('input');
+  await ins.nth(0).fill(who); await ins.nth(1).fill('880101'); await ins.nth(2).fill('01011112222');
+  await click(p, '다음 단계'); await click(p, '전체');
+  await p.locator('input[placeholder*="검색"]').fill(id); await p.waitForTimeout(300);
+  await click(p, label); await click(p, '다음 단계');
+};
+
+test('프로그램 이름 변경: 검색·선택·새 계약·새 동의서에 반영, ID·금액 그대로, 기존 계약·서명 문서 유지, 되돌리기', async () => {
+  const oldDoc = { id: 'D-OLD', contractId: 'C-OLD', kind: '이용동의서', version: 1, signedAt: '2026-09-01', html: '<div>스페셜 토닝 1 서명 문서</div>' };
+  const p = await open([mk('C-OLD', '스페셜 토닝 1', { cat: '색소', total: 1320000, paid: 1320000 })], { storage: { 'dachaeum.v3.docs': JSON.stringify([oldDoc]) } });
+  const before = await p.evaluate(() => [localStorage.getItem('dachaeum.v3.contracts'), localStorage.getItem('dachaeum.v3.docs')]);
+  await pmOpen(p); await pmSearch(p, 'PGM-0001');
+  await p.locator('input[placeholder="프로그램 이름 변경"]').first().fill('스페셜 토닝 1 (가을)');
+  await click(p, '이름 저장');
+  assert.match(await body(p), /프로그램 이름을 ‘스페셜 토닝 1 \(가을\)’\(으\)로 저장/);
+  assert.deepEqual((await lsJ(p, 'dachaeum.priceOverride')).programs['PGM-0001'], { name: '스페셜 토닝 1 (가을)' });
+  assert.match(await body(p), /스페셜 토닝 1 \(가을\) PGM-0001 · 색소\s*1,320,000원/, '금액 그대로');
+  await pmClose(p);
+  await p.reload(); await p.waitForTimeout(2000);
+  await toStep3(p, 'PGM-0001', '스페셜 토닝 1 (가을)');
+  assert.match(await body(p), /최종 계약금액 1,320,000원/);
+  await click(p, '카드'); await signAndSave(p);
+  const all = await contracts(p), c = all.find(x => x.id !== 'C-OLD');
+  assert.equal(c.program, '스페셜 토닝 1 (가을)');
+  assert.equal(c.priceSnap.programId, 'PGM-0001');
+  assert.equal(c.total, 1320000);
+  const d = (await docs(p)).find(x => x.contractId === c.id);
+  assert.match(d.html.replace(/<[^>]+>/g, ' '), /스페셜 토닝 1 \(가을\)/, '새 동의서에 변경 이름');
+  const after = await p.evaluate(() => [localStorage.getItem('dachaeum.v3.contracts'), localStorage.getItem('dachaeum.v3.docs')]);
+  assert.equal(JSON.stringify(JSON.parse(after[0]).find(x => x.id === 'C-OLD')), JSON.stringify(JSON.parse(before[0])[0]), '기존 계약 그대로');
+  assert.deepEqual(JSON.parse(after[1]).find(x => x.id === 'D-OLD'), oldDoc, '기존 서명 문서 그대로');
+  // 기본 이름으로
+  await p.goto(URL); await p.waitForTimeout(1500);
+  await pmOpen(p); await pmSearch(p, 'PGM-0001'); await click(p, '기본 이름으로');
+  assert.equal(await lsJ(p, 'dachaeum.priceOverride').then(o => o.programs['PGM-0001']), undefined);
+  assert.equal((await contracts(p)).find(x => x.id === c.id).program, '스페셜 토닝 1 (가을)', '되돌려도 저장된 계약 이름은 그대로');
+  assert.deepEqual(p.errors, []);
+});
+
+test('이벤트 관리: 할인율 이벤트 추가 → 3단계 할인 항목·금액·결제 안내 반영, 1회 정상가 그대로, 중지 시 사라짐 / 정액 이벤트 중복 허용 설정 저장', async () => {
+  const p = await open();
+  await pmOpen(p); await click(p, '이벤트');
+  const evNames = await p.locator('xpath=//label[starts-with(normalize-space(.),"이벤트명")]/input').evaluateAll(els => els.map(e => e.value));
+  assert.deepEqual(evNames, ['비마약성 무통주사제 [어나프라주] 1회 제공', '[뉴비쥬] 앵콜 이벤트'], '기존 이벤트 설정을 읽어서 표시');
+  assert.match(await body(p), /추가 할인 불가 \(기본\)/);
+  await p.locator('input[placeholder="이벤트명"]').fill('가을 이벤트');
+  await p.locator('input[placeholder="할인율"]').fill('10');
+  await click(p, '이벤트 추가');
+  let eo = await lsJ(p, 'dachaeum.eventOverride');
+  assert.equal(eo.added.length, 1); const id = eo.added[0].id;
+  assert.deepEqual([eo.added[0].name, eo.added[0].rate, eo.added[0].kind], ['가을 이벤트', 0.1, 'rate']);
+  await p.locator('input[placeholder="프로그램 ID (예: PGM-0001)"]').fill('PGM-0001'); await click(p, '프로그램 추가');
+  await click(p, '이벤트 저장', 2);
+  eo = await lsJ(p, 'dachaeum.eventOverride');
+  assert.deepEqual(eo.events[id], { programs: ['PGM-0001'] });
+  // 정액 적용가 이벤트: 선결제권 함께 선택 허용 저장 (기존 이벤트 값은 유지, 바꾼 항목만 기록)
+  await click(p, '선결제권', 0); await click(p, '이벤트 저장', 1);
+  assert.deepEqual((await lsJ(p, 'dachaeum.eventOverride')).events['EV-NEWBIJOU'], { stack: { pre: true } });
+  await pmClose(p);
+  await toStep3(p, 'PGM-0001', '스페셜 토닝 1');
+  assert.match(await body(p), /가을 이벤트 10%/, '할인 항목에 이벤트 표시');
+  assert.match(await body(p), /최종 계약금액 1,320,000원/, '선택 전 자동 적용 없음');
+  await click(p, '가을 이벤트 10%');
+  assert.match(await body(p), /최종 계약금액 1,188,000원/);
+  assert.match(await body(p), /1,188,000원을 결제할게요/, '결제 안내도 같은 금액');
+  await click(p, '카드'); await signAndSave(p);
+  const [c] = await contracts(p);
+  assert.deepEqual([c.total, c.disc.kind, c.disc.eventId, c.disc.label], [1188000, 'ev:' + id, id, '가을 이벤트 10%']);
+  assert.deepEqual(c.items.map(i => i.price), [330000, 198000, 198000], '이벤트 할인은 환불용 1회 정상가를 바꾸지 않음');
+  // 중지하면 할인 항목에서 사라짐
+  await p.goto(URL); await p.waitForTimeout(1500);
+  await pmOpen(p); await click(p, '이벤트'); await click(p, '중지', 2); await click(p, '이벤트 저장', 2); await pmClose(p);
+  await toStep3(p, 'PGM-0001', '스페셜 토닝 1');
+  assert.doesNotMatch(await body(p), /가을 이벤트 10%/);
+  assert.deepEqual(p.errors, []);
+});
+
+test('선결제권 신규 구매: 예정금액·사용액·예상 잔액 구분, 수납 확인 전 서명 불가, 계약 납부액은 사용액만 → 환불 801,900 잔액 복원, 화면·정산서·저장 문서 일치', async () => {
+  const p = await open();
+  await toStep3(p, 'PGM-0018', '여드름 8주 프로그램', '신규구매테스트');
+  await click(p, '선결제권'); await click(p, '300'); await click(p, '신규 구매');
+  let b = await body(p);
+  assert.match(b, /신규 구매금액 \(구매 예정 · 수납 전\)\s*3,000,000원/);
+  assert.match(b, /이번 계약에 선결제권 사용\s*891,000원/);
+  assert.match(b, /차감 후 예상 잔액 \(수납 확인 후 확정\)\s*2,109,000원/);
+  assert.match(b, /선결제권 3,000,000원 수납 확인이 필요해요/);
+  await click(p, '동의서 미리보기 · 서명');
+  assert.doesNotMatch(await body(p), /터치하여 서명/, '수납 확인 전에는 서명으로 넘어가지 않음');
+  await click(p, '카드', 0); await p.getByText(/선결제권 구매금액 3,000,000원을 받았습니다/).click(); await p.waitForTimeout(300);
+  b = await body(p);
+  assert.match(b, /신규 구매금액 \(수납 확인\)\s*3,000,000원/);
+  assert.match(b, /차감 후 선결제권 잔액\s*2,109,000원/);
+  assert.match(b, /추가 결제 필요금액\s*0원/);
+  await signAndSave(p);
+  const [c] = await contracts(p);
+  assert.deepEqual([c.total, c.paid], [891000, 891000], '납부액 = 이번 계약 사용액 (구매금액 3,000,000 아님)');
+  assert.deepEqual(c.payments, [{ method: '선결제권 (신규 구매 300)', amount: 891000, prepaid: true, newPurchase: true }]);
+  assert.deepEqual(c.prepaid, { mode: 'new', tier: '300', purchase: 3000000, purchaseMethod: '카드', received: true, balBefore: 3000000, use: 891000, balAfter: 2109000 });
+  assert.match((await docs(p))[0].html.replace(/<[^>]+>/g, ' '), /신규 구매 3,000,000원 중 891,000원 사용 · 차감 후 잔액 2,109,000원/, '동의서에 선결제권 사용 표시');
+  // 환불 (시술 전)
+  await p.goto(URL); await p.waitForTimeout(1500);
+  await click(p, '여드름 8주 프로그램'); await click(p, '환불 정산');
+  b = await body(p);
+  assert.equal(await finalRefund(p), '801,900');
+  assert.match(b, /이 중 선결제권 사용분\s*891,000원/);
+  assert.match(b, /환불 방법\s*선결제권 잔액 복원 801,900원/);
+  // 서비스 이용 기록: 추가 건수만 바꾸고 추가하지 않으면 차감 없음
+  const svcBox = p.locator('xpath=//*[text()="추가 건수"]/ancestor::div[2]');
+  await svcBox.getByText('+', { exact: true }).first().click(); await p.waitForTimeout(200);
+  assert.equal(await finalRefund(p), '801,900', '입력 대기 건수는 차감 안 됨');
+  await click(p, '정산서 생성 · 환자 서명');
+  const st = (await body(p)).replace(/\s+/g, ' ');
+  for (const re of [/납부금액 891,000원/, /선결제권 사용분 891,000원 \(납부금액에 포함\)/, /위약금 \(총 계약금액 891,000원 × 10%\) 89,100원/, /= 최종 환불금액 801,900원/,
+    /4\. 환불 방법/, /선결제권 \(잔액 복원\) 891,000원 801,900원/, /합계 \(= 최종 환불금액\) 801,900원/, /선결제권 잔액으로 복원/]) assert.match(st, re);
+  await sign(p); await p.getByText('서명 완료 · 저장', { exact: true }).last().click(); await p.waitForTimeout(800);
+  const done = (await contracts(p))[0];
+  assert.ok(done.refund, '정산서 서명 저장 → 환불완료');
+  assert.deepEqual([done.refund.refundNum, done.refund.penNum, done.refund.paidEff], [801900, 89100, 891000]);
+  assert.deepEqual(done.refund.pays.map(x => [x.method, x.prepaid, x.paid, x.refund]), [['선결제권 잔액 복원', true, 891000, 801900]]);
+  const rd = (await docs(p)).find(x => x.kind !== '이용동의서');
+  const rt = rd.html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ');
+  for (const re of [/납부금액 891,000 원/, /선결제권 사용분 891,000원 \(납부금액에 포함\)/, /위약금 \(총 계약금액 891,000 원 × 10%\) 89,100 원/, /= 최종 환불금액 801,900 원/,
+    /선결제권 \(잔액 복원\) 891,000원 801,900원/, /합계 \(= 최종 환불금액\) 801,900원/]) assert.match(rt, re, '저장 문서(PDF 원본)도 같은 금액');
+  assert.deepEqual(p.errors, []);
+});
+
+test('선결제권 보유 잔액 사용: 충분(1,000,000)·부족(300,000) 각각 사용액·잔액·추가 결제 일치, 선결제권 기준 금액을 잔액에 더하지 않음', async () => {
+  const p = await open();
+  await toStep3(p, 'PGM-0018', '여드름 8주 프로그램', '잔액충분');
+  await click(p, '선결제권'); await click(p, '300'); await click(p, '보유 잔액 사용');
+  await click(p, '동의서 미리보기 · 서명');
+  assert.doesNotMatch(await body(p), /터치하여 서명/, '잔액 확인 전 진행 불가');
+  const balIn = p.locator('xpath=//*[text()="보유 선결제권 잔액 (직원 확인)"]/following-sibling::span//input');
+  await balIn.fill('1000000'); await p.waitForTimeout(300);
+  let b = await body(p);
+  assert.match(b, /보유 선결제권 잔액 \(직원 확인\)\s*1,000,000원/);
+  assert.match(b, /이번 계약에 선결제권 사용\s*891,000원/);
+  assert.match(b, /사용 후 선결제권 잔액\s*109,000원/);
+  assert.match(b, /추가 결제 필요금액\s*0원/);
+  await signAndSave(p);
+  let [c] = await contracts(p);
+  assert.deepEqual([c.total, c.paid, c.preBal], [891000, 891000, 1000000]);
+  assert.deepEqual(c.prepaid, { mode: 'bal', tier: '300', purchase: null, purchaseMethod: null, received: null, balBefore: 1000000, use: 891000, balAfter: 109000 });
+  // 부족
+  await p.goto(URL); await p.waitForTimeout(1500);
+  await toStep3(p, 'PGM-0018', '여드름 8주 프로그램', '잔액부족');
+  await click(p, '선결제권'); await click(p, '300'); await click(p, '보유 잔액 사용');
+  await balIn.fill('300000'); await p.waitForTimeout(300);
+  b = await body(p);
+  assert.match(b, /이번 계약에 선결제권 사용\s*300,000원/);
+  assert.match(b, /사용 후 선결제권 잔액\s*0원/);
+  assert.match(b, /추가 결제 필요금액\s*591,000원/);
+  assert.match(b, /591,000원을 결제할게요/);
+  await click(p, '카드'); await signAndSave(p);
+  c = (await contracts(p)).find(x => x.patient.name === '잔액부족');
+  assert.deepEqual([c.total, c.paid], [891000, 891000]);
+  assert.deepEqual(c.payments.map(x => [x.method, x.amount, !!x.prepaid]), [['카드', 591000, false], ['선결제권 잔액', 300000, true]], '당일 카드 수납과 잔액 사용 구분');
+  assert.equal(c.prepaid.balAfter, 0);
+  assert.equal(c.method, '카드 + 선결제권 잔액 300,000원');
+  assert.deepEqual(p.errors, []);
+});
+
+test('백업·복원: 프로그램 이름·이벤트·1회 정상가·총 등록금액 설정이 깨끗한 기기에 그대로 복원되고 새 계약에 적용', async () => {
+  const fs = require('node:fs');
+  const ov = { programs: { 'PGM-0001': { name: '스페셜 토닝 1 (가을)' }, 'PGM-0002': { total: '1450000' } }, added: [], deleted: [], events: {} };
+  const eo = { events: { 'EV-R-T': { programs: ['PGM-0001'] }, 'EV-NEWBIJOU': { stack: { pre: true } } }, added: [{ id: 'EV-R-T', kind: 'rate', name: '가을 이벤트', rate: 0.1, start: '', end: '', active: true, programs: [] }], at: '2026-10-02 10:00' };
+  const uo = { items: { 'proc:pig-revlite': { price: '250000' } } };
+  const src = await open([mk('CT1', '백업 원본 계약')], { storage: { 'dachaeum.priceOverride': JSON.stringify(ov), 'dachaeum.eventOverride': JSON.stringify(eo), 'dachaeum.unitOverride': JSON.stringify(uo) } });
+  const keysOf = pg => pg.evaluate(() => Object.fromEntries(Object.keys(localStorage).filter(k => k.startsWith('dachaeum.') && k !== 'dachaeum.v3.lastBackup').map(k => [k, localStorage.getItem(k)])));
+  const original = await keysOf(src);
+  await click(src, '백업 · 복원');
+  await src.locator('input[placeholder="비밀번호 (6자 이상)"]').fill('test-pass-1');
+  await src.locator('input[placeholder="비밀번호 확인"]').fill('test-pass-1');
+  await click(src, '백업 파일 만들기'); await src.waitForTimeout(2000);
+  const [dl] = await Promise.all([src.waitForEvent('download'), src.getByText(/^파일 저장 · /).click()]);
+  const text = fs.readFileSync(await dl.path(), 'utf8');
+  assert.doesNotMatch(text, /가을 이벤트|스페셜 토닝/, '설정도 암호화');
+  const dst = await open();
+  await click(dst, '백업 · 복원');
+  await dst.locator('input[placeholder="백업할 때 정한 비밀번호"]').fill('test-pass-1');
+  await dst.locator('input[type=file]').setInputFiles({ name: 'b.json', mimeType: 'application/json', buffer: Buffer.from(text) }); await dst.waitForTimeout(2500);
+  await Promise.all([dst.waitForEvent('load'), click(dst, '이 백업으로 복원')]); await dst.waitForTimeout(2000);
+  assert.deepEqual(await keysOf(dst), original, '이름·이벤트·정상가·가격 설정과 계약 전체 동일');
+  await toStep3(dst, 'PGM-0001', '스페셜 토닝 1 (가을)');
+  assert.match(await body(dst), /가을 이벤트 10%/);
+  await click(dst, '가을 이벤트 10%'); await click(dst, '카드'); await signAndSave(dst);
+  const c = (await contracts(dst)).find(x => x.id !== 'CT1');
+  assert.deepEqual([c.program, c.total, c.items.find(i => /레블라이트/.test(i.name)).price], ['스페셜 토닝 1 (가을)', 1188000, 250000]);
+  assert.deepEqual(src.errors.concat(dst.errors), []);
+});
+
+test('기납부 예약금 + 오늘 예약금: 별도 입금으로 안내·합산 (같은 입금인지 여부는 운영 기준 확인 필요 — 현재 동작 기록)', async () => {
+  const p = await open();
+  await toStep3(p, 'PGM-0018', '여드름 8주 프로그램', '예약금테스트');
+  const pdIn = p.locator('xpath=//*[text()="기납부 예약금"]/following-sibling::span//input');
+  await pdIn.fill('89100'); await click(p, '예약금 결제'); await p.waitForTimeout(200);
+  assert.match(await body(p), /기납부 예약금 89,100원은 이미 받은 금액이며, 오늘 예약금 99,000원은 별도로 받습니다/);
+  await click(p, '카드'); await signAndSave(p);
+  const [c] = await contracts(p);
+  assert.deepEqual([c.total, c.paid, c.priorDep], [990000, 188100, 89100], '기납부 89,100(1회) + 오늘 예약금 99,000 (계약금액 10%)');
+  assert.deepEqual(c.payments.map(x => [x.method, x.amount]), [['카드', 99000]], '기납부 예약금은 결제수단 기록에 중복으로 넣지 않음');
+});

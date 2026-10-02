@@ -216,3 +216,83 @@ test('공통 시술 판정: 시술 ID가 시술 DB에 있고 모든 프로그램
   assert.ok(CT.applyUnits(d, CT.setProcUnit(null, 'scar-picofraxel-regen-full', 1)).programs.filter(p => p.items.some(i => i.id === 'scar-picofraxel-regen-full'))
     .every(p => p.items.find(i => i.id === 'scar-picofraxel-regen-full').settleUnit === '275000'));
 });
+
+// ---- 프로그램 이름 · 이벤트 · 할인 설정 ----
+const DB = () => require('../data/programs.json');
+const disc = (cur, all, o = {}) => PR.discount({ cur, held: false, hairParts: [], hairRate: 0, listNum: Number(cur.total), optAddSum: 0, all, ...o });
+
+test('프로그램 이름 변경: ID·baseName 유지, 이름 규칙(리프팅 혜택가 정상가 연결·제모 결합)과 금액 그대로', () => {
+  require('../src/catalog.js'); const CT = globalThis.DachaeumCatalog;
+  let ov = CT.setProgramField(null, 'PGM-0085', 'name', '인모드 FX 정상 3회 (이름 변경)');
+  ov = CT.setProgramField(ov, 'PGM-0085B', 'name', '인모드 혜택가 3회');
+  ov = CT.setProgramField(ov, 'PGM-0037', 'name', '남성 턱 제모 5회');
+  const d = CT.applyOverride(DB(), ov), all = d.programs, P = id => all.find(p => p.id === id);
+  assert.equal(P('PGM-0085B').name, '인모드 혜택가 3회');
+  assert.equal(P('PGM-0085B').baseName, '인모드 FX 3회 (리프팅 적용가)');
+  assert.equal(all.filter(p => /PGM-0085/.test(p.id)).length, 3, '새 프로그램이 생기지 않음');
+  assert.equal(disc(P('PGM-0085B'), all).totalNum, 330000);
+  for (const [t, v] of [['300', 396000], ['400', 374000], ['500', 352000]])
+    assert.equal(disc(P('PGM-0085B'), all, { disc: 'pre', preTier: t }).totalNum, v, '이름을 바꿔도 정상가 440,000 기준 연결 유지');
+  assert.equal(PR.hairFixed(P('PGM-0037')), true, '제모 지정 결합상품 판정 유지');
+  assert.equal(P('PGM-0085').total, '440000');
+  // 이름 기록 제거 → 원래 이름, 다른 기록(총 등록금액)은 유지
+  const ov2 = CT.clearProgramField(CT.setProgramTotal(ov, 'PGM-0085', 450000), 'PGM-0085', 'name');
+  assert.deepEqual(ov2.programs['PGM-0085'], { total: '450000' });
+});
+
+test('이벤트: 정액 적용가 이벤트는 설정한 할인만 함께 선택, 할인율 이벤트는 하나의 할인으로 선택, 기간·사용 여부 반영', () => {
+  const CT = globalThis.DachaeumCatalog, today = '2026-10-02';
+  const base = DB(), nb2 = base.programs.find(p => p.id === 'PGM-EV-NB2'), ev = base.events.find(e => e.id === 'EV-NEWBIJOU');
+  assert.deepEqual(disc(nb2, base.programs, { evDef: ev }).allowed, ['none'], '기본: 이벤트 적용가에 추가 할인 불가');
+  assert.equal(disc(nb2, base.programs, { evDef: ev, disc: 'ref' }).totalNum, 275000, '허용 안 된 할인은 적용 안 됨');
+  const ev2 = { ...ev, stack: { pre: true } };
+  assert.deepEqual(disc(nb2, base.programs, { evDef: ev2 }).allowed, ['none', 'pre']);
+  assert.equal(disc(nb2, base.programs, { evDef: ev2, disc: 'pre', preTier: '300' }).totalNum, 247500, '275,000 × 90%');
+  // 할인율 이벤트
+  let eo = CT.addRateEvent(null, { id: 'EV-R-T', name: '가을 이벤트', rate: 0.1, start: '2026-10-01', end: '2026-10-31', active: true, programs: ['PGM-0001'] });
+  let d = CT.applyEventOv(base, eo);
+  const p1 = d.programs.find(p => p.id === 'PGM-0001');
+  const rev = CT.rateEventsFor(d, 'PGM-0001', today);
+  assert.equal(rev.length, 1);
+  const r0 = disc(p1, d.programs, { rateEvents: rev });
+  assert.deepEqual(r0.options.map(o => o.label), ['일반', '지인 소개 5%', '재티켓팅 10%', '선결제권', '가을 이벤트 10%']);
+  assert.equal(r0.totalNum, 1320000, '선택하지 않으면 자동 적용 안 됨');
+  const r1 = disc(p1, d.programs, { rateEvents: rev, disc: 'ev:EV-R-T' });
+  assert.deepEqual([r1.totalNum, r1.discLabel, r1.eventId], [1188000, '가을 이벤트 10%', 'EV-R-T']);
+  assert.equal(CT.rateEventsFor(d, 'PGM-0001', '2026-11-01').length, 0, '기간 밖');
+  assert.equal(disc(p1, d.programs, { rateEvents: [], disc: 'ev:EV-R-T' }).totalNum, 1320000, '사용할 수 없게 된 이벤트 선택은 일반으로');
+  eo = CT.setEvent(eo, 'EV-R-T', { active: false });
+  assert.equal(CT.rateEventsFor(CT.applyEventOv(base, eo), 'PGM-0001', today).length, 0, '사용 중지');
+  // 패키지 이벤트 프로그램에는 할인율 이벤트 미적용, 제모 결합가에도 미적용
+  assert.deepEqual(disc(nb2, base.programs, { evDef: ev, rateEvents: rev }).allowed, ['none']);
+  // 기존 이벤트 설정 변경은 바꾼 항목만 덧붙이고 기존 값을 지우지 않음
+  const eo2 = CT.setEvent(null, 'EV-NEWBIJOU', { name: '뉴비쥬 가을 앵콜', end: '2026-12-31' });
+  const e2 = CT.applyEventOv(base, eo2).events.find(e => e.id === 'EV-NEWBIJOU');
+  assert.deepEqual([e2.name, e2.kind, e2.validMonths, e2.end], ['뉴비쥬 가을 앵콜', 'package', 3, '2026-12-31']);
+  assert.equal(CT.eventOn(e2, '2027-01-01'), false);
+  assert.deepEqual(CT.clearEvent(eo2, 'EV-NEWBIJOU').events, {});
+});
+
+test('이벤트 적용가(총 등록금액) 변경은 환불용 1회 정상가를 바꾸지 않음', () => {
+  const CT = globalThis.DachaeumCatalog, base = DB();
+  const d = CT.applyOverride(base, CT.setProgramTotal(null, 'PGM-EV-NB2', 200000));
+  const nb2 = d.programs.find(p => p.id === 'PGM-EV-NB2'), b = base.programs.find(p => p.id === 'PGM-EV-NB2');
+  assert.equal(nb2.total, '200000');
+  assert.deepEqual(nb2.items.map(i => [i.id, i.settleUnit, i.unitPrice]), b.items.map(i => [i.id, i.settleUnit, i.unitPrice]));
+});
+
+test('선결제권 사용 계약 환불: 사용분 891,000 전액 → 시술 전 801,900 (잔액 복원), 예약금만 납부 → 0원', () => {
+  const items = [{ kind: '시술', name: 'A', qty: 4, price: 220000 }];
+  const pre = { total: 891000, paid: 891000, items, payments: [{ method: '선결제권 (신규 구매 300)', amount: 891000, prepaid: true, newPurchase: true }] };
+  const r = RF.settle(pre, { used: [0] });
+  assert.deepEqual([r.penNum, r.usedAmt, r.refundNum, r.amounts[0], r.allocOk], [89100, 0, 801900, 801900, true]);
+  assert.equal(r.pays.length, 1, '프로그램에 쓰지 않은 선결제권 잔액은 정산에 포함되지 않음');
+  const depOnly = { total: 891000, paid: 89100, items, payments: [{ method: '카드', amount: 89100 }] };
+  assert.equal(RF.settle(depOnly, { used: [0] }).refundNum, 0, '89,100 − 89,100 − 0');
+  // 잔액 일부 + 카드: 수단별 입력 합계 = 최종 환불금액, 수단별 한도 초과 불가
+  const mix = { total: 891000, paid: 891000, items, payments: [{ method: '카드', amount: 591000 }, { method: '선결제권 잔액', amount: 300000, prepaid: true }] };
+  assert.equal(RF.settle(mix, { used: [0], alloc: { 0: '591,000', 1: '210,900' } }).allocOk, true);
+  assert.equal(RF.settle(mix, { used: [0], alloc: { 0: '501,900', 1: '300,000' } }).allocOk, true);
+  assert.equal(RF.settle(mix, { used: [0], alloc: { 0: '401,900', 1: '400,000' } }).allocOver, true);
+  assert.equal(RF.settle(mix, { used: [0] }).allocOk, false, '자동 배분 없음');
+});

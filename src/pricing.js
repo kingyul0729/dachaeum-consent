@@ -7,9 +7,11 @@
   const DEPOSIT_RATE = 0.1;
   const num = v => Number(String(v || '').replace(/[^0-9]/g, '')) || 0;
 
+  // 이름 규칙은 가격 데이터의 원래 이름(baseName)으로 판단 → 가격 관리에서 표시 이름을 바꿔도 규칙·연결 유지
+  const nm = p => (p && (p.baseName || p.name)) || '';
   // 제모: 남성 지정 결합상품 / 결합할인 제외 부위
-  const hairFixed = p => /하관|전체수염|턱밑라인/.test((p && p.name) || '');
-  const hairExcluded = p => /인중|겨드랑이/.test((p && p.name) || '');
+  const hairFixed = p => /하관|전체수염|턱밑라인/.test(nm(p));
+  const hairExcluded = p => /인중|겨드랑이/.test(nm(p));
   function hairCombo(parts) {
     const elig = parts.filter(p => !hairExcluded(p) && !hairFixed(p));
     const rate = elig.length >= 3 ? 0.2 : elig.length === 2 ? 0.1 : 0;
@@ -19,29 +21,38 @@
   }
 
   // 리프팅 후 1년 이내 스킨부스터 → 선결제권 사용 시 같은 상품 정상가 기준
-  const isYearSkinBooster = cur => !!(cur && cur.cat === '스킨부스터' && /리프팅 (할인가|적용가)/.test(cur.name || ''));
+  const isYearSkinBooster = cur => !!(cur && cur.cat === '스킨부스터' && /리프팅 (할인가|적용가)/.test(nm(cur)));
   const findNormalOf = (cur, all) => (all.find(p => p.id === String(cur.id).replace(/^(PGM-SB-\d)D/, '$1N') && p.id !== cur.id)
-    || all.find(p => p.id !== cur.id && p.cat === cur.cat && p.name === String(cur.name).replace(/\s*[·(]\s*리프팅 (할인가|적용가)\)?\s*$/, ''))) || null;
+    || all.find(p => p.id !== cur.id && p.cat === cur.cat && nm(p) === nm(cur).replace(/\s*[·(]\s*리프팅 (할인가|적용가)\)?\s*$/, ''))) || null;
 
   // 2단계: 할인 하나 선택 → 최종 계약금액
-  function discount({ cur, held, hairParts, hairRate, listNum, optAddSum, all, disc, preTier }) {
+  // evDef: 현재 프로그램의 정액 적용가(패키지) 이벤트 — stack 설정에 있는 할인만 함께 선택 가능 (기본: 추가 할인 불가)
+  // rateEvents: 현재 프로그램에 쓸 수 있는 할인율 이벤트 — 할인 항목 중 하나로 직원이 선택 (다른 할인과 중복 없음)
+  function discount({ cur, held, hairParts, hairRate, listNum, optAddSum, all, disc, preTier, evDef, rateEvents }) {
     const isEvProg = !!(cur && cur.event);
+    const stack = (isEvProg && evDef && evDef.stack) || {};
     const isYearSB = isYearSkinBooster(cur);
     const isComboFixed = held ? !!(cur && cur.cat === '제모' && hairFixed(cur)) : (hairParts || []).some(hairFixed);
     const noPreHair = isComboFixed || hairRate > 0;
-    const noRet = !!(cur && cur.cat === '여드름' && /4주/.test(cur.name || ''));
-    const discOk = k => k === 'none' || (!isEvProg && !(k === 'ret' && noRet) && !noPreHair);
+    const noRet = !!(cur && cur.cat === '여드름' && /4주/.test(nm(cur)));
+    const RE = (!isEvProg && !noPreHair && cur ? (rateEvents || []) : []);
+    const evOf = k => String(k).startsWith('ev:') ? RE.find(e => 'ev:' + e.id === k) || null : null;
+    const discOk = k => k === 'none' || (String(k).startsWith('ev:') ? !!evOf(k)
+      : (!isEvProg || !!stack[k]) && !(k === 'ret' && noRet) && !noPreHair);
     const discKey = discOk(disc || 'none') ? (disc || 'none') : 'none';
     const tier = discKey === 'pre' && PREPAID_TIER[preTier] ? preTier : '';
     const normal = isYearSB ? findNormalOf(cur, all) : null;
     const preBase = normal ? Number(normal.total || 0) + optAddSum : listNum;
-    const discRate = discKey === 'pre' ? (PREPAID_TIER[tier] || 0) : (DISCOUNTS.find(d => d[0] === discKey) || [0, 0, 0])[2];
+    const evSel = evOf(discKey);
+    const discRate = discKey === 'pre' ? (PREPAID_TIER[tier] || 0) : evSel ? Number(evSel.rate) : (DISCOUNTS.find(d => d[0] === discKey) || [0, 0, 0])[2];
     const discBase = discKey === 'pre' ? preBase : listNum;
     const totalNum = discRate ? Math.round(discBase * (1 - discRate)) : listNum;
     const discLabel = discKey === 'pre' ? (tier ? '선결제권 ' + tier + ' / ' + Math.round(discRate * 100) + '%' : '선결제권')
-      : discKey === 'none' ? '' : DISCOUNTS.find(d => d[0] === discKey)[1];
+      : discKey === 'none' ? '' : evSel ? evSel.name + ' ' + Math.round(discRate * 100) + '%' : DISCOUNTS.find(d => d[0] === discKey)[1];
+    const options = DISCOUNTS.filter(d => discOk(d[0])).map(d => ({ key: d[0], label: d[1] }))
+      .concat(RE.map(e => ({ key: 'ev:' + e.id, label: e.name + ' ' + Math.round(Number(e.rate) * 100) + '%', eventId: e.id })));
     return { isEvProg, isYearSB, isComboFixed, noPreHair, noRet, discOk, discKey, preTier: tier, preBase, discRate, discBase, totalNum, discLabel,
-      allowed: DISCOUNTS.filter(d => discOk(d[0])).map(d => d[0]), listTotal: discKey === 'pre' ? preBase : listNum };
+      allowed: options.map(o => o.key), options, eventId: evSel ? evSel.id : null, stack, listTotal: discKey === 'pre' ? preBase : listNum };
   }
 
   // 3단계: 최종 계약금액 − 기존 선결제권 잔액(직원 입력, 없으면 0) − 기납부 예약금
@@ -55,6 +66,6 @@
       paid: nowNum + Math.min(totalNum, bal + pd) };
   }
 
-  g.DachaeumPricing = { DISCOUNTS, PREPAID_TIER, RET_PERIODS, num, hairFixed, hairExcluded, hairCombo, isYearSkinBooster, findNormalOf,
+  g.DachaeumPricing = { DISCOUNTS, PREPAID_TIER, RET_PERIODS, num, nm, hairFixed, hairExcluded, hairCombo, isYearSkinBooster, findNormalOf,
     discount, payment };
 })(typeof window !== 'undefined' ? window : globalThis);

@@ -36,10 +36,12 @@
   }
   function applyOverride(base, ov) {
     const d = JSON.parse(JSON.stringify(base));
+    // baseName: 가격 데이터(programs.json)의 원래 이름. 표시 이름을 바꿔도 이름 규칙(제모 결합·리프팅 혜택가 정상가 연결 등)은 이 값으로 판단
+    d.programs = (d.programs || []).map(p => ({ ...p, baseName: p.baseName || p.name }));
     if (!ov) return d;
     const del = new Set(ov.deleted || []);
-    d.programs = (d.programs || []).filter(p => !del.has(p.id)).map(p => ov.programs && ov.programs[p.id] ? { ...p, ...ov.programs[p.id] } : p);
-    (ov.added || []).forEach(p => { if (!d.programs.some(x => x.id === p.id)) d.programs.push(p); });
+    d.programs = d.programs.filter(p => !del.has(p.id)).map(p => ov.programs && ov.programs[p.id] ? { ...p, ...ov.programs[p.id], baseName: p.baseName } : p);
+    (ov.added || []).forEach(p => { if (!d.programs.some(x => x.id === p.id)) d.programs.push({ ...p, baseName: p.baseName || p.name }); });
     d.events = (d.events || []).map(e => ov.events && ov.events[e.id] ? { ...e, ...ov.events[e.id] } : e);
     if (ov.at) d.version = (base.version || '') + ' · 변경 ' + ov.at;
     return d;
@@ -86,7 +88,43 @@
   const clearUnit = (uo, pid, iid, at) => clearKey(uo, unitKey(pid, iid), at);
   const setProcUnit = (uo, iid, price, at) => setKey(uo, procKey(iid), price, at);
   const clearProcUnit = (uo, iid, at) => clearKey(uo, procKey(iid), at);
-  const withOverride = base => applyUnits(applyOverride(base, readOverride()), readUnits());
+  // 이벤트 관리: 별도 키(dachaeum.eventOverride)에 저장. 형식 { events: { 이벤트ID: 변경 항목 }, added: [할인율 이벤트], at }
+  // 기존 이벤트(가격 데이터 + 기존 priceOverride.events)는 읽어서 쓰고, 여기에는 바꾼 항목만 덧붙임 → 기존 설정을 초기화하지 않음
+  // 정액 적용가 이벤트(패키지)의 금액은 해당 이벤트 프로그램의 총 등록금액(priceOverride)으로 관리 — 환불용 1회 정상가와 별개
+  const EVENT_KEY = 'dachaeum.eventOverride';
+  const EV_FIELDS = ['name', 'active', 'start', 'end', 'rate', 'programs', 'stack'];
+  const readEvents = () => { try { return JSON.parse(localStorage.getItem(EVENT_KEY) || 'null'); } catch (e) { return null; } };
+  const pickEv = o => { const r = {}; EV_FIELDS.forEach(k => { if (o && Object.prototype.hasOwnProperty.call(o, k)) r[k] = o[k]; }); return r; };
+  function applyEventOv(d0, eo) {
+    if (!eo || (!Object.keys(eo.events || {}).length && !(eo.added || []).length)) return d0;
+    const d = JSON.parse(JSON.stringify(d0)), ch = eo.events || {};
+    d.events = (d.events || []).map(e => ch[e.id] ? { ...e, ...pickEv(ch[e.id]) } : e)
+      .concat((eo.added || []).filter(e => !(d.events || []).some(x => x.id === e.id)).map(e => ({ ...e, kind: 'rate', ...pickEv(ch[e.id] || {}) })));
+    if (eo.at) d.version = (d.version || '') + ' · 이벤트 변경 ' + eo.at;
+    return d;
+  }
+  const copyEo = eo => JSON.parse(JSON.stringify(eo || { events: {}, added: [] }));
+  function setEvent(eo, id, patch, at) { const o = copyEo(eo); o.events = o.events || {}; o.events[id] = { ...(o.events[id] || {}), ...pickEv(patch) }; if (at) o.at = at; return o; }
+  function clearEvent(eo, id, at) { const o = copyEo(eo); if (!o.events || !o.events[id]) return o; delete o.events[id]; if (at) o.at = at; return o; }
+  function addRateEvent(eo, ev, at) { const o = copyEo(eo); o.added = (o.added || []).concat([{ id: ev.id, kind: 'rate', ...pickEv(ev) }]); if (at) o.at = at; return o; }
+  function removeRateEvent(eo, id, at) { const o = copyEo(eo); o.added = (o.added || []).filter(e => e.id !== id); if (o.events) delete o.events[id]; if (at) o.at = at; return o; }
+  // 이벤트 사용 가능: 사용 여부 + 적용 기간(시작일·종료일, 비어 있으면 제한 없음)
+  const eventOn = (e, today) => !!e && e.active !== false && (!e.start || today >= e.start) && (!e.end || today <= e.end);
+  // 할인율 이벤트: 직원이 할인 항목에서 직접 선택할 때만 적용 (자동 적용 없음)
+  const rateEventsFor = (db, pid, today) => ((db && db.events) || []).filter(e => e.kind === 'rate' && eventOn(e, today)
+    && Number(e.rate) > 0 && Number(e.rate) < 1 && (e.programs || []).includes(pid));
+  const withOverride = base => applyEventOv(applyUnits(applyOverride(base, readOverride()), readUnits()), readEvents());
+  // 가격 관리 화면: 프로그램 표시 이름(name)·총 등록금액(total)을 각각 기록·제거 (프로그램 ID는 그대로)
+  function setProgramField(ov, id, field, value, at) {
+    const o = copyOvF(ov); o.programs = o.programs || {};
+    o.programs[id] = { ...(o.programs[id] || {}), [field]: String(value) }; if (at) o.at = at; return o;
+  }
+  function clearProgramField(ov, id, field, at) {
+    const o = copyOvF(ov), p = (o.programs || {})[id];
+    if (!p || !Object.prototype.hasOwnProperty.call(p, field)) return o;
+    delete p[field]; if (!Object.keys(p).length) delete o.programs[id]; if (at) o.at = at; return o;
+  }
+  const copyOvF = ov => JSON.parse(JSON.stringify(ov || { programs: {}, added: [], deleted: [], events: {} }));
   // 가격 관리 화면: 프로그램 총 등록금액(total)만 기록·제거. 같은 기록 안의 다른 변경(다른 필드·추가·삭제·이벤트)은 그대로 둠
   const copyOv = ov => JSON.parse(JSON.stringify(ov || { programs: {}, added: [], deleted: [], events: {} }));
   function setProgramTotal(ov, id, total, at) {
@@ -99,5 +137,6 @@
     delete p.total; if (!Object.keys(p).length) delete o.programs[id]; if (at) o.at = at; return o;
   }
   g.DachaeumCatalog = { EXCLUDED_SVC, SWAP_EXTRAS, isEditableSvc, svcPool, OV_KEY, diffOverride, applyOverride, readOverride, withOverride,
-    setProgramTotal, clearProgramTotal, UNIT_KEY, unitKey, procKey, readUnits, commonUnits, applyUnits, setUnit, clearUnit, setProcUnit, clearProcUnit };
+    setProgramTotal, clearProgramTotal, UNIT_KEY, unitKey, procKey, readUnits, commonUnits, applyUnits, setUnit, clearUnit, setProcUnit, clearProcUnit,
+    setProgramField, clearProgramField, EVENT_KEY, readEvents, applyEventOv, setEvent, clearEvent, addRateEvent, removeRateEvent, eventOn, rateEventsFor };
 })(typeof window !== 'undefined' ? window : globalThis);
