@@ -517,7 +517,7 @@ class Component extends DCLogic {
       const rows = Object.values(g); return rows.length ? rows : null; })();
     const NOTICE = {};
 
-    const steps = ['환자 정보', '프로그램 · 구성', '금액 · 결제', '미리보기 · 서명'].map((label, i) => {
+    const steps = ['환자 정보', '프로그램 · 구성', '결제 등록', '미리보기 · 서명'].map((label, i) => {
       const n = i + 1, done = n < s.step, cur = n === s.step;
       return { n, label, done, notDone: !done, weight: cur ? 600 : 500, fg: cur ? '#1c1f23' : done ? '#5c636b' : '#a4abb3',
         dotBg: cur ? '#345b80' : done ? '#ffffff' : '#ffffff', dotFg: cur ? '#ffffff' : done ? '#345b80' : '#a4abb3',
@@ -1097,8 +1097,8 @@ class Component extends DCLogic {
                  if (discKey === 'pre' && !preTier) return this.flash('선결제권 기준을 선택해 주세요');
                  if (discKey === 'pre' && !preNew && !balIn) return this.flash('선결제권 할인은 확인한 보유 잔액이 있거나 신규 구매할 때만 적용할 수 있습니다');
                  if (preNew && !preBuyM) return this.flash('선결제권 구매 결제수단을 선택해 주세요');
-                 if (preRcvOver) return this.flash('실제 수납액이 구매금액 ' + won(preBuy) + '원보다 큽니다');
-                 if (preNew && !preRcvFull) return this.flash('선결제권 구매금액 전액 수납 후 서명할 수 있습니다 (임시 저장 후 이어서 진행)');
+                 if (preRcvOver) return this.flash('받은 금액이 선결제권 구매금액 ' + won(preBuy) + '원보다 큽니다');
+                 if (preNew && !preRcvFull) return this.flash('선결제권 구매금액을 모두 받은 뒤 서명할 수 있습니다 (임시 저장 후 이어서 진행)');
                  if (nowNum > 0 && !selM.length) return this.flash('결제수단을 선택해 주세요');
                  if (isSplit && (!a1 || a1 >= nowNum)) return this.flash('분할결제 금액을 입력해 주세요');
                  if (!totalNum) return this.flash('총 등록금액을 입력해 주세요');
@@ -1109,9 +1109,17 @@ class Component extends DCLogic {
                if (s.step === 1 && !p1ok) { this.setState({ tried1: true }); return this.flash('환자 정보를 확인해 주세요'); }
                if (s.step === 2 && !cur) return this.flash('프로그램을 선택해 주세요');
                if (s.step === 2 && isLesion && !lesionOk) return this.flash('흑자별 부위와 크기(3cm 이하)를 입력해 주세요');
-               return this.setState({ step: s.step + 1 });
+               // 계약금액(할인·선결제권 기준·총 등록금액·1회 정상가)은 2단계에서 확정 → 결제 등록으로 넘어가기 전에 확인
+               if (s.step === 2) {
+                 if (discKey === 'pre' && !preTier) return this.flash('선결제권 기준을 선택해 주세요');
+                 if (discKey === 'pre' && !preNew && !balIn) return this.flash('선결제권 할인은 확인한 보유 잔액이 있거나 신규 구매할 때만 적용할 수 있습니다');
+                 if (!totalNum) return this.flash('총 등록금액을 입력해 주세요');
+                 if (isManual && !manualUnit) return this.flash('환불용 1회 정상가를 입력해 주세요');
+                 { const miss = unitFixLines.find(l => !fixVal(l.key)); if (miss) { this.setState({ tried3: true }); return this.flash('‘' + miss.name + '’의 환불용 1회 정상가를 입력해 주세요'); } }
+               }
+               return this.setState({ step: s.step + 1, pvOn: false });
              },
-             onS: () => s.step === 1 ? this.setState({ screen: 'list' }) : this.setState({ step: s.step - 1 }) },
+             onS: () => s.step === 1 ? this.setState({ screen: 'list' }) : this.setState({ step: s.step - 1, pvOn: false }) },
       detail: (() => {
         const st = s.cStatus;
         if (st === '등록완료') return { primary: '환불 정산', onP: () => this.setState({ screen: 'refund', ...this.rfStateOf(C) }) };
@@ -1161,8 +1169,10 @@ class Component extends DCLogic {
         this.setState(st => ({ units: { ...st.units, [manualKey]: v } })); },
       st1: s.step === 1, st2: s.step === 2, st3: false, st4: s.step === 3,
       // 2단계 우측: 선택 구성 확인 (동의서는 버튼으로만 표시)
-      notSt2: s.step !== 2, showPv: s.step !== 2 || !!s.pvOn, showSel: s.step === 2 && !s.pvOn,
-      pvHead: s.pvOn ? '동의서 미리보기' : '선택 프로그램', pvBtn: s.pvOn ? '구성 보기' : '동의서 보기',
+      // 3단계(결제 등록)는 고정 미리보기 없이 결제 내용만 표시하고, 상단 '미리보기' 버튼으로 필요할 때만 동의서를 엶
+      notSt2: s.step !== 2, showPv: s.step === 1 || !!s.pvOn, showSel: s.step === 2 && !s.pvOn, showPaySum: s.step === 3 && !s.pvOn,
+      pvHeadShow: s.step === 2 || s.step === 3, pvSubTitle: s.step === 1 ? '실시간 미리보기' : '',
+      pvHead: s.pvOn ? '동의서 미리보기' : s.step === 3 ? '결제 내용' : '선택 프로그램', pvBtn: s.pvOn ? (s.step === 3 ? '닫기' : '구성 보기') : s.step === 3 ? '미리보기' : '동의서 보기',
       togglePv: () => this.setState(st => ({ pvOn: !st.pvOn })),
       hasSel: !!cur, noSel: !cur, selPrice: cur ? (listNum ? won(listNum) + '원' : '금액 입력') : '',
       hasBaseSel: docItems.some(i => !i.isAdd && i.kind === '시술'),
@@ -1260,8 +1270,27 @@ class Component extends DCLogic {
       fullBd: dep ? '#e3e6ea' : '#345b80', fullBg: dep ? '#ffffff' : '#f6f9fc',
       depCk: ck(dep), fullCk: ck(!dep), depFg: dep ? '#1c1f23' : '#5c636b', fullFg: dep ? '#5c636b' : '#1c1f23',
       depText: won(depAmt) + '원', fullText: won(needNum) + '원',
-      payHero: preNew && !preRcvFull ? '선결제권 구매금액 전액 수납 확인이 필요해요' : (dep ? depAmt : needNum) > 0 ? won(dep ? depAmt : needNum) + '원을 결제할게요'
-        : dep && needNum > 0 ? '추가 예약금 없이 등록할게요 (미수금 ' + won(needNum) + '원)' : '추가 결제 없이 등록할게요',
+      payHero: preNew && !preRcvFull ? '선결제권 미수 ' + won(Math.max(0, preBuy - preRcvAmt)) + '원' : (dep ? depAmt : needNum) > 0 ? won(dep ? depAmt : needNum) + '원을 결제할게요'
+        : dep && needNum > 0 ? '추가 예약금 없이 등록할게요 (미수 ' + won(needNum) + '원)' : '추가 결제 없이 등록할게요',
+      // 3단계 결제 등록: 2단계에서 확정한 계약 정보(읽기 전용) + 오늘 수납 입력. 계산 과정은 표시하지 않고 결과만
+      ctrRows: [{ k: '프로그램', v: cur ? progTitle(cur) : '' }, { k: '최종 계약금액', v: won(totalNum) + '원', fw: 700 },
+        ...(discRate || hairRate ? [{ k: '할인', v: [hairRate ? '제모 결합 ' + Math.round(hairRate * 100) + '%' : '', discRate ? discLabel : ''].filter(Boolean).join(' · ') }] : []),
+        ...(balIn > 0 || preNew ? [{ k: '선결제권', v: [balIn > 0 ? '보유 잔액 ' + won(balIn) + '원' : '', preNew ? '신규 구매 ' + won(preBuy) + '원' : ''].filter(Boolean).join(' · ') }] : [])
+      ].map(r => ({ ...r, fw: r.fw || 500 })),
+      preBuyTitle: '선결제권 구매 ' + won(preBuy) + '원',
+      preShortText: preRcvOver ? '받은 금액이 구매금액보다 큽니다' : '미수 ' + won(Math.max(0, preBuy - preRcvAmt)) + '원 · 모두 받은 뒤 서명할 수 있어요',
+      hasNeed: needNum > 0, noNeed: needNum <= 0,
+      sumRows: (() => {
+        const partial = preNew && !preRcvFull, rest = Math.max(0, needNum - nowNum);
+        const rows = [{ k: '오늘 수납', v: won(nowNum) + '원' + (nowNum > 0 && selM.length ? ' · ' + selM.join(' + ') : ''), big: true },
+          ...(preNew ? [{ k: '선결제권 구매 수납', v: won(preRcvAmt) + '원' + (preBuyM ? ' · ' + preBuyM : '') }] : []),
+          ...(partial && preBuy > preRcvAmt ? [{ k: '선결제권 미수', v: won(preBuy - preRcvAmt) + '원', warn: true }] : []),
+          ...(rest > 0 ? [{ k: '미수', v: won(rest) + '원', warn: true }] : []),
+          ...(pdUse > 0 ? [{ k: '이미 받은 예약금', v: won(pdUse) + '원' }] : []),
+          ...(preUse > 0 && !partial ? [{ k: '프로그램 사용 (선결제권)', v: won(preUse) + '원' + (balUse > 0 && newUse > 0 ? ' (보유 ' + won(balUse) + ' + 신규 ' + won(newUse) + ')' : '') }] : []),
+          ...((balIn > 0 || preNew) && !partial ? [{ k: '남은 선결제권', v: won(preLeft) + '원', strong: true }] : [])];
+        return rows.map((r, i) => ({ ...r, sep: i ? '1px solid #eef0f2' : '0', fs: r.big ? '18px' : '14px', fw: r.big || r.strong ? 700 : 500, fg: r.warn ? '#b3261e' : '#1c1f23' }));
+      })(),
       payLabel: payLabels.label, payNow: payLabels.now, payRest: payLabels.rest,
       tabStatus: s.tab === 'status', tabDocs: s.tab === 'docs',
       dRefunded: s.cStatus === '환불완료', dStatus: s.cStatus, dStatusBg: this.chip(s.cStatus)[0], dStatusFg: this.chip(s.cStatus)[1],
