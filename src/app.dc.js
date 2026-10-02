@@ -157,7 +157,8 @@ class Component extends DCLogic {
     c.setAttribute('data-onepage', hh <= 1046 || nProg <= 1 ? '1' : '0');
     const html = c.outerHTML; box.remove(); return html;
   }
-  addDoc(kind, title, C) {
+  // 서명 문서 생성: 현재 화면을 문서로 만들어 새 문서 목록을 돌려줌 (기기 기록·화면 반영은 commitSigned 성공 후)
+  buildDoc(kind, title, C) {
     const html = this.snapshotDoc();
     const today = Component.today();
     const docs0 = this.state.docs || [];
@@ -170,8 +171,21 @@ class Component extends DCLogic {
     const id = 'D' + Date.now();
     const docs = docs0.map(d => mine(d) ? { ...d, superseded: true } : d)
       .concat([{ id, contractId: C.id || null, pk, kind, title, program: C.program, nProg: (C.programs || []).length || 1, version, signedAt: today, fileName, html, superseded: false, priceSnap: C.priceSnap || null }]);
-    this.setState({ docs, justSaved: id });
-    try { localStorage.setItem('dachaeum.v3.docs', JSON.stringify(docs)); } catch (e) { this.flash('기기 저장 공간이 부족합니다'); }
+    return { docs, id };
+  }
+  // 서명 저장: 계약 → 서명 문서 순으로 기기에 기록하고 다시 읽어 확인. 하나라도 실패하면 이번에 쓴 기록을 원래대로 되돌리고 false
+  // (계약만 저장되고 문서가 없는 상태·재시도 시 중복 계약을 만들지 않음. 화면의 작성 내용·서명은 호출한 쪽에서 그대로 둠)
+  commitSigned(contracts, docs) {
+    const KC = 'dachaeum.v3.contracts', KD = 'dachaeum.v3.docs', prev = {};
+    const put = (k, v) => { prev[k] = localStorage.getItem(k); localStorage.setItem(k, v); if (localStorage.getItem(k) !== v) throw new Error('verify ' + k); };
+    try {
+      if (contracts) put(KC, JSON.stringify(contracts.filter(x => !x.sample)));
+      put(KD, JSON.stringify(docs));
+      return true;
+    } catch (e) {
+      Object.keys(prev).forEach(k => { try { if (prev[k] === null) localStorage.removeItem(k); else localStorage.setItem(k, prev[k]); } catch (e2) {} });
+      return false;
+    }
   }
 
   pvRef = el => this._obs(el, 'pvH');
@@ -415,12 +429,15 @@ class Component extends DCLogic {
           return { db: dbx, contracts: this.sampleContracts(dbx).filter(sc => !real.some(c => c.id === sc.id)).concat(real) }; });
         // 가격 관리에서 바꾸면 바로 반영 (다른 탭 저장 · 화면 복귀 시)
         this._base = base;
+        // 비교 기준은 합친 가격 데이터 전체 (길이만 비교하면 같은 길이의 이름·할인율 변경을 놓침)
         const reload = () => { const d = merge(this._base);
-          const key = JSON.stringify(d).length + '|' + (d.version || '');
+          const key = JSON.stringify(d);
           if (key === this._dbKey) return; this._dbKey = key; this.setState({ db: this.applyEvents(d) }); };
-        this._dbKey = JSON.stringify(db).length + '|' + (db.version || '');
+        this._dbKey = JSON.stringify(db);
         this._reload = reload;
-        window.addEventListener('storage', e => { if (e.key === window.DachaeumCatalog.OV_KEY || e.key === window.DachaeumCatalog.UNIT_KEY) reload(); });
+        // 다른 탭에서 총 등록금액·1회 정상가·이벤트 설정을 바꾸면 반영 (새 계약 작성에만 쓰이고, 저장된 계약·서명 문서는 계약 당시 값 유지)
+        const WATCH = [window.DachaeumCatalog.OV_KEY, window.DachaeumCatalog.UNIT_KEY, window.DachaeumCatalog.EVENT_KEY];
+        window.addEventListener('storage', e => { if (e.key === null || WATCH.includes(e.key)) reload(); });
         window.addEventListener('focus', reload);
         window.addEventListener('pageshow', reload);
         document.addEventListener('visibilitychange', () => { if (!document.hidden) reload(); });
@@ -899,6 +916,7 @@ class Component extends DCLogic {
       const key = x => JSON.stringify([x.program, x.total, (x.items || []).map(i => [i.kind, i.name, i.qty, i.price])]);
       return key(b) === key(c); };
     const RESIGN_MSG = '화면 구성이 계약 당시 내용과 달라 재서명할 수 없습니다';
+    const SAVE_FAIL_MSG = '기기 저장 공간이 부족해 저장하지 못했습니다. 작성 내용과 서명은 그대로 있으니 공간을 확보한 뒤 다시 저장해 주세요';
 
     const C = s.contract || this.defaultContract;
     // 환불 계산·검증: refund.js 한 곳 기준 (위약금 · 이용금액 · CO₂/흑자 병변 · 최종 환불금액 · 결제수단별 한도/합계)
@@ -1060,7 +1078,7 @@ class Component extends DCLogic {
 
     // 새 동의서 작성 시작: 이전 작성분(할인·선결제권·기납부 예약금·결제수단·분할금액·구성 선택 등)이 다음 환자에게 남지 않도록 초기화
     const NEW_RESET = { prog: -1, progId: '', hairIds: [], method: '', mSel: [], split1: '', cashRcpt: '', pay: 'full', addArea: '', addSel: [], addSvc: [], addSvN: {},
-      svcOff: [], svcSwap: {}, oGrp: '', disc: 'none', preTier: '', retPeriod: '', preBal: '', priorDep: '', preNew: false, preRcvAmt: '', preBuyM: '', draftId: '', amounts: {}, units: {}, lesions: null,
+      svcOff: [], svcSwap: {}, oGrp: '', disc: 'none', preTier: '', retPeriod: '', preBal: '', priorDep: '', preNew: false, preRcvAmt: '', preBuyM: '', draftId: '', pendingCtId: '', amounts: {}, units: {}, lesions: null,
       unitFix: {}, tried3: false, evFirst: '', forceFull: false, dupPick: '', dupOff: '', pvOn: false, sig: false, tried1: false, pendingSign: false, ckRefund: false };
     const bars = {
       list: { note: '기록은 이 기기에만 저장됩니다. 7일마다 백업하세요.', primary: '새 동의서 작성', secondary: '백업 · 복원', onP: () => this.setState({ screen: 'new', step: 1, ...NEW_RESET, ...((this.props.testFill ?? false) ? { step: 2, patient: { name: '테스트', birth: '900101', phone: '010-1234-5678' } } : { patient: { name: '', birth: '', phone: '' } }) }), onS: () => this.setState({ bkOpen: true, bkMsg: '', bkPlan: null, bkReady: '', bkPw: '', bkPw2: '', bkPwR: '' }) },
@@ -1254,24 +1272,33 @@ class Component extends DCLogic {
         if (!s.ckRefund) return this.flash('환불 규정 확인에 체크해 주세요');
         if (!s.sigImg) return this.flash('서명이 필요합니다');
         if (s.signFrom === 'resign' && !sameAsContract()) return this.flash(RESIGN_MSG);
-        this._saving = true; setTimeout(() => { this._saving = false; }, 1500);
-        const nc = s.signFrom === 'new' ? { id: 'CT' + Date.now(), ...buildContract(), status: '등록완료' } : null;
+        this._saving = true;
+        // 새 계약 id는 저장에 실패해도 유지 → 다시 저장할 때 같은 id로 교체 (중복 계약 방지)
+        const nc = s.signFrom === 'new' ? { id: s.pendingCtId || 'CT' + Date.now(), ...buildContract(), status: '등록완료' } : null;
+        const contracts = nc ? (s.contracts || []).filter(x => x.id !== nc.id).concat([nc]) : null;
+        const D = this.buildDoc('이용동의서', ((nc || C).event ? '이벤트 ' : '') + '프로그램 이용 동의서' + ((nc || C).docMode === 'brief' ? ' (재등록)' : ''), nc || C);
+        if (!this.commitSigned(contracts, D.docs)) { this._saving = false; if (nc) this.setState({ pendingCtId: nc.id });
+          return this.flash(SAVE_FAIL_MSG); }
+        setTimeout(() => { this._saving = false; }, 1500);
+        // 임시 저장본은 계약·서명 문서가 기기에 저장된 것을 확인한 뒤에만 정리
         if (nc && s.draftId) this.writeDrafts(this.readDrafts().filter(x => x.id !== s.draftId));
-        if (nc) { const contracts = (s.contracts || []).concat([nc]); this.setState({ contracts, cSel: false });
-          try { localStorage.setItem('dachaeum.v3.contracts', JSON.stringify(contracts.filter(x => !x.sample))); } catch (e) { this.flash('기기 저장 공간이 부족합니다'); } }
-        this.addDoc('이용동의서', ((nc || C).event ? '이벤트 ' : '') + '프로그램 이용 동의서' + ((nc || C).docMode === 'brief' ? ' (재등록)' : ''), nc || C);
-        this.setState({ screen: 'detail', tab: 'docs', savedSig: s.sigImg, signedAt: todayStr, signFrom: '', pendingSign: false, ckRefund: false,
-          ...(nc ? { contract: nc, cStatus: '등록완료', rfUsed: null, rfVisits: null, rfVar: null, lesions: null, rfLes: null, rfAlloc: null, rfReason: '', rfExtra: '' } : {}) }); },
+        this.setState({ docs: D.docs, justSaved: D.id, screen: 'detail', tab: 'docs', savedSig: s.sigImg, signedAt: todayStr, signFrom: '', pendingSign: false, ckRefund: false,
+          ...(nc ? { contracts, cSel: false, contract: nc, cStatus: '등록완료', pendingCtId: '', draftId: '', rfUsed: null, rfVisits: null, rfVar: null, lesions: null, rfLes: null, rfAlloc: null, rfReason: '', rfExtra: '' } : {}) }); },
       saveRefund: () => { if (this._saving) return;
         if (RS.error) return this.flash(RS.error);
         if (!s.sigImg) return this.flash('서명이 필요합니다');
-        this._saving = true; setTimeout(() => { this._saving = false; }, 1500);
+        this._saving = true;
         const refund = { priceFixes: C.priceFixes || [], signedAt: todayStr, stage: usedAmt > 0 ? '시술 시작 후 해지' : '시술 시작 전 해지', ...rfDraft(),
           usedCounts: U, lesAmt, trtAmt, svcAmt, usedAmt, penNum, paidEff, refundNum,
           pays: rfPays.map((p, i) => ({ method: p.prepaid ? '선결제권 잔액 복원' : p.method, prepaid: !!p.prepaid, priorDep: !!p.priorDep, paid: Number(p.amount || 0), refund: RS.amounts[i] })) };
         const nc = { ...C, status: '환불완료', refunded: true, refundedAt: todayStr, refund, refundDraft: null };
-        this.addDoc('환불정산서', '환불 정산서', nc);
-        this.saveContract(nc, { screen: 'detail', tab: 'docs' }); this.flash('환불이 완료되었습니다'); },
+        const contracts = (s.contracts || []).map(x => x.id && x.id === nc.id ? nc : x);
+        const D = this.buildDoc('환불정산서', '환불 정산서', nc);
+        // 계약·정산서가 모두 저장된 경우에만 환불완료. 실패하면 등록완료·작성 중 정산·서명을 그대로 두고 다시 저장할 수 있게 함
+        if (!this.commitSigned(contracts, D.docs)) { this._saving = false; return this.flash(SAVE_FAIL_MSG); }
+        setTimeout(() => { this._saving = false; }, 1500);
+        this.setState({ contracts, contract: nc, cStatus: this.statusOf(nc), docs: D.docs, justSaved: D.id, screen: 'detail', tab: 'docs' });
+        this.flash('환불이 완료되었습니다'); },
       primary: bar.primary, secondary: bar.secondary,
       hasSecondary: !!bar.secondary, onPrimary: bar.onP, onSecondary: bar.onS,
       today: todayISO, lq: s.lq || '', onLq: e => this.setState({ lq: e.target.value }),

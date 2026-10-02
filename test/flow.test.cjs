@@ -886,3 +886,270 @@ test('예약금: 목표(계약 총액 10%)에서 이 계약에 이미 납부·�
   assert.deepEqual(c.payments, [{ method: '선결제권 (신규 구매 300)', amount: 3000000, prepaid: true, newPurchase: true }]);
   assert.equal(c.prepaid.balAfter, 0);
 });
+
+// 기기 저장 실패 흉내: 지정한 키에 쓰면 저장 공간 부족 오류 (window.__failKeys로 바꿀 수 있음)
+const failWrites = (p, keys) => p.evaluate(keys => {
+  window.__failKeys = new Set(keys);
+  if (!window.__origSet) { window.__origSet = Storage.prototype.setItem;
+    Storage.prototype.setItem = function (k, v) { if (window.__failKeys.has(k)) throw new DOMException('quota', 'QuotaExceededError'); return window.__origSet.call(this, k, v); }; }
+}, keys);
+const SAVE_FAIL = /저장 공간이 부족해 저장하지 못했습니다\. 작성 내용과 서명은 그대로/;
+
+test('동의서 저장 실패: 계약·문서 저장 실패 시 임시 저장본·작성 내용·서명 유지, 완료 표시 없음 → 다시 저장하면 계약·문서 1건씩, 그 후 임시 저장 정리', async () => {
+  const p = await open();
+  await toStep3(p, 'PGM-0018', '여드름 8주 프로그램', '저장실패테스트');
+  await click(p, '선결제권'); await click(p, '300'); await click(p, '신규 구매 3,000,000원');
+  const rcv = p.locator('xpath=//label[starts-with(normalize-space(.),"실제 수납액")]//input');
+  await click(p, '카드', 0); await rcv.fill('1000000'); await p.waitForTimeout(300);
+  await click(p, '동의서 미리보기 · 서명'); await click(p, '임시 저장');
+  await p.goto(URL); await p.waitForTimeout(1500);
+  await click(p, '이어서 작성'); await rcv.fill('3000000'); await p.waitForTimeout(300);
+  await click(p, '동의서 미리보기 · 서명'); await p.getByText(/위 환불 규정/).last().click(); await sign(p);
+  const draftsBefore = await lsJ(p, 'dachaeum.v3.newDrafts');
+  assert.equal(draftsBefore.length, 1);
+  const sigShown = () => p.locator('img[src^="data:image/png"]').count();
+  for (const keys of [['dachaeum.v3.contracts'], ['dachaeum.v3.docs']]) {
+    await failWrites(p, keys);
+    await p.getByText('동의하고 저장', { exact: true }).last().dblclick(); await p.waitForTimeout(700);
+    assert.deepEqual(await lsJ(p, 'dachaeum.v3.newDrafts'), draftsBefore, keys[0] + ' 실패 → 임시 저장본 유지');
+    assert.deepEqual(await contracts(p), [], keys[0] + ' 실패 → 계약 저장 안 됨(문서 실패 시 계약 기록도 되돌림)');
+    assert.deepEqual(await docs(p), []);
+    const b = await body(p);
+    assert.match(b, /동의하고 저장/, '서명 화면 유지 (완료로 넘어가지 않음)');
+    assert.doesNotMatch(b, /등록완료/);
+    assert.ok(await sigShown() > 0, '서명 유지');
+    assert.match(b, SAVE_FAIL, keys[0] + ' 실패 안내');
+  }
+  // 저장 공간 확보 후 다시 저장 → 1건씩
+  await failWrites(p, []);
+  await p.getByText('동의하고 저장', { exact: true }).last().dblclick(); await p.waitForTimeout(800);
+  const cs = await contracts(p), ds = await docs(p);
+  assert.equal(cs.length, 1, '중복 계약 없음'); assert.equal(ds.length, 1, '중복 문서 없음');
+  assert.deepEqual([ds[0].contractId, ds[0].version, ds[0].kind], [cs[0].id, 1, '이용동의서']);
+  assert.deepEqual([cs[0].total, cs[0].paid, cs[0].prepaid.received, cs[0].prepaid.balAfter], [891000, 891000, 3000000, 2109000]);
+  assert.deepEqual(await lsJ(p, 'dachaeum.v3.newDrafts'), [], '저장 확인 후 임시 저장 정리');
+  await p.goto(URL); await p.waitForTimeout(1500);
+  const b = await body(p);
+  assert.doesNotMatch(b, /이어서 작성/); assert.equal((b.match(/저장실패테스트/g) || []).length, 1);
+  assert.deepEqual(p.errors, []);
+});
+
+test('환불 정산서 저장 실패: 등록완료·작성 중 정산·서명 유지, 문서 없음 → 다시 저장하면 환불완료·정산서 1건', async () => {
+  const p = await open([mk('CT1', '프로그램 A')]);
+  await click(p, '프로그램 A'); await click(p, '환불 정산');
+  await p.getByText('+', { exact: true }).nth(0).click(); await p.waitForTimeout(200);
+  await allocInputs(p).nth(0).fill('400000'); await allocInputs(p).nth(1).fill('300000'); await p.waitForTimeout(400);
+  await click(p, '정산서 생성 · 환자 서명'); await sign(p);
+  for (const keys of [['dachaeum.v3.docs'], ['dachaeum.v3.contracts']]) {
+    await failWrites(p, keys);
+    await p.getByText('서명 완료 · 저장', { exact: true }).last().dblclick(); await p.waitForTimeout(700);
+    const [c] = await contracts(p);
+    assert.ok(!c.refund && !c.refunded && (c.status || '등록완료') === '등록완료', keys[0] + ' 실패 → 환불완료 아님');
+    assert.ok(c.refundDraft && c.refundDraft.alloc, '작성 중 정산 유지');
+    assert.deepEqual(await docs(p), [], keys[0] + ' 실패 → 정산서만 남지 않음');
+    const b = await body(p);
+    assert.match(b, /서명 완료 · 저장/, '정산서 서명 화면 유지');
+    assert.match(b, SAVE_FAIL);
+  }
+  await failWrites(p, []);
+  await p.getByText('서명 완료 · 저장', { exact: true }).last().dblclick(); await p.waitForTimeout(800);
+  const [c] = await contracts(p);
+  assert.equal(c.status, '환불완료'); assert.equal(c.refund.refundNum, 700000); assert.equal(c.refundDraft, null);
+  const ds = await docs(p);
+  assert.equal(ds.length, 1); assert.deepEqual([ds[0].kind, ds[0].contractId, ds[0].version], ['환불정산서', 'CT1', 1]);
+  assert.deepEqual(p.errors, []);
+});
+
+test('다른 탭 이벤트 설정 변경: 열려 있는 앱에 이름·할인율·적용 프로그램·사용 여부 반영, 저장된 계약·서명 문서 불변', async () => {
+  const eo = { events: {}, added: [{ id: 'EV-R-T', kind: 'rate', name: '가을 이벤트', rate: 0.1, start: '', end: '', active: true, programs: ['PGM-0001'] }], at: '2026-10-02 10:00' };
+  const oldDoc = { id: 'D-OLD', contractId: 'C-EV', kind: '이용동의서', version: 1, signedAt: '2026-10-01', html: '<div>가을 이벤트 10% 1,188,000원 서명 문서</div>' };
+  const old = mk('C-EV', '스페셜 토닝 1', { cat: '색소', total: 1188000, paid: 1188000, disc: { kind: 'ev:EV-R-T', label: '가을 이벤트 10%', rate: 0.1, eventId: 'EV-R-T' } });
+  const p = await open([old], { storage: { 'dachaeum.eventOverride': JSON.stringify(eo), 'dachaeum.v3.docs': JSON.stringify([oldDoc]) } });
+  const saved = () => p.evaluate(() => [localStorage.getItem('dachaeum.v3.contracts'), localStorage.getItem('dachaeum.v3.docs')]);
+  const before = await saved();
+  await toStep3(p, 'PGM-0001', '스페셜 토닝 1');
+  await click(p, '가을 이벤트 10%');
+  assert.match(await body(p), /최종 계약금액 1,188,000원/);
+  // 다른 탭 (같은 기기)
+  const other = await p.context().newPage(); other.errors = []; other.on('pageerror', e => other.errors.push(e.message));
+  await other.goto(URL); await other.waitForTimeout(1500);
+  const change = (patch, at) => other.evaluate(([patch, at]) => { const CT = window.DachaeumCatalog;
+    localStorage.setItem(CT.EVENT_KEY, JSON.stringify(CT.setEvent(CT.readEvents(), 'EV-R-T', patch, at))); }, [patch, at]);
+  await change({ name: '겨울 이벤트', rate: 0.2 }, '2026-10-02 11:00'); await p.waitForTimeout(500);
+  let b = await body(p);
+  assert.match(b, /겨울 이벤트 20%/, '이름·할인율 반영'); assert.doesNotMatch(b, /가을 이벤트/);
+  assert.match(b, /최종 계약금액 1,056,000원/, '선택한 이벤트의 새 할인율로 계산');
+  await change({ name: '겨울 이벤트!', rate: 0.2 }, '2026-10-02 11:00'); await p.waitForTimeout(500);
+  assert.match(await body(p), /겨울 이벤트! 20%/, '같은 시각·비슷한 길이의 변경도 반영');
+  await change({ programs: ['PGM-0002'] }, '2026-10-02 11:01'); await p.waitForTimeout(500);
+  b = await body(p);
+  assert.doesNotMatch(b, /겨울 이벤트/, '적용 프로그램에서 빠지면 할인 항목에서 사라짐');
+  assert.match(b, /최종 계약금액 1,320,000원/, '선택했던 이벤트 할인 해제');
+  await change({ programs: ['PGM-0001'] }, '2026-10-02 11:02'); await p.waitForTimeout(500);
+  assert.match(await body(p), /겨울 이벤트! 20%/);
+  await change({ active: false }, '2026-10-02 11:03'); await p.waitForTimeout(500);
+  assert.doesNotMatch(await body(p), /겨울 이벤트/, '사용 안 함 반영');
+  assert.deepEqual(await saved(), before, '저장된 계약·서명 문서 불변');
+  await p.goto(URL); await p.waitForTimeout(1500);
+  await click(p, '스페셜 토닝 1');
+  b = await body(p);
+  assert.match(b, /1,188,000/, '기존 계약 금액 유지');
+  assert.deepEqual(p.errors.concat(other.errors), []);
+});
+
+// ---- iPad 세로 화면 전체 흐름: 화면 금액 = 저장 계약 = 서명 문서 = 환불 정산, PDF A4 1장 ----
+async function openPad(width = 810, height = 1080) {
+  const ctx = await browser.newContext({ viewport: { width, height }, hasTouch: true, deviceScaleFactor: 2, acceptDownloads: true });
+  const p = await ctx.newPage(); p.errors = []; p.on('pageerror', e => p.errors.push(e.message)); p.on('dialog', d => d.accept());
+  await p.goto(URL); await p.evaluate(() => localStorage.clear()); await p.reload(); await p.waitForTimeout(2000);
+  return p;
+}
+const noHScroll = async (p, where) => assert.ok(await p.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth + 1), where + ': 가로 스크롤 없음');
+const plain = h => String(h || '').replace(/<[^>]+>/g, ' ').replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ');
+// 문서 탭에서 n번째 문서 PDF 만들기 → 파일 저장 → A4 세로 1장 확인
+async function pdfCheck(p, n, name) {
+  const fs = require('node:fs');
+  await p.getByText('PDF 보기', { exact: true }).nth(n).click();
+  await p.getByText('PDF 저장·공유·인쇄', { exact: true }).waitFor({ timeout: 20000 });
+  await noHScroll(p, name + ' PDF 화면');
+  // PDF 화면을 연 동안 파일을 반복해서 다시 만드는 기존 동작(별도 보고) 때문에 준비된 순간에 누를 때까지 재시도
+  let dl = null;
+  for (let i = 0; i < 15 && !dl; i++) {
+    await p.getByText('PDF 저장·공유·인쇄', { exact: true }).waitFor({ timeout: 20000 });
+    [dl] = await Promise.all([p.waitForEvent('download', { timeout: 2500 }).catch(() => null), p.getByText(/^PDF (저장·공유·인쇄|만드는 중…)$/).click()]);
+  }
+  assert.ok(dl, name + ': PDF 파일 저장');
+  const buf = fs.readFileSync(await dl.path()), txt = buf.toString('latin1');
+  assert.equal(buf.slice(0, 5).toString(), '%PDF-', name + ': PDF 파일');
+  assert.equal((txt.match(/\/Type\s*\/Page[^s]/g) || []).length, 1, name + ': 1장');
+  assert.match(txt, /\/MediaBox\s*\[\s*0 0 595\.2\d+ 841\.8\d+\s*\]/, name + ': A4 세로');
+  await p.locator('path[d="M15 18l-6-6 6-6"]').last().locator('xpath=ancestor::div[1]').click({ force: true }); await p.waitForTimeout(400);
+  assert.doesNotMatch(await body(p), /PDF 저장·공유·인쇄|PDF 만드는 중/, name + ': PDF 화면 닫힘');
+  return buf.length;
+}
+const signSave = async (p, label) => { await p.getByText(/위 환불 규정/).last().click(); await sign(p); await click(p, label); await p.waitForTimeout(800); };
+
+test('iPad 세로 전체 흐름 ①: 기납부 예약금 + 예약금 결제 → 서명·저장·PDF → 시술 1회 이용 → 환불 정산(0원 하한) → 정산서 서명·PDF', async () => {
+  const p = await openPad();
+  await toStep3(p, 'PGM-0018', '여드름 8주 프로그램', '패드예약금');
+  await noHScroll(p, '결제 단계');
+  await p.locator('xpath=//*[text()="기납부 예약금"]/following-sibling::span//input').fill('50000');
+  await click(p, '예약금 결제'); await click(p, '카드');
+  const b = await body(p);
+  assert.match(b, /예약금 목표 99,000원 중 이미 납부·사용 50,000원 → 오늘 추가 예약금 49,000원 · 남는 미수금 891,000원/);
+  assert.match(b, /49,000원을 결제할게요/);
+  await click(p, '동의서 미리보기 · 서명'); await noHScroll(p, '동의서 서명 화면');
+  await signSave(p, '동의하고 저장');
+  const [c] = await contracts(p);
+  assert.deepEqual([c.total, c.paid, c.priorDep, c.pay], [990000, 99000, 50000, 'deposit']);
+  assert.deepEqual(c.payments.map(x => [x.method, x.amount]), [['카드', 49000]]);
+  const d0 = plain((await docs(p))[0].html);
+  assert.match(d0, /990,000/); assert.match(d0, /예약금/);
+  await pdfCheck(p, 0, '이용동의서');
+  // 환불: 시술 1회 이용
+  await p.goto(URL); await p.waitForTimeout(1500);
+  await click(p, '패드예약금'); await click(p, '환불 정산'); await noHScroll(p, '환불 정산 화면');
+  await p.getByText('+', { exact: true }).nth(0).click(); await p.waitForTimeout(300);
+  const rb = await body(p);
+  assert.equal(await finalRefund(p), '0', '실제 납부 99,000 − 위약금 99,000 − 이용금액 → 0원 하한');
+  await click(p, '정산서 생성 · 환자 서명'); await noHScroll(p, '정산서 서명 화면');
+  await sign(p); await p.getByText('서명 완료 · 저장', { exact: true }).last().click(); await p.waitForTimeout(800);
+  const done = (await contracts(p))[0];
+  assert.equal(done.status, '환불완료');
+  assert.deepEqual([done.refund.paidEff, done.refund.penNum, done.refund.refundNum], [99000, 99000, 0]);
+  assert.ok(done.refund.usedAmt > 0, '이용금액 기록');
+  assert.deepEqual([done.total, done.paid, done.items.length], [c.total, c.paid, c.items.length], '원 계약 금액·항목 유지');
+  const rd = (await docs(p)).find(x => x.kind === '환불정산서');
+  assert.equal(rd.contractId, c.id);
+  assert.match(plain(rd.html), /최종 환불금액 0 원/);
+  await pdfCheck(p, 0, '환불정산서');
+  await pdfCheck(p, 1, '이용동의서(환불 후)');
+  assert.deepEqual(p.errors, []);
+});
+
+test('iPad 세로 전체 흐름 ②: 기존 잔액 + 신규 구매 부분 수납 → 임시 저장 → 새로고침 → 이어서 전액 수납 → 서명·PDF → 이용 1회 → 잔액 복원 환불 → 정산서·PDF', async () => {
+  const p = await openPad();
+  const balIn = p.locator('xpath=//*[text()="보유 선결제권 잔액 (직원 확인)"]/following-sibling::span//input');
+  const rcv = p.locator('xpath=//label[starts-with(normalize-space(.),"실제 수납액")]//input');
+  await toStep3(p, 'PGM-0018', '여드름 8주 프로그램', '패드선결제');
+  await click(p, '선결제권'); await click(p, '300'); await balIn.fill('200000');
+  await click(p, '신규 구매 3,000,000원'); await click(p, '현금', 0); await rcv.fill('1500000'); await p.waitForTimeout(300);
+  let b = await body(p);
+  assert.match(b, /구매 미수금 · 전액 수납 확인 필요\s*1,500,000원/);
+  assert.match(b, /차감 후 남은 선결제권 잔액 \(예상\)\s*2,309,000원/);
+  await click(p, '동의서 미리보기 · 서명');
+  assert.doesNotMatch(await body(p), /터치하여 서명/, '부분 수납 → 서명 불가');
+  await click(p, '임시 저장');
+  await p.reload(); await p.waitForTimeout(2000);
+  await click(p, '이어서 작성');
+  assert.equal(await rcv.inputValue(), '1,500,000'); assert.equal(await balIn.inputValue(), '200,000');
+  await rcv.fill('3000000'); await p.waitForTimeout(300);
+  b = await body(p);
+  for (const re of [/이 계약에 사용\s*200,000원/, /이 계약에 사용\s*691,000원/, /차감 후 남은 선결제권 잔액\s*2,309,000원/, /최종 계약금액 891,000원/, /추가 결제 필요금액\s*0원/]) assert.match(b, re);
+  await click(p, '동의서 미리보기 · 서명'); await signSave(p, '동의하고 저장');
+  const [c] = await contracts(p);
+  assert.deepEqual([c.total, c.paid], [891000, 891000]);
+  assert.deepEqual(c.prepaid, { tier: '300', balBefore: 200000, balUse: 200000, purchase: 3000000, received: 3000000, purchaseMethod: '현금', newUse: 691000, use: 891000, balAfter: 2309000 });
+  assert.deepEqual(await lsJ(p, 'dachaeum.v3.newDrafts'), []);
+  assert.equal((await docs(p)).length, 1);
+  await pdfCheck(p, 0, '이용동의서');
+  await p.goto(URL); await p.waitForTimeout(1500);
+  await click(p, '패드선결제'); await click(p, '환불 정산');
+  await p.getByText('+', { exact: true }).nth(0).click(); await p.waitForTimeout(300);
+  const used = c.items[0].price, expect = Math.max(0, 891000 - 89100 - used);
+  assert.equal(await finalRefund(p), expect.toLocaleString('en-US'), '891,000 − 89,100 − 1회 정상가');
+  b = await body(p);
+  assert.match(b, /선결제권 잔액 복원[\s\S]*?원결제 200,000원[\s\S]*?선결제권 잔액 복원[\s\S]*?원결제 691,000원/, '기존 잔액·신규 구매 사용분을 구분해 표시');
+  assert.match(b, new RegExp(expect.toLocaleString('en-US') + '원이 더 배분되어야 합니다'), '자동 배분 없음');
+  await allocInputs(p).nth(0).fill('250000'); await p.waitForTimeout(300);
+  await click(p, '정산서 생성 · 환자 서명');
+  assert.doesNotMatch(await body(p), /터치하여 서명/, '원결제 200,000 초과 차단');
+  await allocInputs(p).nth(0).fill('200000'); await allocInputs(p).nth(1).fill(String(expect - 200000)); await p.waitForTimeout(300);
+  await click(p, '정산서 생성 · 환자 서명');
+  const st = (await body(p)).replace(/\s+/g, ' ');
+  assert.match(st, new RegExp('= 최종 환불금액 ' + expect.toLocaleString('en-US') + '원'));
+  await sign(p); await p.getByText('서명 완료 · 저장', { exact: true }).last().click(); await p.waitForTimeout(800);
+  const done = (await contracts(p))[0];
+  assert.deepEqual([done.refund.paidEff, done.refund.penNum, done.refund.usedAmt, done.refund.refundNum], [891000, 89100, used, expect]);
+  assert.deepEqual(done.refund.pays.map(x => [x.method, x.prepaid, x.paid, x.refund]), [['선결제권 잔액 복원', true, 200000, 200000], ['선결제권 잔액 복원', true, 691000, expect - 200000]]);
+  const restored = done.refund.pays.filter(x => x.prepaid).reduce((t, x) => t + x.refund, 0);
+  assert.equal(restored, expect, '잔액 복원액 기록 = 최종 환불금액');
+  assert.ok(done.refund.pays.every(x => x.refund <= x.paid), '결제수단별 원결제 초과 없음');
+  const rt = plain((await docs(p)).find(x => x.kind === '환불정산서').html);
+  assert.match(rt, new RegExp('최종 환불금액 ' + expect.toLocaleString('en-US') + ' 원'));
+  await pdfCheck(p, 0, '환불정산서');
+  assert.deepEqual(p.errors, []);
+});
+
+test('iPad 세로 전체 흐름 ③: 기납부 예약금 + 카드·현금 분할 완납 → 서명 → 이용 1회 → 결제수단별 반환 입력(초과 차단) → 정산서 저장 값 일치', async () => {
+  const p = await openPad(768, 1024);
+  await toStep3(p, 'PGM-0018', '여드름 8주 프로그램', '패드분할');
+  await p.locator('xpath=//*[text()="기납부 예약금"]/following-sibling::span//input').fill('90000');
+  await click(p, '카드'); await click(p, '현금');
+  await p.locator('input[placeholder="금액"]').fill('500000'); await p.waitForTimeout(300);
+  assert.match(await body(p), /900,000원을 결제할게요/);
+  await noHScroll(p, '분할 결제 (768px)');
+  await click(p, '동의서 미리보기 · 서명'); await signSave(p, '동의하고 저장');
+  const [c] = await contracts(p);
+  assert.deepEqual([c.total, c.paid, c.priorDep], [990000, 990000, 90000]);
+  assert.deepEqual(c.payments.map(x => [x.method, x.amount]), [['카드', 500000], ['현금', 400000]]);
+  await p.goto(URL); await p.waitForTimeout(1500);
+  await click(p, '패드분할'); await click(p, '환불 정산');
+  await p.getByText('+', { exact: true }).nth(0).click(); await p.waitForTimeout(300);
+  const used = c.items[0].price, expect = 990000 - 99000 - used;
+  assert.equal(await finalRefund(p), expect.toLocaleString('en-US'));
+  await allocInputs(p).nth(0).fill('600000'); await p.waitForTimeout(300);
+  await click(p, '정산서 생성 · 환자 서명');
+  assert.match(await body(p), /원결제|초과/, '카드 원결제 500,000 초과 차단');
+  assert.doesNotMatch(await body(p), /터치하여 서명/);
+  await allocInputs(p).nth(0).fill('500000'); await allocInputs(p).nth(1).fill(String(expect - 500000)); await p.waitForTimeout(300);
+  await click(p, '정산서 생성 · 환자 서명'); await sign(p);
+  await p.getByText('서명 완료 · 저장', { exact: true }).last().click(); await p.waitForTimeout(800);
+  const done = (await contracts(p))[0];
+  assert.equal(done.refund.refundNum, expect);
+  assert.deepEqual(done.refund.pays.map(x => [x.method, x.paid, x.refund]), [['카드', 500000, 500000], ['현금', 400000, expect - 500000], ['기납부 예약금', 90000, 0]]);
+  const rt = plain((await docs(p)).find(x => x.kind === '환불정산서').html);
+  assert.match(rt, new RegExp('최종 환불금액 ' + expect.toLocaleString('en-US') + ' 원'));
+  await pdfCheck(p, 0, '환불정산서 (768px)');
+  assert.deepEqual(p.errors, []);
+});
