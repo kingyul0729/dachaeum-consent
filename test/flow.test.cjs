@@ -1271,3 +1271,97 @@ test('서명 문서 고정: 서명 → PDF → 프로그램명·총 등록금액
   assert.deepEqual((await docs(p)).map(d => [d.kind, d.version]), [['이용동의서', 1], ['환불정산서', 1]]);
   assert.deepEqual(p.errors, []);
 });
+
+// ---- iPad Safari 세로 화면 스크롤 (Safari 주소창·탭 막대만큼 보이는 높이가 1180보다 작음) ----
+async function openSafariLike(h = 1047) {
+  const ctx = await browser.newContext({ viewport: { width: 820, height: h }, isMobile: true, hasTouch: true, deviceScaleFactor: 2 });
+  const p = await ctx.newPage(); p.errors = []; p.on('pageerror', e => p.errors.push(e.message)); p.on('dialog', d => d.accept());
+  await p.goto(URL); await p.evaluate(() => localStorage.clear()); await p.reload(); await p.waitForTimeout(2000);
+  p.cdp = await ctx.newCDPSession(p);
+  return p;
+}
+// 손가락으로 위로 밀기 (실제 터치 이벤트)
+const swipeUp = async (p, x, y, dy) => {
+  await p.cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x, y }] });
+  for (let k = 1; k <= 10; k++) await p.cdp.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ x, y: y - dy * k / 10 }] });
+  await p.cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] }); await p.waitForTimeout(250);
+};
+// 결제 단계 왼쪽 입력 영역: 끝까지 밀어 올린 뒤 마지막 내용이 화면 안에 보이는지, 잘린 카드가 없는지
+const payPaneState = p => p.evaluate(() => {
+  const lab = [...document.querySelectorAll('div')].find(d => d.textContent.trim() === '결제 방식');
+  let pane = lab; while (pane && !(pane.style.width === '451px')) pane = pane.parentElement;
+  if (!pane) return { missing: true, screen: document.body.innerText.slice(0, 200) };
+  const vh = window.visualViewport ? visualViewport.height : innerHeight, last = pane.lastElementChild.getBoundingClientRect();
+  const root = [...document.querySelectorAll('div')].find(d => d.style.maxWidth === '820px');
+  const hit = document.elementFromPoint(220, Math.min(vh - 40, last.bottom - 5));
+  return { clipped: [...pane.children].filter(c => c.scrollHeight > c.clientHeight + 1).length, atEnd: pane.scrollTop >= pane.scrollHeight - pane.clientHeight - 1,
+    lastBottom: Math.round(last.bottom), vh: Math.round(vh), rootH: Math.round(root.getBoundingClientRect().height), docScroll: Math.round(scrollY),
+    hitInPane: !!hit && pane.contains(hit), fixedOverlays: [...document.querySelectorAll('div')].filter(d => getComputedStyle(d).position === 'fixed' && d.id !== '__bundler_err' && d.getBoundingClientRect().height > 0).length };
+});
+const scrollPayToEnd = async p => { for (let i = 0; i < 6; i++) await swipeUp(p, 220, 700, 500); return payPaneState(p); };
+const toPrepaidPay = async (p, who) => {
+  await toStep3(p, 'PGM-0033', '얼굴전체', who);
+  await click(p, '선결제권'); await click(p, '300'); await click(p, '신규 구매 3,000,000원'); await click(p, '카드', 0);
+  await p.locator('xpath=//label[starts-with(normalize-space(.),"실제 수납액")]//input').fill('3000000'); await p.waitForTimeout(300);
+};
+const assertScrollable = (st, where) => {
+  assert.ok(!st.missing, where + ': 결제 단계 화면 ' + JSON.stringify(st));
+  assert.equal(st.clipped, 0, where + ': 잘린 카드 없음 (결제 방식 카드가 줄어들지 않음)');
+  assert.ok(st.atEnd && st.lastBottom <= st.vh, where + ': 손가락 스크롤로 마지막 내용까지 보임 ' + JSON.stringify(st));
+  assert.equal(st.rootH, st.vh, where + ': 앱 높이 = 실제 보이는 높이 (아래가 화면 밖으로 밀려나지 않음)');
+  assert.ok(st.hitInPane, where + ': 투명 덮개 없이 입력 영역이 터치를 받음');
+  assert.equal(st.fixedOverlays, 0, where + ': 닫힌 뒤 남은 고정 오버레이 없음');
+};
+
+test('iPad Safari 세로 결제 화면: 선결제권 신규 구매 3,000,000원 입력 후 끝까지 스크롤 · 키보드·가격 관리·미리보기 다녀와도 스크롤 유지', async () => {
+  const p = await openSafariLike();
+  // 가격 관리(목록 화면)를 열고 닫은 뒤 작성 시작
+  await p.locator('[title="가격 관리"]').click(); await p.waitForTimeout(400);
+  await p.getByText('닫기', { exact: true }).last().click(); await p.waitForTimeout(400);
+  await toPrepaidPay(p, '스크롤테스트');
+  assertScrollable(await scrollPayToEnd(p), '가격 관리 닫은 뒤 · 처음');
+  // 키보드: 입력칸 선택 → 보이는 높이 축소 → 닫힘 (실제 키보드 대신 화면 높이 변화로 근사)
+  const rcv = p.locator('xpath=//label[starts-with(normalize-space(.),"실제 수납액")]//input');
+  await rcv.focus(); await p.setViewportSize({ width: 820, height: 700 }); await p.waitForTimeout(300);
+  await rcv.evaluate(e => e.blur()); await p.setViewportSize({ width: 820, height: 1047 }); await p.waitForTimeout(400);
+  assertScrollable(await scrollPayToEnd(p), '키보드 열고 닫은 뒤');
+  assert.equal(await rcv.inputValue(), '3,000,000');
+  // 동의서 미리보기 → 이전
+  await click(p, '예약금 결제');
+  await click(p, '동의서 미리보기 · 서명');
+  assert.match(await body(p), /터치하여 서명/, '미리보기 화면으로 이동');
+  await click(p, '직원');   // 서명 화면 → 직원 화면 복귀
+  if (!/결제 방식/.test(await body(p))) await click(p, '이전');
+  assertScrollable(await scrollPayToEnd(p), '미리보기 다녀온 뒤');
+  assert.match(await body(p), /최종 계약금액 3,465,000원/);
+  assert.deepEqual(p.errors, []);
+});
+
+test('공유 시트·홈 화면에 추가 전후 이벤트(blur·인쇄 미리보기·숨김·pagehide·pageshow·focus·크기 변경): 앱 오류 없음, 입력값 유지, 이후 서명·저장 정상', async () => {
+  const p = await openSafariLike();
+  await p.evaluate(() => { window.__errs = []; window.addEventListener('unhandledrejection', e => window.__errs.push(String(e.reason))); });
+  await toPrepaidPay(p, '공유시트');
+  const rcv = p.locator('xpath=//label[starts-with(normalize-space(.),"실제 수납액")]//input');
+  const setVis = v => p.evaluate(v => { Object.defineProperty(document, 'hidden', { configurable: true, get: () => v === 'hidden' });
+    Object.defineProperty(document, 'visibilityState', { configurable: true, get: () => v }); document.dispatchEvent(new Event('visibilitychange')); }, v);
+  for (let round = 0; round < 2; round++) {   // 공유 시트 열기 → 취소, 다시 열기 → 홈 화면에 추가 진행
+    await p.evaluate(() => { window.dispatchEvent(new Event('blur')); window.dispatchEvent(new Event('beforeprint')); });
+    await p.emulateMedia({ media: 'print' }); await p.pdf(); await p.emulateMedia({ media: 'screen' });
+    await p.evaluate(() => window.dispatchEvent(new Event('afterprint')));
+    await setVis('hidden'); await p.evaluate(() => window.dispatchEvent(new PageTransitionEvent('pagehide', { persisted: true })));
+    await p.setViewportSize({ width: 820, height: 980 }); await p.waitForTimeout(200); await p.setViewportSize({ width: 820, height: 1047 });
+    await setVis('visible'); await p.evaluate(() => { window.dispatchEvent(new PageTransitionEvent('pageshow', { persisted: true })); window.dispatchEvent(new Event('focus')); });
+    await p.waitForTimeout(600);
+    assert.equal(await rcv.inputValue(), '3,000,000', '입력값 유지');
+    assert.equal(await p.evaluate(() => (document.getElementById('__bundler_err') || {}).textContent || ''), '', '오류 표시 없음');
+    assertScrollable(await scrollPayToEnd(p), '공유 시트 다녀온 뒤 ' + round);
+  }
+  assert.deepEqual(await p.evaluate(() => window.__errs), []);
+  assert.equal(await p.evaluate(() => !!document.getElementById('dc-debug')), false, '#debug 없으면 진단 기록 표시 안 함');
+  // 이후 서명·저장 정상, 금액 그대로 (추가 예약금 0원 · 미수금 465,000원)
+  await click(p, '예약금 결제'); await signAndSave(p);
+  const [c] = await contracts(p);
+  assert.deepEqual([c.total, c.paid, c.prepaid.received, c.prepaid.newUse], [3465000, 3000000, 3000000, 3000000]);
+  assert.equal((await docs(p)).length, 1);
+  assert.deepEqual(p.errors, []);
+});
