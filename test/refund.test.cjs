@@ -298,3 +298,36 @@ test('예약금 계산: 목표 = 계약 총액 10%, 이미 납부·사용한 금
   const r4 = PR.payment({ totalNum: 100000, preBal: 0, priorDep: 95000, deposit: true });
   assert.equal(r4.depAmt, 0, '남은 미납금액 5,000이 있어도 목표 10,000 이미 충족');
 });
+
+test('리프팅 후 혜택가 7개(인모드 FX + 스킨부스터 리프팅 할인가 6개): 지인 소개·재티켓팅·할인율 이벤트 선택 불가, 혜택가 그대로 / 선결제권은 정상가 기준', () => {
+  const all = require('../data/programs.json').programs;
+  const ids = all.filter(p => PR.isYearSkinBooster(p)).map(p => p.id).sort();
+  assert.deepEqual(ids, ['PGM-0085B', 'PGM-SB-1D1', 'PGM-SB-1D3', 'PGM-SB-2D1', 'PGM-SB-2D3', 'PGM-SB-3D1', 'PGM-SB-3D3']);
+  for (const id of ids) {
+    const cur = all.find(p => p.id === id), price = Number(cur.total);
+    const ev = [{ id: 'EV-R-X', kind: 'rate', name: '가을 이벤트', rate: 0.1, programs: [id] }];
+    const run = disc => PR.discount({ cur, held: false, hairParts: [], hairRate: 0, listNum: price, optAddSum: 0, all, disc, preTier: '300', rateEvents: ev });
+    assert.deepEqual(run('none').allowed, ['none', 'pre'], id + ': 혜택가 / 선결제권만');
+    for (const k of ['ref', 'ret', 'ev:EV-R-X']) {
+      const r = run(k);
+      assert.deepEqual([r.discKey, r.totalNum, r.eventId], ['none', price, null], id + ' + ' + k + ' → 추가 할인 없음');
+    }
+    const normal = PR.findNormalOf(cur, all);
+    assert.ok(normal && !PR.isYearSkinBooster(normal), id + ': 정상가 상품 연결');
+    assert.equal(run('pre').totalNum, Math.round(Number(normal.total) * 0.9), id + ': 선결제권 300은 정상가 기준');
+  }
+});
+
+test('정상가 프로그램: 할인율 이벤트는 직원 선택 시에만, 선택하면 이벤트 하나만 (지인 소개·재티켓팅·선결제권과 중복 없음) / 정액 이벤트 프로그램은 다른 할인 불가', () => {
+  const all = require('../data/programs.json').programs;
+  const cur = all.find(p => p.id === 'PGM-0085'), ev = [{ id: 'EV-R-X', kind: 'rate', name: '가을 이벤트', rate: 0.2, programs: ['PGM-0085'] }];
+  const run = (disc, c = cur, list = Number(cur.total)) => PR.discount({ cur: c, held: false, hairParts: [], hairRate: 0, listNum: list, optAddSum: 0, all, disc, preTier: '300', rateEvents: ev });
+  assert.deepEqual(run('none').allowed, ['none', 'ref', 'ret', 'pre', 'ev:EV-R-X']);
+  assert.equal(run('none').totalNum, 440000, '자동 적용 없음');
+  const e = run('ev:EV-R-X');
+  assert.deepEqual([e.discKey, e.discRate, e.totalNum, e.preTier], ['ev:EV-R-X', 0.2, 352000, ''], '이벤트만 적용, 선결제권 등급 무시');
+  assert.equal(run('ref').totalNum, 418000); assert.equal(run('pre').totalNum, 396000);
+  const evProg = all.find(p => p.event);
+  const pk = run('ref', evProg, Number(evProg.total));
+  assert.deepEqual([pk.allowed, pk.discKey, pk.totalNum], [['none'], 'none', Number(evProg.total)], '정액 이벤트 프로그램: 다른 할인 불가');
+});

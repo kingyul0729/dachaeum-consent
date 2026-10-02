@@ -1153,3 +1153,121 @@ test('iPad 세로 전체 흐름 ③: 기납부 예약금 + 카드·현금 분할
   await pdfCheck(p, 0, '환불정산서 (768px)');
   assert.deepEqual(p.errors, []);
 });
+
+test('혜택가 할인 규칙(신규 계약부터): 혜택가 상품에 지인 소개·재티켓팅·이벤트 선택지 없음, 정상가 상품은 이벤트 선택 가능, 가격 관리에서 혜택가에 이벤트 추가 차단, 기존 계약 불변', async () => {
+  const eo = { events: {}, added: [{ id: 'EV-R-T', kind: 'rate', name: '가을 이벤트', rate: 0.2, start: '', end: '', active: true, programs: ['PGM-0085', 'PGM-0085B', 'PGM-SB-1D1'] }], at: '2026-10-02 10:00' };
+  const old = mk('C-OLD-B', '인모드 FX 3회 (리프팅 적용가)', { total: 313500, paid: 313500, priorDep: 0, payments: [{ method: '카드', amount: 313500 }], method: '카드',
+    disc: { kind: 'ref', label: '지인 소개 5%', rate: 0.05 }, items: [{ kind: '시술', name: '인모드 FX', qty: 3, price: 165000 }] });
+  const oldDoc = { id: 'D-OLD-B', contractId: 'C-OLD-B', kind: '이용동의서', version: 1, signedAt: '2026-09-20', html: '<div>지인 소개 5% 313,500원 서명 문서</div>' };
+  const p = await open([old], { storage: { 'dachaeum.eventOverride': JSON.stringify(eo), 'dachaeum.v3.docs': JSON.stringify([oldDoc]) } });
+  const saved = () => p.evaluate(() => [localStorage.getItem('dachaeum.v3.contracts'), localStorage.getItem('dachaeum.v3.docs')]);
+  const before = await saved();
+  const pick = async (id, steps, stay) => {
+    await click(p, '새 동의서 작성'); const ins = p.locator('input');
+    await ins.nth(0).fill('혜택가테스트'); await ins.nth(1).fill('880101'); await ins.nth(2).fill('01011112222');
+    await click(p, '다음 단계');
+    if (id) { await click(p, '전체'); await p.locator('input[placeholder*="검색"]').fill(id); await p.waitForTimeout(300); } else await click(p, '스킨부스터');
+    for (const t of steps) await click(p, t);
+    if (!stay) await click(p, '다음 단계'); };
+  for (const [id, steps, price] of [['PGM-0085B', ['3회'], '330,000'], ['PGM-SB-1D1', ['1회'], '550,000']]) {
+    await p.goto(URL); await p.waitForTimeout(1500);
+    await pick(id, steps);
+    const b = await body(p);
+    assert.doesNotMatch(b, /지인 소개 5%/, id + ': 지인 소개 선택 불가');
+    assert.doesNotMatch(b, /재티켓팅 10%/, id + ': 재티켓팅 선택 불가');
+    assert.doesNotMatch(b, /가을 이벤트/, id + ': 혜택가 + 이벤트 중복 불가');
+    assert.match(b, /선결제권/);
+    assert.match(b, new RegExp('최종 계약금액 ' + price + '원'), id + ': 혜택가 그대로');
+    assert.match(b, /지인 소개·재티켓팅·이벤트 추가 할인 불가/);
+  }
+  // 정상가 상품: 직원이 이벤트를 선택하면 이벤트만 적용 (자동 적용 없음)
+  await p.goto(URL); await p.waitForTimeout(1500);
+  // 인모드 FX 3회 정상가 (PGM-0085): 정상가 묶음의 횟수 스테퍼(+)로 3회 선택
+  await pick('PGM-0085', ['정상가'], true);
+  for (let i = 0; i < 3 && !/선택 프로그램[\s\S]*인모드 FX 3회\s*440,000원/.test(await body(p)); i++) { await p.locator('path[d="M12 5v14M5 12h14"]').first().locator('xpath=ancestor::div[1]').click(); await p.waitForTimeout(300); }
+  await click(p, '다음 단계');
+  assert.match(await body(p), /최종 계약금액 440,000원/, '이벤트 자동 적용 없음');
+  await click(p, '가을 이벤트 20%');
+  assert.match(await body(p), /최종 계약금액 352,000원/);
+  await click(p, '카드'); await signAndSave(p);
+  const c = (await contracts(p)).find(x => x.id !== 'C-OLD-B');
+  assert.deepEqual([c.total, c.disc.kind, c.disc.preTier, c.disc.label], [352000, 'ev:EV-R-T', null, '가을 이벤트 20%'], '이벤트 하나만');
+  // 가격 관리: 혜택가 프로그램을 할인율 이벤트에 추가하지 못함
+  await p.goto(URL); await p.waitForTimeout(1500);
+  await pmOpen(p); await click(p, '이벤트');
+  await p.locator('input[placeholder="프로그램 ID (예: PGM-0001)"]').first().fill('PGM-SB-2D1'); await click(p, '프로그램 추가');
+  assert.match(await body(p), /리프팅 후 혜택가 프로그램에는 할인율 이벤트를 걸 수 없습니다/);
+  await pmClose(p);
+  // 기존 계약(지인 소개 5% · 313,500)은 그대로
+  const after = await saved();
+  assert.equal(after[0].includes('"C-OLD-B"') && JSON.stringify(JSON.parse(after[0]).find(x => x.id === 'C-OLD-B')), JSON.stringify(JSON.parse(before[0]).find(x => x.id === 'C-OLD-B')), '기존 계약 불변');
+  assert.ok(JSON.parse(after[1]).some(d => d.id === 'D-OLD-B' && d.html === oldDoc.html), '기존 서명 문서 불변');
+  await click(p, '인모드 FX 3회 (리프팅 적용가)'); await click(p, '환불 정산');
+  assert.equal(await finalRefund(p), '282,150', '기존 계약 금액(313,500) 기준 환불 그대로');
+  assert.deepEqual(p.errors, []);
+});
+
+test('서명 문서 고정: 서명 → PDF → 프로그램명·총 등록금액·1회 정상가·이벤트 변경 → 다시 열어도 처음 서명 내용 그대로, 여러 번 열어도 PDF 재생성·버전·상태 변경 없음 / 환불 정산서도 동일', async () => {
+  const fs = require('node:fs');
+  const p = await openPad();
+  const h2c = () => p.evaluate(() => window.__h2c || 0);
+  const countPdf = () => p.evaluate(() => { if (window.__h2cWrapped) return; window.__h2cWrapped = true; const o = window.html2canvas; window.__h2c = 0;
+    window.html2canvas = (...a) => { window.__h2c++; return o(...a); }; });
+  const snap = () => p.evaluate(() => [localStorage.getItem('dachaeum.v3.contracts'), localStorage.getItem('dachaeum.v3.docs')]);
+  const pdfvText = () => p.evaluate(() => (document.getElementById('pdfv') || {}).innerText || '');
+  const back = async () => { await p.locator('path[d="M15 18l-6-6 6-6"]').last().locator('xpath=ancestor::div[1]').click({ force: true }); await p.waitForTimeout(400); };
+  const openDoc = async (n) => { await p.getByText('PDF 보기', { exact: true }).nth(n).click(); await p.getByText('PDF 저장·공유·인쇄', { exact: true }).waitFor({ timeout: 20000 }); };
+  const savePdf = async () => { const [dl] = await Promise.all([p.waitForEvent('download'), p.getByText('PDF 저장·공유·인쇄', { exact: true }).click()]); return fs.readFileSync(await dl.path()); };
+  const toDocs = async () => { await p.goto(URL); await p.waitForTimeout(1800); await countPdf(); await click(p, '문서고정'); await click(p, '문서'); };
+  const changeSettings = (tag) => p.evaluate(tag => { const CT = window.DachaeumCatalog;
+    localStorage.setItem(CT.OV_KEY, JSON.stringify(CT.setProgramTotal(CT.setProgramField(CT.readOverride(), 'PGM-0001', 'name', '스페셜 토닝 변경' + tag, 'x'), 'PGM-0001', 1500000 + tag * 1000, 'x')));
+    localStorage.setItem(CT.UNIT_KEY, JSON.stringify(CT.setProcUnit(CT.readUnits(), 'pig-revlite', 250000 + tag * 1000, 'x')));
+    localStorage.setItem(CT.EVENT_KEY, JSON.stringify(CT.addRateEvent(CT.readEvents(), { id: 'EV-R-' + tag, name: '변경 이벤트' + tag, rate: 0.3, start: '', end: '', active: true, programs: ['PGM-0001'] }, 'x'))); }, tag);
+  // 1) 계약 생성·서명 2) 문서·PDF 저장
+  await toStep3(p, 'PGM-0001', '스페셜 토닝 1', '문서고정'); await click(p, '카드');
+  await click(p, '동의서 미리보기 · 서명'); await signSave(p, '동의하고 저장');
+  await countPdf();
+  const [c0] = await contracts(p), d0 = (await docs(p))[0];
+  await openDoc(0); await p.waitForTimeout(4000);
+  const signedText = await pdfvText();
+  assert.match(signedText, /스페셜 토닝 1/); assert.match(signedText, /1,320,000/);
+  assert.equal(await h2c(), 1, 'PDF 1번만 생성 (반복 생성 없음)');
+  const pdf1 = await savePdf(); assert.equal(pdf1.slice(0, 5).toString(), '%PDF-');
+  await back();
+  for (let i = 0; i < 3; i++) { await openDoc(0); await p.waitForTimeout(800); await back(); }
+  assert.equal(await h2c(), 1, '같은 문서를 다시 열면 만들어 둔 PDF 재사용');
+  await openDoc(0); assert.ok((await savePdf()).equals(pdf1), '같은 PDF 파일'); await back();
+  const base = await snap();
+  // 3) 프로그램명·가격·1회 정상가·이벤트 변경 → 4) 다시 열기
+  await changeSettings(1);
+  await toDocs();
+  for (let i = 0; i < 3; i++) { await openDoc(0); await p.waitForTimeout(i ? 800 : 4000); assert.equal(await pdfvText(), signedText, '5) 처음 서명 내용 그대로'); await back(); }
+  assert.equal(await h2c(), 1, '새로 연 뒤에도 문서당 1번만 생성');
+  const t = await pdfvText();
+  assert.deepEqual(await snap(), base, '6) 조회만으로 계약·문서(버전·저장 시각·상태) 변화 없음');
+  assert.doesNotMatch(signedText, /스페셜 토닝 변경|변경 이벤트|1,501,000/);
+  assert.deepEqual((await docs(p)).map(d => [d.id, d.version, d.signedAt]), [[d0.id, 1, d0.signedAt]]);
+  assert.equal((await contracts(p))[0].status, '등록완료');
+  // 7) 환불 정산서도 동일
+  await p.goto(URL); await p.waitForTimeout(1500);
+  await click(p, '문서고정'); await click(p, '환불 정산');
+  await p.getByText('+', { exact: true }).nth(0).click(); await p.waitForTimeout(300);
+  await click(p, '정산서 생성 · 환자 서명'); await sign(p);
+  await p.getByText('서명 완료 · 저장', { exact: true }).last().click(); await p.waitForTimeout(800);
+  const c1 = (await contracts(p))[0], rd = (await docs(p)).find(d => d.kind === '환불정산서');
+  assert.equal(c1.status, '환불완료');
+  assert.deepEqual([c1.total, c1.items.map(i => i.price)], [c0.total, c0.items.map(i => i.price)], '계약 금액·단가 불변');
+  await countPdf();
+  await openDoc(0); await p.waitForTimeout(4000);
+  const refundText = await pdfvText();
+  assert.match(refundText, new RegExp('최종 환불금액\\s*' + c1.refund.refundNum.toLocaleString('en-US')));
+  const base2 = await snap();
+  await changeSettings(2);
+  await toDocs();
+  for (let i = 0; i < 3; i++) { await openDoc(0); await p.waitForTimeout(i ? 800 : 4000); assert.equal(await pdfvText(), refundText, '정산서 처음 내용 그대로'); await back(); }
+  await openDoc(1); await p.waitForTimeout(4000); assert.equal(await pdfvText(), signedText, '동의서도 그대로'); await back();
+  assert.equal(await h2c(), 2, '문서 2개 → 각 1번씩만 생성');
+  assert.deepEqual(await snap(), base2, '조회만으로 정산서·계약·환불 상태 변화 없음');
+  assert.deepEqual((await docs(p)).map(d => [d.kind, d.version]), [['이용동의서', 1], ['환불정산서', 1]]);
+  assert.deepEqual(p.errors, []);
+});

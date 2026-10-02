@@ -29,13 +29,14 @@
   // 할인은 한 가지만: 이벤트(정액 적용가·할인율)는 다른 할인과 중복 없음
   // rateEvents: 현재 프로그램에 쓸 수 있는 할인율 이벤트 — 할인 항목 중 하나로 직원이 선택 (자동 적용 없음)
   // 리프팅 후 1년 이내 혜택가: 지인 소개·재티켓팅 추가 할인 불가, 선결제권은 정상가 기준
+  // 혜택가와 할인율 이벤트도 중복 없음 → 혜택가 상품에는 이벤트 선택지를 두지 않음 (이벤트는 정상가 프로그램에서 직원이 선택)
   function discount({ cur, held, hairParts, hairRate, listNum, optAddSum, all, disc, preTier, evDef, rateEvents }) {
     const isEvProg = !!(cur && cur.event);
     const isYearSB = isYearSkinBooster(cur);
     const isComboFixed = held ? !!(cur && cur.cat === '제모' && hairFixed(cur)) : (hairParts || []).some(hairFixed);
     const noPreHair = isComboFixed || hairRate > 0;
     const noRet = !!(cur && cur.cat === '여드름' && /4주/.test(nm(cur)));
-    const RE = (!isEvProg && !noPreHair && cur ? (rateEvents || []) : []);
+    const RE = (!isEvProg && !noPreHair && !isYearSB && cur ? (rateEvents || []) : []);
     const evOf = k => String(k).startsWith('ev:') ? RE.find(e => 'ev:' + e.id === k) || null : null;
     const discOk = k => k === 'none' || (String(k).startsWith('ev:') ? !!evOf(k)
       : !isEvProg && !(k === 'ret' && noRet) && !(isYearSB && (k === 'ref' || k === 'ret')) && !noPreHair);

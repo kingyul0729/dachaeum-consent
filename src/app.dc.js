@@ -250,8 +250,11 @@ class Component extends DCLogic {
     if (key !== prevKey) { const h2 = wrap.offsetHeight; if (h2) this.setState({ [wrap === (this._els || {}).pvH ? 'pvH' : 'sgH']: h2 }); }
   }
   // 열린 문서를 실제 PDF 파일(A4 1장)로 미리 만들어 둠 → 버튼을 누르면 바로 공유 시트
+  // 저장된 문서 스냅샷(doc.html)만 사용. 같은 문서는 처음 만든 PDF 파일을 다시 씀 (조회만으로 문서·계약·버전은 바뀌지 않음)
   async buildPdf(doc) {
-    const key = doc.id; this._pdfKey = key; this._pdfFile = null; this.setState({ pdfReady: false });
+    const key = doc.id; this._pdfKey = key; this._pdfCache = this._pdfCache || {};
+    if (this._pdfCache[key]) { this._pdfFile = this._pdfCache[key]; this.setState({ pdfReady: true }); return; }
+    this._pdfFile = null; this.setState({ pdfReady: false });
     for (let i = 0; i < 50 && !(window.html2canvas && window.jspdf && document.getElementById('pdfv')); i++) await new Promise(r => setTimeout(r, 100));
     const el = document.getElementById('pdfv');
     if (!el || !window.html2canvas || !window.jspdf) { if (this._pdfKey === key) this.setState({ pdfReady: 'fail' }); return; }
@@ -266,11 +269,14 @@ class Component extends DCLogic {
       const w = cv.width * r, hh = cv.height * r;
       pdf.addImage(cv.toDataURL('image/jpeg', 0.92), 'JPEG', (210 - w) / 2, M, w, hh);
       const blob = pdf.output('blob');
-      this._pdfFile = new File([blob], doc.fileName, { type: 'application/pdf' });
+      if (this._pdfKey !== key) return;
+      this._pdfFile = this._pdfCache[key] = new File([blob], doc.fileName, { type: 'application/pdf' });
       this.setState({ pdfReady: true });
     } catch (e) { if (this._pdfKey === key) this.setState({ pdfReady: 'fail' }); }
   }
   sharePdf() {
+    // 생성 실패 시에만 같은 저장 문서로 다시 시도 (새 계약·새 버전·재서명 없음)
+    if (this.state.pdfReady === 'fail') { const d = (this.state.docs || []).find(x => x.id === this.state.pdfId); if (d) this.buildPdf(d); return; }
     const f = this._pdfFile; if (!f) return this.flash('PDF를 만드는 중입니다. 잠시 후 다시 눌러 주세요');
     if (navigator.canShare && navigator.canShare({ files: [f] })) { navigator.share({ files: [f], title: f.name }).catch(() => {}); return; }
     const url = URL.createObjectURL(f); const a = document.createElement('a'); a.href = url; a.download = f.name; document.body.appendChild(a); a.click(); a.remove();
@@ -279,7 +285,9 @@ class Component extends DCLogic {
   componentDidUpdate(pp, ps) {
     if ((this.state.screen === 'refund' || this.state.screen === 'refundSign') && ['rfUsed', 'rfVisits', 'rfLes', 'rfVar', 'rfAlloc', 'rfReason'].some(k => this.state[k] !== (ps || {})[k])) {
       clearTimeout(this._draftT); this._draftT = setTimeout(() => this.saveDraft(), 300); }
-    if (this.state.pdfId && this.state.pdfId !== (ps || {}).pdfId) { const d = (this.state.docs || []).find(x => x.id === this.state.pdfId); if (d) setTimeout(() => this.buildPdf(d), 50); }
+    // PDF는 문서를 열 때 한 번만 만듦 (이전 상태값과 비교하지 않고 열린 문서 id로 판단 → 화면이 다시 그려져도 반복 생성하지 않음)
+    const pid = this.state.pdfId || null;
+    if (pid !== this._pdfOpenFor) { this._pdfOpenFor = pid; const d = pid && (this.state.docs || []).find(x => x.id === pid); if (d) setTimeout(() => this.buildPdf(d), 50); }
     cancelAnimationFrame(this._fitRaf);
     this._fitRaf = requestAnimationFrame(() => Object.values(this._els || {}).forEach(el => this._fit(el)));
   }
@@ -1211,7 +1219,7 @@ class Component extends DCLogic {
       isPreDisc: discKey === 'pre', isRetDisc: discKey === 'ret',
       tierOpts: Object.keys(PR.PREPAID_TIER).map(t => ({ label: t, ...chip(preTier === t), pick: () => this.setState({ preTier: t }) })),
       retOpts: PR.RET_PERIODS.map(t => ({ label: t, ...chip((s.retPeriod || '1개월 이내') === t), pick: () => this.setState({ retPeriod: t }) })),
-      discNote: isYearSB ? (discKey === 'pre' ? '선결제권 사용 · 1년 이내 혜택가 제외, 정상가 기준 계산' : '리프팅 후 1년 이내 혜택가 · 지인 소개·재티켓팅 추가 할인 불가') : noPreHair ? (hairRate ? '제모 결합할인 적용' : '지정 결합가') + ' · 추가 할인 불가' : noRet ? '여드름 4주 프로그램 · 재티켓팅 제외' : '',
+      discNote: isYearSB ? (discKey === 'pre' ? '선결제권 사용 · 1년 이내 혜택가 제외, 정상가 기준 계산' : '리프팅 후 1년 이내 혜택가 · 지인 소개·재티켓팅·이벤트 추가 할인 불가') : noPreHair ? (hairRate ? '제모 결합할인 적용' : '지정 결합가') + ' · 추가 할인 불가' : noRet ? '여드름 4주 프로그램 · 재티켓팅 제외' : '',
       hasDiscNote: !!cur && (isYearSB || noPreHair || noRet),
       hasHairOff: hairRate > 0, hairOffLabel: '제모 결합 ' + hairElig.length + '부위 ' + Math.round(hairRate * 100) + '%', hairOffText: '− ' + won(hairOff) + '원', hairSumText: won(hairSum) + '원',
       hasDisc: !!discRate, discLabel, discBaseText: won(discBase) + '원',
@@ -1430,7 +1438,7 @@ class Component extends DCLogic {
         dangerouslySetInnerHTML: { __html: this.cleanHtml(pdfDoc.html) || '<div style="padding:60px;text-align:center;color:#8d949b">문서 내용이 없습니다</div>' } }) : null,
       closePdf: () => this.setState({ pdfId: null }),
       sharePdf: () => this.sharePdf(),
-      pdfBtnLabel: s.pdfReady === true ? 'PDF 저장·공유·인쇄' : s.pdfReady === 'fail' ? 'PDF 생성 실패' : 'PDF 만드는 중…',
+      pdfBtnLabel: s.pdfReady === true ? 'PDF 저장·공유·인쇄' : s.pdfReady === 'fail' ? 'PDF 생성 실패 · 다시 시도' : 'PDF 만드는 중…',
       pdfBtnOp: s.pdfReady === true ? 1 : 0.55,
       hasPrimary: !!bar.primary,
       toast: s.toast,
@@ -1682,6 +1690,7 @@ class Component extends DCLogic {
             addProg: () => { const p = progById(addPid);
               if (!p) return msg('프로그램 ID를 확인해 주세요 (예: PGM-0001)', true);
               if (p.event) return msg('정액 적용가 이벤트 프로그램에는 할인율 이벤트를 걸 수 없습니다', true);
+              if (window.DachaeumPricing.isYearSkinBooster(p)) return msg('리프팅 후 혜택가 프로그램에는 할인율 이벤트를 걸 수 없습니다 (혜택가와 이벤트는 중복 불가 · 정상가 프로그램에 추가해 주세요)', true);
               if (progs.includes(p.id)) return msg('이미 추가된 프로그램입니다', true);
               this.setState({ evEdit: { ...evE, [e.id]: { ...ed, programs: progs.concat(p.id) } }, evAdd: { ...(s.evAdd || {}), [e.id]: '' }, pmMsg: '' }); },
             svcText: kind === 'service' ? '적용 프로그램 ' + matched.length + '개 · 제공 서비스: ' + ((e.item || {}).name || '-') + (e.item && e.item.settleUnit ? ' (환불 정산단가 ' + won(e.item.settleUnit) + '원)' : '') : '',
