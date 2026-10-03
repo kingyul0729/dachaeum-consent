@@ -1426,3 +1426,34 @@ test('선결제권 완납·예약금 선택: 선택 전 서명 불가 · 예약�
   }
   assert.deepEqual(p.errors, []);
 });
+
+test('선결제권 예약금 결제 → 서명·저장 → 다시 열기: 받은 금액 300,000 · 미수금 2,700,000 유지, 목록·상세에 완납 표시 없음, 중복 반영 없음 / 결제수단 선택 전 서명 표시 일치', async () => {
+  const p = await open();
+  await toStep3(p, 'PGM-0018', '여드름 8주 프로그램', '미수금유지', async () => { await click(p, '선결제권'); await click(p, '300'); await click(p, '신규 구매 3,000,000원'); });
+  await click(p, '예약금 결제', 0);
+  assert.match(await body(p), /서명\s*결제수단 선택 후 가능/, '결제수단 선택 전에는 서명 가능으로 표시하지 않음');
+  assert.equal(await trySign(p), false, '표시와 실제 진행 조건 일치');
+  await click(p, '계좌이체', 0);
+  assert.match(await body(p), /서명\s*가능/);
+  await signAndSave(p);
+  const before = (await contracts(p))[0];
+  assert.deepEqual([before.total, before.paid, before.priorDep, before.prepaid.received, before.prepaid.unpaid, before.prepaid.payType, before.prepaid.purchaseMethod],
+    [891000, 891000, 0, 300000, 2700000, '예약금', '계좌이체']);
+  assert.deepEqual(before.payments, [{ method: '선결제권 (신규 구매 300)', amount: 891000, prepaid: true, newPurchase: true }], '받은 300,000을 오늘 결제로 다시 기록하지 않음');
+  // 다시 열기 (새로고침)
+  await p.reload(); await p.waitForTimeout(2000);
+  await click(p, '여드름 8주 프로그램');
+  let b = await body(p);
+  assert.match(b, /등록 · 선결제권 3,000,000원 중 예약금 300,000원 · 미수금 2,700,000원/, '목록에 받은 금액·미수금');
+  assert.doesNotMatch(b, /완납/, '목록에 완납 표시 없음');
+  await p.getByText(/등록 · 선결제권/).first().click(); await p.waitForTimeout(400);
+  b = await body(p);
+  assert.match(b, /납부 상태\s*선결제권 3,000,000원 중 예약금 300,000원 · 미수금 2,700,000원/, '상세에 받은 금액·미수금');
+  assert.doesNotMatch(b, /완납/, '상세에 완납 표시 없음');
+  assert.deepEqual((await contracts(p))[0], before, '다시 열어도 저장값 그대로 (중복 반영 없음)');
+  // 환불 계산은 그대로: 납부금액(선결제권 사용분) 891,000 − 위약금 89,100 = 801,900 → 선결제권 잔액 복원, 현금 환불 없음
+  await click(p, '환불 정산');
+  assert.equal(await finalRefund(p), '801,900');
+  assert.match(await body(p), /환불 방법\s*선결제권 잔액 복원 801,900원/);
+  assert.deepEqual(p.errors, []);
+});

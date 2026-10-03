@@ -1051,12 +1051,16 @@ class Component extends DCLogic {
         return order.map(t => ({ kind: '서비스', name: t + ' · ' + g[t].parts.join(', '), reg: '—', used: g[t].n,
           price: g[t].prices.size === 1 ? won([...g[t].prices][0]) : '—', amt: won(g[t].sum) })); })());
     const koDate = d => { const [y, m, dd] = d.split('-'); return y + '년 ' + Number(m) + '월 ' + Number(dd) + '일'; };
+    // 선결제권 미수금: 프로그램에 선결제권을 사용해도 선결제권 대금을 다 받지 않았으면 완납으로 표시하지 않음 (저장된 받은 금액·미수금 그대로)
+    const preDueOf = c => { const q = c && c.prepaid; return q && Number(q.purchase) > 0 && Number(q.unpaid) > 0
+      ? '선결제권 ' + won(q.purchase) + '원 중 ' + (q.payType || '수납') + ' ' + won(q.received) + '원 · 미수금 ' + won(q.unpaid) + '원' : ''; };
+    const payStateOf = c => Number(c.paid || 0) >= Number(c.total || 0) ? '완납'
+      : (c.payments || []).some(p => p.balance) ? '일부 납부 (잔금 ' + won(Number(c.total || 0) - Number(c.paid || 0)) + '원 미납)' : '예약금 납부 (잔금 미납)';
     const rf = {
       rfName: C.patient.name, rfBirth: C.patient.birth, rfPhone: C.patient.phone,
       rfProg: C.program, rfDate: C.date, rfExpiry: C.expiry, rfMethod: C.method,
       // 납부 상태: 저장된 납부금액 기준 (잔금 결제 기록이 있으면 일부 납부로 표시)
-      rfPayState: Number(C.paid || 0) >= Number(C.total || 0) ? '완납'
-        : (C.payments || []).some(p => p.balance) ? '일부 납부 (잔금 ' + won(Number(C.total || 0) - Number(C.paid || 0)) + '원 미납)' : '예약금 납부 (잔금 미납)',
+      rfPayState: payStateOf(C), rfPayStateView: [preDueOf(C) && Number(C.paid || 0) >= Number(C.total || 0) ? '' : payStateOf(C), preDueOf(C)].filter(Boolean).join(' · '),
       rfTotal: won(C.total), rfPaid: won(paidEff), rfPen: won(penNum),
       rfPayRows: rfPays.map((p, i) => { const a = RS.amounts[i], over = RS.over[i];
         return { method: p.prepaid ? '선결제권 잔액 복원' : p.method, paid: won(p.amount) + '원', val: rfAlloc[i] || '', left: won(Math.max(0, Number(p.amount || 0) - a)) + '원',
@@ -1302,7 +1306,8 @@ class Component extends DCLogic {
           // 계약금액 전부를 선결제권으로 쓰면 최종 계약금액과 같은 금액이라 다시 표시하지 않음 (일부만 쓸 때만)
           ...(preUse > 0 && preUse < totalNum ? [{ k: '프로그램 사용 (선결제권)', v: won(preUse) + '원' }] : []),
           ...(balIn > 0 || preNew ? [{ k: '잔액', v: won(preLeft) + '원', strong: true }] : []),
-          ...(preNew ? [{ k: '서명', v: preSignOk ? '가능' : '완납 또는 예약금 선택 후 가능', warn: !preSignOk }] : [])];
+          ...(preNew ? [(() => { const why = !preSignOk ? '완납 또는 예약금 선택 후 가능' : !preBuyM || (nowNum > 0 && !selM.length) ? '결제수단 선택 후 가능' : '';
+            return { k: '서명', v: why || '가능', warn: !!why }; })()] : [])];
         return rows.map((r, i) => ({ ...r, sep: i ? '1px solid rgba(0,0,0,0.1)' : '0', fs: r.big ? '18px' : '14px', fw: r.big || r.strong ? 700 : 500, fg: r.warn ? '#d4183d' : '#0a0a0a' }));
       })(),
       payLabel: payLabels.label, payNow: payLabels.now, payRest: payLabels.rest,
@@ -1451,7 +1456,7 @@ class Component extends DCLogic {
           backToCList: () => { if (s.payDraft && !confirm('저장하지 않은 결제 정보가 있습니다. 저장하지 않고 나갈까요?')) return; this.setState({ cSel: false, payDraft: null }); },
           cRows: list.map((c, i) => { const todo = payTodo(c), refunded = !!c.refunded;
             return { sep: i ? '1px solid rgba(0,0,0,0.1)' : '0', prog: c.program, refunded,
-              sub: c.date + ' 등록 · ' + (c.pay === 'deposit' ? '예약금' : '완납') + ' · ' + (c.method || '-'),
+              sub: c.date + ' 등록 · ' + (preDueOf(c) ? (c.pay === 'deposit' ? '예약금 · ' : '') + preDueOf(c) : c.pay === 'deposit' ? '예약금' : '완납') + ' · ' + (c.method || '-'),
               total: won(c.total) + '원', st: (c.payments && c.payments.length) ? (todo ? '결제정보 입력 필요' : '결제정보 입력 완료') : '결제정보 없음',
               stBg: todo ? '#f9fafb' : '#f9fafb', stFg: todo ? '#4b5563' : '#717182',
               open: () => this.setState({ contract: c, cStatus: this.statusOf(c), cSel: true, ...this.rfStateOf(c) }) }; }) };
