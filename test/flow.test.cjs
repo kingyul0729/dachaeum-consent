@@ -761,7 +761,7 @@ test('선결제권 신규 구매: 완납·예약금 선택 전 서명 불가·�
   assert.deepEqual(c.payments, [{ method: '선결제권 (신규 구매 300)', amount: 891000, prepaid: true, newPurchase: true }]);
   assert.deepEqual(c.prepaid, { tier: '300', balBefore: 0, balUse: 0, purchase: 3000000, received: 300000, unpaid: 2700000, payType: '예약금', purchaseMethod: '카드', newUse: 891000, use: 891000, balAfter: 2109000 });
   assert.deepEqual(await lsJ(p, 'dachaeum.v3.newDrafts'), [], '서명 저장 후 임시 저장 정리');
-  assert.match(plain((await docs(p))[0].html), /결제수단 카드 \/ 선결제권 사용 891,000원 프로그램 여드름 8주 프로그램 프로그램 금액 990,000원 적용할인 선결제권 300만원 \(10%\) 결제금액 891,000원 \(예약금: 300,000원\) 미수금 2,700,000원 잔액 2,109,000원/);
+  assert.match(plain((await docs(p))[0].html), /결제수단 카드 \/ 선결제권 프로그램 여드름 8주 프로그램 프로그램 금액 990,000원 적용할인 선결제권 300만원 \(10%\) 결제금액 891,000원 \(예약금: 300,000원\) \(잔액: 2,109,000원\) 미수금 2,700,000원/);
   // 환불 (시술 전)
   await p.goto(URL); await p.waitForTimeout(1500);
   await click(p, '여드름 8주 프로그램'); await click(p, '환불 정산');
@@ -1392,7 +1392,7 @@ test('선결제권 300만 · 예약금 결제 → 10% 300,000 자동 / 미수금
   assert.deepEqual(c.payments, [{ method: '선결제권 (신규 구매 300)', amount: 891000, prepaid: true, newPurchase: true }], '오늘 결제로 다시 기록하지 않음');
   assert.deepEqual(c.prepaid, { tier: '300', balBefore: 0, balUse: 0, purchase: 3000000, received: 300000, unpaid: 2700000, payType: '예약금', purchaseMethod: '현금', newUse: 891000, use: 891000, balAfter: 2109000 });
   const d = plain((await docs(p))[0].html);
-  assert.match(d, /결제수단 현금 \/ 선결제권 사용 891,000원 .*프로그램 금액 990,000원 적용할인 선결제권 300만원 \(10%\) 결제금액 891,000원 \(예약금: 300,000원\) 미수금 2,700,000원 잔액 2,109,000원/);
+  assert.match(d, /결제수단 현금 \/ 선결제권 .*프로그램 금액 990,000원 적용할인 선결제권 300만원 \(10%\) 결제금액 891,000원 \(예약금: 300,000원\) \(잔액: 2,109,000원\) 미수금 2,700,000원/);
   assert.equal((d.match(/300,000원/g) || []).length, 1, '예약금 한 번만');
   await pdfCheck(p, 0, '이용동의서 (선결제권 예약금)');
   assert.deepEqual(p.errors, []);
@@ -1479,6 +1479,7 @@ test('동의서 상단 결제 정보: 할인 없음(프로그램 금액만·현�
   await toStep3(p, 'PGM-0003', '스페셜 토닝 3', '문서상단3', async () => { await click(p, '선결제권'); await click(p, '400'); await balInOf(p).fill('89000'); await click(p, '신규 구매 4,000,000원'); });
   await click(p, '완납 결제', 0); await click(p, '카드', 0); await click(p, '미리보기');
   t = await top();
-  assert.match(t, /결제수단 카드 \/ 선결제권 사용 1,309,000원 프로그램 스페셜 토닝 3 프로그램 금액 1,540,000원 적용할인 선결제권 400만원 \(15%\) 결제금액 1,309,000원 잔액 2,780,000원 $/, '보유 잔액 89,000을 사용액으로 적지 않음');
+  assert.match(t, /결제수단 카드 \/ 선결제권 프로그램 스페셜 토닝 3 프로그램 금액 1,540,000원 적용할인 선결제권 400만원 \(15%\) 결제금액 1,309,000원 \(잔액: 2,780,000원\) $/, '결제수단에 금액 없음, 잔액은 결제금액 아래');
+  assert.doesNotMatch(t, /89,000/, '보유 잔액 89,000을 따로 적지 않음');
   assert.deepEqual(p.errors, []);
 });

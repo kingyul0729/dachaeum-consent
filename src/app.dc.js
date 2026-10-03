@@ -1365,15 +1365,15 @@ class Component extends DCLogic {
       pName: isResign ? C.patient.name : (P.name || ''), pBirth: isResign ? C.patient.birth : (P.birth || ''), pPhone: isResign ? C.patient.phone : (P.phone || ''),
       // 동의서 상단 결제 정보: 저장할 계약 값(재서명은 저장된 계약)에서 표시만 만듦 — 계산·수납 기록은 바꾸지 않음
       ...(() => { const D = isResign ? C : buildContract();
-        if (!D) return { docMethod: '', docListText: '', hasDocDisc: false, docDiscText: '', docPayText: '', hasDocDepA: false, hasDocDepB: false, docDepText: '', hasDocDue: false, docDueText: '', hasDocLeft: false, docLeftText: '' };
+        if (!D) return { docMethod: '', docListText: '', hasDocDisc: false, docDiscText: '', docPayText: '', hasDocDepA: false, hasDocDepB: false, docDepText: '', hasDocDue: false, docDueText: '', hasDocLeftA: false, hasDocLeftB: false, docLeftText: '' };
         const q = D.prepaid || null, pays = D.payments || [], d = D.disc || {}, hc = D.hairCombo || null;
-        // 결제수단: 실제 적용된 수단만 '/'로 연결. 선결제권은 이번에 차감한 금액, 현금영수증은 발급 기록이 있을 때만
+        // 결제수단: 실제 적용된 수단만 '/'로 연결 (금액 없이). 현금영수증은 발급 기록이 있을 때만
         const ms = [];
         const addM = m => { if (m && !ms.includes(m)) ms.push(m); };
         if (q && Number(q.purchase) > 0 && Number(q.received) > 0) addM(q.purchaseMethod);
         pays.filter(x => !x.prepaid).forEach(x => addM(x.method));
         const preUseAmt = pays.filter(x => x.prepaid).reduce((t, x) => t + Number(x.amount || 0), 0);
-        if (preUseAmt > 0) ms.push('선결제권 사용 ' + won(preUseAmt) + '원');
+        if (preUseAmt > 0) ms.push('선결제권');
         if (pays.some(x => x.rcpt === '발급')) ms.push('현금영수증');
         // 할인: 실제 선택한 할인·조건만
         const rate = Number(d.rate || 0);
@@ -1389,7 +1389,9 @@ class Component extends DCLogic {
         return { docMethod: ms.join(' / ') || D.method || '', docListText: won(base) + '원',
           hasDocDisc: !!discText, docDiscText: discText, docPayText: won(total) + '원',
           hasDocDepA: dep > 0 && !discText, hasDocDepB: dep > 0 && !!discText, docDepText: '(예약금: ' + won(dep) + '원)',
-          hasDocDue: due > 0, docDueText: won(due) + '원', hasDocLeft: !!q, docLeftText: q ? won(q.balAfter || 0) + '원' : '' }; })(),
+          hasDocDue: due > 0, docDueText: won(due) + '원',
+          // 잔액(사용하고 남은 선결제권): 예약금처럼 결제금액(할인 없으면 프로그램 금액) 아래에 (잔액: N원)
+          hasDocLeftA: !!q && !discText, hasDocLeftB: !!q && !!discText, docLeftText: q ? '(잔액: ' + won(q.balAfter || 0) + '원)' : '' }; })(),
       isBrief, notBrief: !isBrief, briefOK, briefPriorDate: isResign ? (C.priorDate || '') : (priorFull ? priorFull.date : ''),
       briefLabel: s.forceFull ? '전체 동의서' : '간이 동의서 · ' + (isResign ? (C.priorDate || '') : (priorFull ? priorFull.date : '')) + ' 약관', briefBtn: s.forceFull ? '간이 동의서로' : '전체 동의서로',
       toggleForceFull: () => this.setState({ forceFull: !s.forceFull }),
