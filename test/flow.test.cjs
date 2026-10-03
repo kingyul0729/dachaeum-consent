@@ -739,11 +739,11 @@ test('선결제권 신규 구매: 10% 미만(200,000/3,000,000)은 서명 불가
   await click(p, '카드', 0); await rcv.fill('200000'); await p.waitForTimeout(300);
   let b = await body(p);
   for (const re of [/선결제권 3,000,000원/, /수납액\s*200,000원/, /결제수단\s*선결제권 카드 200,000원/, /미수금\s*2,800,000원/, /서명\s*10%\(300,000원\) 이상 받으면 가능/,
-    /예약금 \+ 수납액이 10%\(300,000원\) 이상이면 서명할 수 있어요/]) assert.match(b, re);
+    /수납액이 10%\(300,000원\) 이상이면 서명할 수 있어요/]) assert.match(b, re);
   assert.doesNotMatch(b, /선결제권 구매|선결제권 미수|남은 선결제권|이미 받은 예약금|오늘 수납|차감 후|예상|실제 수납액|구매 미수금|추가 결제 필요금액/, '통일한 용어만 사용');
   await click(p, '동의서 미리보기 · 서명');
   assert.doesNotMatch(await body(p), /터치하여 서명/, '10% 미만 서명 불가');
-  assert.match(await body(p), /예약금 \+ 수납액이 선결제권 금액의 10%\(300,000원\) 이상이어야 서명할 수 있습니다/);
+  assert.match(await body(p), /수납액이 선결제권 금액의 10%\(300,000원\) 이상이어야 서명할 수 있습니다/);
   await click(p, '임시 저장');
   const drafts = await lsJ(p, 'dachaeum.v3.newDrafts');
   assert.equal(drafts.length, 1);
@@ -751,7 +751,7 @@ test('선결제권 신규 구매: 10% 미만(200,000/3,000,000)은 서명 불가
   assert.deepEqual(await contracts(p), [], '임시 저장은 계약이 아님');
   // 새로 열어 이어서 작성 → 수납액 1,000,000 (10% 이상) → 미수금 남은 채로 서명
   await p.goto(URL); await p.waitForTimeout(1500);
-  assert.match(await body(p), /임시 저장\s*신규구매테스트 · 여드름 8주 프로그램 선결제권 3,000,000원 · 예약금 0원 · 수납액 200,000원 · 미수금 2,800,000원/);
+  assert.match(await body(p), /임시 저장\s*신규구매테스트 · 여드름 8주 프로그램 선결제권 3,000,000원 · 수납액 200,000원 · 미수금 2,800,000원/);
   await click(p, '이어서 작성');
   assert.equal(await rcv.inputValue(), '200,000');
   await rcv.fill('1000000'); await p.waitForTimeout(300);
@@ -761,9 +761,9 @@ test('선결제권 신규 구매: 10% 미만(200,000/3,000,000)은 서명 불가
   const [c] = await contracts(p);
   assert.deepEqual([c.total, c.paid, c.priorDep], [891000, 891000, 0], '납부액 = 이번 계약 사용액 (선결제권 금액 3,000,000 아님)');
   assert.deepEqual(c.payments, [{ method: '선결제권 (신규 구매 300)', amount: 891000, prepaid: true, newPurchase: true }]);
-  assert.deepEqual(c.prepaid, { tier: '300', balBefore: 0, balUse: 0, purchase: 3000000, received: 1000000, deposit: 0, todayRcv: 1000000, unpaid: 2000000, purchaseMethod: '카드', newUse: 891000, use: 891000, balAfter: 2109000 });
+  assert.deepEqual(c.prepaid, { tier: '300', balBefore: 0, balUse: 0, purchase: 3000000, received: 1000000, unpaid: 2000000, purchaseMethod: '카드', newUse: 891000, use: 891000, balAfter: 2109000 });
   assert.deepEqual(await lsJ(p, 'dachaeum.v3.newDrafts'), [], '서명 저장 후 임시 저장 정리');
-  assert.match((await docs(p))[0].html.replace(/<[^>]+>/g, ' '), /선결제권 3,000,000원에서 891,000원 \(예약금 0원 · 수납액 1,000,000원 · 미수금 2,000,000원\) 프로그램 사용 · 잔액 2,109,000원/);
+  assert.match((await docs(p))[0].html.replace(/<[^>]+>/g, ' '), /선결제권 3,000,000원에서 891,000원 \(수납액 1,000,000원 · 미수금 2,000,000원\) 프로그램 사용 · 잔액 2,109,000원/);
   // 환불 (시술 전)
   await p.goto(URL); await p.waitForTimeout(1500);
   await click(p, '여드름 8주 프로그램'); await click(p, '환불 정산');
@@ -806,7 +806,7 @@ test('선결제권 보유 잔액: 충분(1,000,000)·부족(300,000)·0원(할�
   await signAndSave(p);
   let c = (await contracts(p))[0];
   assert.deepEqual([c.total, c.paid, c.preBal], [891000, 891000, 1000000]);
-  assert.deepEqual(c.prepaid, { tier: '300', balBefore: 1000000, balUse: 891000, purchase: 0, received: 0, deposit: 0, todayRcv: 0, unpaid: 0, purchaseMethod: null, newUse: 0, use: 891000, balAfter: 109000 });
+  assert.deepEqual(c.prepaid, { tier: '300', balBefore: 1000000, balUse: 891000, purchase: 0, received: 0, unpaid: 0, purchaseMethod: null, newUse: 0, use: 891000, balAfter: 109000 });
   // 부족
   await p.goto(URL); await p.waitForTimeout(1500);
   await toStep3(p, 'PGM-0018', '여드름 8주 프로그램', '잔액부족', async () => { await click(p, '선결제권'); await click(p, '300'); await balIn.fill('300000'); await p.waitForTimeout(300); });
@@ -829,7 +829,7 @@ test('선결제권 보유 잔액: 충분(1,000,000)·부족(300,000)·0원(할�
   c = (await contracts(p)).find(x => x.patient.name === '함께사용');
   assert.deepEqual([c.total, c.paid], [891000, 891000], '3,200,000 아님');
   assert.deepEqual(c.payments, [{ method: '선결제권 잔액', amount: 200000, prepaid: true }, { method: '선결제권 (신규 구매 300)', amount: 691000, prepaid: true, newPurchase: true }]);
-  assert.deepEqual(c.prepaid, { tier: '300', balBefore: 200000, balUse: 200000, purchase: 3000000, received: 3000000, deposit: 0, todayRcv: 3000000, unpaid: 0, purchaseMethod: '현금', newUse: 691000, use: 891000, balAfter: 2309000 });
+  assert.deepEqual(c.prepaid, { tier: '300', balBefore: 200000, balUse: 200000, purchase: 3000000, received: 3000000, unpaid: 0, purchaseMethod: '현금', newUse: 691000, use: 891000, balAfter: 2309000 });
   assert.equal(c.disc.preTier, '300', '잔액을 합쳐 할인 기준을 올리지 않음');
   assert.deepEqual(p.errors, []);
 });
@@ -840,7 +840,7 @@ test('백업·복원: 프로그램 이름·이벤트·1회 정상가·총 등록
   const eo = { events: { 'EV-R-T': { programs: ['PGM-0001'] }, 'EV-NEWBIJOU': { stack: { pre: true } } }, added: [{ id: 'EV-R-T', kind: 'rate', name: '가을 이벤트', rate: 0.1, start: '', end: '', active: true, programs: [] }], at: '2026-10-02 10:00' };
   const uo = { items: { 'proc:pig-revlite': { price: '250000' } } };
   const src = await open([mk('CT1', '백업 원본 계약')], { storage: { 'dachaeum.priceOverride': JSON.stringify(ov), 'dachaeum.eventOverride': JSON.stringify(eo), 'dachaeum.unitOverride': JSON.stringify(uo),
-    'dachaeum.v3.newDrafts': JSON.stringify([{ id: 'DR1', name: '임시환자', prog: '스페셜 토닝 1', note: '선결제권 3,000,000원 · 예약금 0원 · 수납액 1,000,000원 · 미수금 2,000,000원', state: { preRcvAmt: '1000000' } }]) } });
+    'dachaeum.v3.newDrafts': JSON.stringify([{ id: 'DR1', name: '임시환자', prog: '스페셜 토닝 1', note: '선결제권 3,000,000원 · 수납액 1,000,000원 · 미수금 2,000,000원', state: { preRcvAmt: '1000000' } }]) } });
   const keysOf = pg => pg.evaluate(() => Object.fromEntries(Object.keys(localStorage).filter(k => k.startsWith('dachaeum.') && k !== 'dachaeum.v3.lastBackup').map(k => [k, localStorage.getItem(k)])));
   const original = await keysOf(src);
   await click(src, '백업 · 복원');
@@ -1099,7 +1099,7 @@ test('iPad 세로 전체 흐름 ②: 기존 잔액 + 신규 구매 10% 미만 �
   await click(p, '동의서 미리보기 · 서명'); await signSave(p, '동의하고 저장');
   const [c] = await contracts(p);
   assert.deepEqual([c.total, c.paid], [891000, 891000]);
-  assert.deepEqual(c.prepaid, { tier: '300', balBefore: 200000, balUse: 200000, purchase: 3000000, received: 3000000, deposit: 0, todayRcv: 3000000, unpaid: 0, purchaseMethod: '현금', newUse: 691000, use: 891000, balAfter: 2309000 });
+  assert.deepEqual(c.prepaid, { tier: '300', balBefore: 200000, balUse: 200000, purchase: 3000000, received: 3000000, unpaid: 0, purchaseMethod: '현금', newUse: 691000, use: 891000, balAfter: 2309000 });
   assert.deepEqual(await lsJ(p, 'dachaeum.v3.newDrafts'), []);
   assert.equal((await docs(p)).length, 1);
   await pdfCheck(p, 0, '이용동의서');
@@ -1375,66 +1375,64 @@ test('공유 시트·홈 화면에 추가 전후 이벤트(blur·인쇄 미리�
   assert.deepEqual(p.errors, []);
 });
 
-// ---- 선결제권 서명 조건: 예약금 + 수납액 ≥ 선결제권 금액의 10% (300 → 300,000 · 400 → 400,000 · 500 → 500,000) ----
-const preDepIn = p => p.locator('xpath=//label[starts-with(normalize-space(.),"예약금")]//input');
+// ---- 선결제권 서명 조건: 수납액(이 선결제권에 지금까지 받은 금액, 예약금 포함) ≥ 선결제권 금액의 10% (300 → 300,000 · 400 → 400,000 · 500 → 500,000) ----
 const preRcvIn = p => p.locator('xpath=//label[starts-with(normalize-space(.),"수납액")]//input');
-const canSign = async (p, dep, rcv) => {
-  await preDepIn(p).fill(String(dep)); await preRcvIn(p).fill(String(rcv)); await p.waitForTimeout(250);
+const canSign = async (p, rcv) => {
+  await preRcvIn(p).fill(String(rcv)); await p.waitForTimeout(250);
   await click(p, '동의서 미리보기 · 서명');
   const ok = /터치하여 서명/.test(await body(p));
   if (ok) { await click(p, '직원'); if (!/결제 내용/.test(await body(p))) { await p.locator('[title="이전"]').click(); await p.waitForTimeout(400); } }
   return ok;
 };
 
-test('선결제권 300만 · 예약금 1,800,000 · 수납액 0 → 미수금 1,200,000 · 서명 가능 · 초과분 없음, 예약금 한 번만 반영 — 화면·저장값·동의서·PDF 일치', async () => {
+test('선결제권 300만 · 예약금으로 받은 300,000 → 수납액 한 칸 300,000 / 미수금 2,700,000 / 서명 가능, 중복 수납 없음 — 화면·저장값·동의서·PDF 일치', async () => {
   const p = await openPad();
   await toStep3(p, 'PGM-0018', '여드름 8주 프로그램', '예약금선결제', async () => { await click(p, '선결제권'); await click(p, '300'); await click(p, '신규 구매 3,000,000원'); });
-  await preDepIn(p).fill('1800000'); await p.waitForTimeout(300);
-  assert.equal(await preDepIn(p).count(), 1, '예약금 입력칸은 한 곳만');
-  const b = await body(p);
-  for (const re of [/수납액\s*0원/, /예약금\s*1,800,000원/, /미수금\s*1,200,000원/, /프로그램 사용 \(선결제권\)\s*891,000원/, /\n잔액\s*2,109,000원/, /서명\s*가능/]) assert.match(b, re);
-  assert.doesNotMatch(b, /초과분|선결제권 구매|선결제권 미수|남은 선결제권|이미 받은 예약금|오늘 수납/);
-  assert.equal((b.match(/1,800,000원/g) || []).length, 1, '예약금 금액은 결제 내용에 한 번만');
+  assert.equal(await p.locator('xpath=//label[starts-with(normalize-space(.),"예약금")]//input').count(), 0, '선결제권은 수납액 한 칸만 (예약금 칸 없음)');
+  assert.equal(await preRcvIn(p).count(), 1);
+  let b = await body(p);
+  assert.match(b, /미수금\s*3,000,000원/, '선결제권 선택만으로 전액 수납 처리하지 않음');
+  assert.match(b, /서명\s*10%\(300,000원\) 이상 받으면 가능/);
+  await click(p, '현금', 0); await preRcvIn(p).fill('300000'); await p.waitForTimeout(300);
+  b = await body(p);
+  for (const re of [/수납액\s*300,000원/, /미수금\s*2,700,000원/, /프로그램 사용 \(선결제권\)\s*891,000원/, /\n잔액\s*2,109,000원/, /서명\s*가능/]) assert.match(b, re);
+  assert.doesNotMatch(b, /초과분|예약금\s*300,000원/, '예약금으로 따로 다시 합산하지 않음');
+  assert.equal((b.match(/300,000원/g) || []).length, 2, '수납액 · 결제수단에만 표시 (중복 합산 없음)');
   await click(p, '동의서 미리보기 · 서명'); await signSave(p, '동의하고 저장');
   const [c] = await contracts(p);
-  assert.deepEqual([c.total, c.paid, c.priorDep], [891000, 891000, 0], '선결제권에 반영한 예약금은 프로그램 대금에 다시 넣지 않음');
-  assert.deepEqual(c.payments, [{ method: '선결제권 (신규 구매 300)', amount: 891000, prepaid: true, newPurchase: true }]);
-  assert.deepEqual([c.prepaid.purchase, c.prepaid.deposit, c.prepaid.todayRcv, c.prepaid.received, c.prepaid.unpaid, c.prepaid.newUse, c.prepaid.balAfter],
-    [3000000, 1800000, 0, 1800000, 1200000, 891000, 2109000]);
+  assert.deepEqual([c.total, c.paid, c.priorDep], [891000, 891000, 0], '받은 돈을 프로그램 예약금으로 다시 넣지 않음');
+  assert.deepEqual(c.payments, [{ method: '선결제권 (신규 구매 300)', amount: 891000, prepaid: true, newPurchase: true }], '오늘 결제로 다시 기록하지 않음');
+  assert.deepEqual(c.prepaid, { tier: '300', balBefore: 0, balUse: 0, purchase: 3000000, received: 300000, unpaid: 2700000, purchaseMethod: '현금', newUse: 891000, use: 891000, balAfter: 2109000 });
   const d = plain((await docs(p))[0].html);
-  assert.match(d, /선결제권 3,000,000원에서 891,000원 \(예약금 1,800,000원 · 수납액 0원 · 미수금 1,200,000원\) 프로그램 사용 · 잔액 2,109,000원/);
-  assert.doesNotMatch(d, /초과분/);
-  await pdfCheck(p, 0, '이용동의서 (예약금 선결제권)');
+  assert.match(d, /선결제권 3,000,000원에서 891,000원 \(수납액 300,000원 · 미수금 2,700,000원\) 프로그램 사용 · 잔액 2,109,000원/);
+  await pdfCheck(p, 0, '이용동의서 (선결제권 10%)');
   assert.deepEqual(p.errors, []);
 });
 
-test('선결제권 10% 기준: 미만 서명 불가 · 정확히 10% 가능 · 초과 가능 · 예약금 + 수납액 합산 · 선결제권 금액 초과 불가 / 400·500 기준', async () => {
+test('선결제권 10% 기준: 미만 서명 불가 · 정확히 10% 가능 · 초과 가능 · 선결제권 금액 초과 불가 / 400·500 기준', async () => {
   const p = await open();
   await toStep3(p, 'PGM-0018', '여드름 8주 프로그램', '기준테스트', async () => { await click(p, '선결제권'); await click(p, '300'); await click(p, '신규 구매 3,000,000원'); });
   await click(p, '카드', 0);
-  assert.equal(await canSign(p, 0, 0), false, '0원');
-  assert.equal(await canSign(p, 0, 299999), false, '10% 미만 (299,999)');
-  assert.match(await body(p), /10%\(300,000원\) 이상이어야 서명할 수 있습니다/);
+  assert.equal(await canSign(p, 0), false, '0원');
+  assert.equal(await canSign(p, 299999), false, '10% 미만 (299,999)');
+  assert.match(await body(p), /수납액이 선결제권 금액의 10%\(300,000원\) 이상이어야 서명할 수 있습니다/);
   assert.match(await body(p), /미수금\s*2,700,001원/);
-  assert.equal(await canSign(p, 0, 300000), true, '정확히 10% (300,000)');
-  assert.equal(await canSign(p, 0, 300001), true, '10% 초과 (300,001)');
-  assert.equal(await canSign(p, 100000, 199999), false, '예약금 + 수납액 299,999');
-  assert.equal(await canSign(p, 100000, 200000), true, '예약금 100,000 + 수납액 200,000');
-  assert.match(await body(p), /수납액\s*200,000원/); assert.match(await body(p), /예약금\s*100,000원/); assert.match(await body(p), /미수금\s*2,700,000원/);
-  assert.equal(await canSign(p, 0, 3000000), true, '전액');
+  assert.equal(await canSign(p, 300000), true, '정확히 10% (300,000)');
+  assert.equal(await canSign(p, 300001), true, '10% 초과 (300,001)');
+  assert.equal(await canSign(p, 3000000), true, '전액');
   assert.doesNotMatch(await body(p), /미수금/, '전액이면 미수금 없음');
-  assert.equal(await canSign(p, 2000000, 1000001), false, '선결제권 금액 초과');
-  assert.match(await body(p), /예약금 \+ 수납액이 선결제권 3,000,000원보다 큽니다/);
+  assert.equal(await canSign(p, 3000001), false, '선결제권 금액 초과');
+  assert.match(await body(p), /수납액이 선결제권 3,000,000원보다 큽니다/);
   for (const [tier, min] of [['400', '400,000'], ['500', '500,000']]) {
     await p.goto(URL); await p.waitForTimeout(1500);
     const won = Number(tier) * 10000;
     await toStep3(p, 'PGM-0033', '얼굴전체', '기준' + tier, async () => { await click(p, '선결제권'); await click(p, tier); await click(p, '신규 구매 ' + won.toLocaleString('en-US') + '원'); });
     await click(p, '현금', 0);
-    assert.match(await body(p), new RegExp('10%\\(' + min + '원\\) 이상이면 서명할 수 있어요'));
-    const lo = Number(tier) * 1000;
+    assert.match(await body(p), new RegExp('수납액이 10%\\(' + min + '원\\) 이상이면 서명할 수 있어요'));
     assert.match(await body(p), /오늘 받을 금액이 없습니다/, '프로그램 대금은 선결제권으로 사용');
-    assert.equal(await canSign(p, 0, lo - 1), false, tier + ': 10% 미만');
-    assert.equal(await canSign(p, 0, lo), true, tier + ': 정확히 10%');
+    const lo = Number(tier) * 1000;
+    assert.equal(await canSign(p, lo - 1), false, tier + ': 10% 미만');
+    assert.equal(await canSign(p, lo), true, tier + ': 정확히 10%');
   }
   assert.deepEqual(p.errors, []);
 });

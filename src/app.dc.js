@@ -831,22 +831,21 @@ class Component extends DCLogic {
     const numOf = v => Number(String(v || '').replace(/[^0-9]/g, '')) || 0;
     // 선결제권: 할인 기준(300·400·500)과 결제 재원을 구분. 직원이 확인·입력한 값만 사용 (다른 계약 금액으로 추정하지 않음)
     // · 보유 잔액: 직원이 확인한 기존 잔액 → 먼저 사용
-    // · 신규 구매(선결제권 할인 선택 시): 선결제권 = 선택한 금액(300 → 3,000,000). 예약금(미리 받은 금액)은 선결제권에 먼저 한 번만 반영하고,
-    //   수납액(오늘 추가로 받은 금액)을 더해 받은 금액을 기록. 받지 않은 금액은 미수금. 예약금 + 수납액이 선결제권 금액의 10% 이상이면 서명 가능
+    // · 신규 구매(선결제권 할인 선택 시): 선결제권 = 선택한 금액(300 → 3,000,000). 수납액 = 이 선결제권에 지금까지 실제로 받은 금액(예약금으로 받은 돈 포함, 한 칸에만 입력)
+    //   미수금 = 선결제권 − 수납액. 수납액이 선결제권 금액의 10% 이상이면 서명 가능
     //   계약 납부액에는 이 계약에 사용한 금액만 포함 (선결제권 금액 전체 아님). 잔액 = 선결제권 − 프로그램 사용 (미수금과 별개)
     // · 기존 잔액과 신규 구매금액을 합쳐 할인 기준을 올리지 않음 (선택한 기준 그대로)
     const preNew = discKey === 'pre' && !!preTier && !!s.preNew;
     const preBuy = preNew ? Number(preTier) * 10000 : 0;
-    const preRcvAmt = preNew ? numOf(s.preRcvAmt) : 0;                                   // 수납액 (오늘)
-    const pdAll = numOf(s.priorDep), pdToBuy = preNew ? Math.min(pdAll, preBuy) : 0, pdToProg = pdAll - pdToBuy;   // 예약금: 선결제권에 먼저
-    const preGot = pdToBuy + preRcvAmt, preUnpaid = Math.max(0, preBuy - preGot);           // 받은 금액 · 미수금
-    const preMin = Math.ceil(preBuy * 0.1), preSignOk = !preNew || preGot >= preMin;           // 서명 기준: 선결제권 금액의 10%
-    const preRcvOver = preNew && preGot > preBuy;
+    const preRcvAmt = preNew ? numOf(s.preRcvAmt) : 0, preUnpaid = Math.max(0, preBuy - preRcvAmt);   // 수납액(누적) · 미수금
+    const preMin = Math.ceil(preBuy * 0.1), preSignOk = !preNew || preRcvAmt >= preMin;          // 서명 기준: 선결제권 금액의 10%
+    const preRcvOver = preNew && preRcvAmt > preBuy;
+    const pdAll = preNew ? 0 : numOf(s.priorDep);   // 선결제권 신규 구매 시 예약금은 수납액에 포함 (따로 입력·합산하지 않음)
     const preBuyM = preNew ? (s.preBuyM || '') : '';
     const balIn = numOf(s.preBal);
     const balUse = Math.min(balIn, totalNum), balAfter = balIn - balUse;
     const newUse = preNew ? Math.min(preBuy, totalNum - balUse) : 0, newLeft = preBuy - newUse;   // 전액 수납 전에는 예상값
-    const PAY = PR.payment({ totalNum, preBal: balUse + newUse, priorDep: pdToProg, deposit: dep });   // 선결제권에 반영한 예약금은 프로그램 대금에 다시 넣지 않음
+    const PAY = PR.payment({ totalNum, preBal: balUse + newUse, priorDep: pdAll, deposit: dep });
     const { preBal, priorDep, needNum, leftNum, depAmt, depTarget } = PAY;
     const preUse = balUse + newUse, preLeft = balAfter + newLeft;
     const pdUse = Math.min(priorDep, Math.max(0, totalNum - preUse)), pdOver = priorDep - pdUse;
@@ -891,7 +890,7 @@ class Component extends DCLogic {
         .concat(newUse > 0 ? [{ method: newLabel, amount: newUse, prepaid: true, newPurchase: true }] : []),
       // 선결제권 기록: 확인한 기존 잔액 · 신규 구매·실제 수납 · 이 계약 사용액(각각) · 차감 후 잔액. 계약 납부액에는 사용액만 포함
       prepaid: balIn > 0 || preNew ? { tier: discKey === 'pre' ? preTier || null : null, balBefore: balIn, balUse,
-        purchase: preNew ? preBuy : 0, received: preNew ? preGot : 0, deposit: preNew ? pdToBuy : 0, todayRcv: preNew ? preRcvAmt : 0, unpaid: preNew ? preUnpaid : 0, purchaseMethod: preNew ? preBuyM : null, newUse,
+        purchase: preNew ? preBuy : 0, received: preNew ? preRcvAmt : 0, unpaid: preNew ? preUnpaid : 0, purchaseMethod: preNew ? preBuyM : null, newUse,
         use: preUse, balAfter: preLeft } : null,
       event: cur.event || null, firstDate: isEventCur ? evFirst : null,
       patient: { ...P },
@@ -1103,8 +1102,8 @@ class Component extends DCLogic {
                  if (discKey === 'pre' && !preTier) return this.flash('선결제권 기준을 선택해 주세요');
                  if (discKey === 'pre' && !preNew && !balIn) return this.flash('선결제권 할인은 확인한 보유 잔액이 있거나 신규 구매할 때만 적용할 수 있습니다');
                  if (preNew && preRcvAmt > 0 && !preBuyM) return this.flash('선결제권 수납액의 결제수단을 선택해 주세요');
-                 if (preRcvOver) return this.flash('예약금 + 수납액이 선결제권 ' + won(preBuy) + '원보다 큽니다');
-                 if (!preSignOk) return this.flash('예약금 + 수납액이 선결제권 금액의 10%(' + won(preMin) + '원) 이상이어야 서명할 수 있습니다 (임시 저장 후 이어서 진행)');
+                 if (preRcvOver) return this.flash('수납액이 선결제권 ' + won(preBuy) + '원보다 큽니다');
+                 if (!preSignOk) return this.flash('수납액이 선결제권 금액의 10%(' + won(preMin) + '원) 이상이어야 서명할 수 있습니다 (임시 저장 후 이어서 진행)');
                  if (nowNum > 0 && !selM.length) return this.flash('결제수단을 선택해 주세요');
                  if (isSplit && (!a1 || a1 >= nowNum)) return this.flash('분할결제 금액을 입력해 주세요');
                  if (!totalNum) return this.flash('총 등록금액을 입력해 주세요');
@@ -1254,13 +1253,13 @@ class Component extends DCLogic {
       togglePreNew: () => this.setState({ preNew: !s.preNew, preRcvAmt: '', preBuyM: '' }),
       preBuyMOpts: ['카드', '현금', '계좌이체'].map(m => ({ label: m, ...chip(preBuyM === m), pick: () => this.setState({ preBuyM: m }) })),
       preRcvIn: s.preRcvAmt ? won(numOf(s.preRcvAmt)) : '', onPreRcv: e => this.setState({ preRcvAmt: e.target.value.replace(/[^0-9]/g, '') }),
-      preNeedDraft: preNew && !preSignOk, notPreNew: !preNew, saveNewDraft: () => this.saveNewDraft({ prog: cur ? progTitle(cur) : '', note: '선결제권 ' + won(preBuy) + '원 · 예약금 ' + won(pdToBuy) + '원 · 수납액 ' + won(preRcvAmt) + '원 · 미수금 ' + won(preUnpaid) + '원' }),
+      preNeedDraft: preNew && !preSignOk, notPreNew: !preNew, saveNewDraft: () => this.saveNewDraft({ prog: cur ? progTitle(cur) : '', note: '선결제권 ' + won(preBuy) + '원 · 수납액 ' + won(preRcvAmt) + '원 · 미수금 ' + won(preUnpaid) + '원' }),
       showBalIn: true,
       priorDepIn: s.priorDep ? won(numOf(s.priorDep)) : '', onPriorDep: e => this.setState({ priorDep: e.target.value.replace(/[^0-9]/g, '') }),
       hasPreBal: preBal > 0, preBalText: '− ' + won(Math.min(preBal, totalNum)) + '원',
       hasPriorDep: priorDep > 0, priorDepText: '− ' + won(Math.min(priorDep, Math.max(0, totalNum - preBal))) + '원',
       hasLeft: pdOver > 0, leftText: won(pdOver) + '원', hasRest: dep && needNum - depAmt > 0,
-      hasPreDoc: preUse > 0, preDocText: [balUse > 0 ? '보유 잔액에서 ' + won(balUse) + '원' : '', newUse > 0 ? '선결제권 ' + won(preBuy) + '원에서 ' + won(newUse) + '원 (예약금 ' + won(pdToBuy) + '원 · 수납액 ' + won(preRcvAmt) + '원 · 미수금 ' + won(preUnpaid) + '원)' : ''].filter(Boolean).join(' + ')
+      hasPreDoc: preUse > 0, preDocText: [balUse > 0 ? '보유 잔액에서 ' + won(balUse) + '원' : '', newUse > 0 ? '선결제권 ' + won(preBuy) + '원에서 ' + won(newUse) + '원 (수납액 ' + won(preRcvAmt) + '원 · 미수금 ' + won(preUnpaid) + '원)' : ''].filter(Boolean).join(' + ')
         + ' 프로그램 사용 · 잔액 ' + won(preLeft) + '원',
       totalText: won(totalNum) + '원',
       progName: cur ? progTitle(cur) : '',
@@ -1280,7 +1279,7 @@ class Component extends DCLogic {
         ...(balIn > 0 ? [{ k: '선결제권', v: '보유 잔액 ' + won(balIn) + '원' }] : [])   // 새 선결제권 금액은 아래 카드 제목에 한 번만
       ].map(r => ({ ...r, fw: r.fw || 500 })),
       preBuyTitle: '선결제권 ' + won(preBuy) + '원',
-      preShortText: preRcvOver ? '예약금 + 수납액이 선결제권 금액보다 큽니다' : '예약금 + 수납액이 10%(' + won(preMin) + '원) 이상이면 서명할 수 있어요',
+      preShortText: preRcvOver ? '수납액이 선결제권 금액보다 큽니다' : '수납액이 10%(' + won(preMin) + '원) 이상이면 서명할 수 있어요',
       hasNeed: needNum > 0, noNeed: needNum <= 0,
       // 결제 내용: 수납액(오늘) · 결제수단 · 예약금 · 미수금 · 프로그램 사용 · 잔액 (같은 금액 반복 없이 결과만)
       sumRows: (() => {
@@ -1293,7 +1292,7 @@ class Component extends DCLogic {
           ...(unpaid > 0 ? [{ k: '미수금', v: won(unpaid) + '원', warn: true }] : []),
           ...(preUse > 0 ? [{ k: '프로그램 사용 (선결제권)', v: won(preUse) + '원' + (balUse > 0 && newUse > 0 ? ' (보유 ' + won(balUse) + ' + 신규 ' + won(newUse) + ')' : '') }] : []),
           ...(balIn > 0 || preNew ? [{ k: '잔액', v: won(preLeft) + '원', strong: true }] : []),
-          ...(preNew ? [{ k: '서명', v: preRcvOver ? '예약금 + 수납액 초과' : preSignOk ? '가능' : '10%(' + won(preMin) + '원) 이상 받으면 가능', warn: !preSignOk || preRcvOver }] : [])];
+          ...(preNew ? [{ k: '서명', v: preRcvOver ? '수납액 초과' : preSignOk ? '가능' : '10%(' + won(preMin) + '원) 이상 받으면 가능', warn: !preSignOk || preRcvOver }] : [])];
         return rows.map((r, i) => ({ ...r, sep: i ? '1px solid rgba(0,0,0,0.1)' : '0', fs: r.big ? '18px' : '14px', fw: r.big || r.strong ? 700 : 500, fg: r.warn ? '#d4183d' : '#0a0a0a' }));
       })(),
       payLabel: payLabels.label, payNow: payLabels.now, payRest: payLabels.rest,
