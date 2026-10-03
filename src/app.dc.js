@@ -1250,8 +1250,6 @@ class Component extends DCLogic {
       hasDiscNote: !!cur && (isYearSB || noPreHair || noRet),
       hasHairOff: hairRate > 0, hairOffLabel: '제모 결합 ' + hairElig.length + '부위 ' + Math.round(hairRate * 100) + '%', hairOffText: '− ' + won(hairOff) + '원', hairSumText: won(hairSum) + '원',
       hasDisc: !!discRate, discLabel, discBaseText: won(discBase) + '원',
-      discDocText: [hairRate ? '제모 결합 ' + hairElig.length + '부위 ' + Math.round(hairRate * 100) + '% (정상가 합계 ' + won(hairSum) + '원)' : '', discRate ? discLabel + ' (기준 ' + won(discBase) + '원)' : ''].filter(Boolean).join(' · '),
-      hasDiscDoc: !!discRate || hairRate > 0,
       preBalIn: s.preBal ? won(numOf(s.preBal)) : '', onPreBal: e => this.setState({ preBal: e.target.value.replace(/[^0-9]/g, '') }),
       // 선결제권 결제 안내 (입력: 보유 잔액 · 신규 구매 여부·실제 수납액 / 계산: 사용액·잔액·추가 결제·미수금)
       preNewOn: preNew, preNewLabel: '신규 구매 ' + (preTier ? won(Number(preTier) * 10000) + '원' : ''), preNewBd: chip(!!s.preNew).bd, preNewBg: chip(!!s.preNew).bg, preNewFg: chip(!!s.preNew).fg,
@@ -1268,8 +1266,6 @@ class Component extends DCLogic {
       hasPreBal: preBal > 0, preBalText: '− ' + won(Math.min(preBal, totalNum)) + '원',
       hasPriorDep: priorDep > 0, priorDepText: '− ' + won(Math.min(priorDep, Math.max(0, totalNum - preBal))) + '원',
       hasLeft: pdOver > 0, leftText: won(pdOver) + '원', hasRest: dep && needNum - depAmt > 0,
-      hasPreDoc: preUse > 0, preDocText: [balUse > 0 ? '보유 잔액에서 ' + won(balUse) + '원' : '', newUse > 0 ? '선결제권 ' + won(preBuy) + '원에서 ' + won(newUse) + '원 (' + preRcvLabel + ' ' + won(preRcvAmt) + '원' + (preUnpaid ? ' · 미수금 ' + won(preUnpaid) + '원' : '') + ')' : ''].filter(Boolean).join(' + ')
-        + ' 프로그램 사용 · 잔액 ' + won(preLeft) + '원',
       totalText: won(totalNum) + '원',
       progName: cur ? progTitle(cur) : '',
       docKind: dep ? '예약금용' : '완납용',
@@ -1367,7 +1363,33 @@ class Component extends DCLogic {
           return { ckBd: on ? '#030213' : 'rgba(0,0,0,0.1)', ckBg: on ? '#030213' : '#ffffff',
             use: () => on ? this.setState({ dupPick: '', patient: { ...(s.patient || {}), phone: '' } }) : this.setState({ dupPick: key, patient: { ...(s.patient || {}), ...d.p } }) }; })() })),
       pName: isResign ? C.patient.name : (P.name || ''), pBirth: isResign ? C.patient.birth : (P.birth || ''), pPhone: isResign ? C.patient.phone : (P.phone || ''),
-      methodText: isResign ? C.method : methodStr,
+      // 동의서 상단 결제 정보: 저장할 계약 값(재서명은 저장된 계약)에서 표시만 만듦 — 계산·수납 기록은 바꾸지 않음
+      ...(() => { const D = isResign ? C : buildContract();
+        if (!D) return { docMethod: '', docListText: '', hasDocDisc: false, docDiscText: '', docPayText: '', hasDocDepA: false, hasDocDepB: false, docDepText: '', hasDocDue: false, docDueText: '', hasDocLeft: false, docLeftText: '' };
+        const q = D.prepaid || null, pays = D.payments || [], d = D.disc || {}, hc = D.hairCombo || null;
+        // 결제수단: 실제 적용된 수단만 '/'로 연결. 선결제권은 이번에 차감한 금액, 현금영수증은 발급 기록이 있을 때만
+        const ms = [];
+        const addM = m => { if (m && !ms.includes(m)) ms.push(m); };
+        if (q && Number(q.purchase) > 0 && Number(q.received) > 0) addM(q.purchaseMethod);
+        pays.filter(x => !x.prepaid).forEach(x => addM(x.method));
+        const preUseAmt = pays.filter(x => x.prepaid).reduce((t, x) => t + Number(x.amount || 0), 0);
+        if (preUseAmt > 0) ms.push('선결제권 사용 ' + won(preUseAmt) + '원');
+        if (pays.some(x => x.rcpt === '발급')) ms.push('현금영수증');
+        // 할인: 실제 선택한 할인·조건만
+        const rate = Number(d.rate || 0);
+        const discText = hc ? '제모 결합 ' + hc.parts + '부위 ' + Math.round(hc.rate * 100) + '%'
+          : !rate ? '' : d.kind === 'pre' ? '선결제권 ' + (d.preTier || '') + '만원 (' + Math.round(rate * 100) + '%)'
+          : d.kind === 'ref' ? '지인소개 5%' : d.kind === 'ret' ? '재티켓팅 10% (' + (d.retPeriod || '1개월 이내') + ')' : (d.label || '');
+        const total = Number(D.total || 0), base = discText ? Number(D.listTotal || total) + (hc ? Number(hc.off || 0) : 0) : total;
+        // 예약금: 실제 받은 금액 그대로 한 번만 (프로그램 예약금 결제·기납부 예약금 + 선결제권 예약금)
+        const paidCash = Number(D.paid || 0) - preUseAmt;
+        const dep = (D.pay === 'deposit' ? Math.max(0, paidCash) : Number(D.priorDep || 0)) + (q && q.payType === '예약금' ? Number(q.received || 0) : 0);
+        // 미수금(앞으로 받을 돈) = 프로그램 남은 대금 + 선결제권 미수금, 잔액 = 사용하고 남은 선결제권
+        const due = Math.max(0, total - Number(D.paid || 0)) + (q ? Number(q.unpaid || 0) : 0);
+        return { docMethod: ms.join(' / ') || D.method || '', docListText: won(base) + '원',
+          hasDocDisc: !!discText, docDiscText: discText, docPayText: won(total) + '원',
+          hasDocDepA: dep > 0 && !discText, hasDocDepB: dep > 0 && !!discText, docDepText: '(예약금: ' + won(dep) + '원)',
+          hasDocDue: due > 0, docDueText: won(due) + '원', hasDocLeft: !!q, docLeftText: q ? won(q.balAfter || 0) + '원' : '' }; })(),
       isBrief, notBrief: !isBrief, briefOK, briefPriorDate: isResign ? (C.priorDate || '') : (priorFull ? priorFull.date : ''),
       briefLabel: s.forceFull ? '전체 동의서' : '간이 동의서 · ' + (isResign ? (C.priorDate || '') : (priorFull ? priorFull.date : '')) + ' 약관', briefBtn: s.forceFull ? '간이 동의서로' : '전체 동의서로',
       toggleForceFull: () => this.setState({ forceFull: !s.forceFull }),
