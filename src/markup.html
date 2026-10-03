@@ -383,18 +383,16 @@ body,body *{word-break:keep-all;overflow-wrap:break-word;line-break:strict}
           <div style="padding:11px 16px;border-bottom:1px solid rgba(0,0,0,0.1);font-size:14px;font-weight:500;color:#0a0a0a">{{ preBuyTitle }}</div>
           <div style="padding:12px 16px">
                     <div style="display:flex;flex-direction:column;gap:10px">
+                      <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px">
+                        <div sc-camel-on-click="{{ pickPreFull }}" style="box-sizing:border-box;border-radius:8.75px;padding:12px 14px;display:flex;flex-direction:column;gap:4px;cursor:pointer;border:1.5px solid {{ preFullBd }};background:{{ preFullBg }}"><span style="font-size:15.75px;font-weight:500;color:{{ preFullFg }}">완납 결제</span><span style="font-size:12.25px;color:#717182;font-variant-numeric:tabular-nums">{{ preFullText }}</span></div>
+                        <div sc-camel-on-click="{{ pickPreDep }}" style="box-sizing:border-box;border-radius:8.75px;padding:12px 14px;display:flex;flex-direction:column;gap:4px;cursor:pointer;border:1.5px solid {{ preDepBd }};background:{{ preDepBg }}"><span style="font-size:15.75px;font-weight:500;color:{{ preDepFg }}">예약금 결제</span><span style="font-size:12.25px;color:#717182;font-variant-numeric:tabular-nums">{{ preDepText }}</span></div>
+                      </div>
                       <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
                         <span style="font-size:12.25px;color:#4b5563;flex:none">결제수단</span>
                         <sc-for list="{{ preBuyMOpts }}" as="o" hint-placeholder-count="3">
                           <div sc-camel-on-click="{{ o.pick }}" style="height:31.5px;padding:0 12px;box-sizing:border-box;border-radius:6.75px;display:flex;align-items:center;font-size:12.25px;font-weight:500;cursor:pointer;border:1px solid {{ o.bd }};background:{{ o.bg }};color:{{ o.fg }}">{{ o.label }}</div>
                         </sc-for>
                       </div>
-                      <label style="display:flex;align-items:center;gap:8px;font-size:12.25px;color:#4b5563">수납액
-                        <span style="display:flex;align-items:center;gap:6px;flex:1;height:31.5px;box-sizing:border-box;border:1px solid transparent;border-radius:6.75px;padding:0 12px;background:#f3f3f5">
-                          <input type="text" sc-camel-input-mode="numeric" placeholder="0" value="{{ preRcvIn }}" sc-camel-on-input="{{ onPreRcv }}" style="flex:1;min-width:0;height:100%;border:0;outline:0;padding:0;background:transparent;font-family:inherit;font-size:14px;text-align:right;color:#0a0a0a;font-variant-numeric:tabular-nums">
-                          <span style="font-size:12.25px;color:#717182">원</span>
-                        </span>
-                      </label>
                       <sc-if value="{{ preNeedDraft }}" hint-placeholder-val="{{ false }}">
                         <div style="display:flex;align-items:center;gap:8px">
                           <span style="flex:1;font-size:12.25px;color:#4b5563">{{ preShortText }}</span>
@@ -459,17 +457,6 @@ body,body *{word-break:keep-all;overflow-wrap:break-word;line-break:strict}
           <sc-if value="{{ hasLeft }}" hint-placeholder-val="{{ false }}"><div style="display:flex;justify-content:space-between;padding:10px 16px 14px;font-size:12.25px;color:#4b5563"><span>예약금 중 계약금액 초과분 (처리 확인 필요)</span><span style="font-variant-numeric:tabular-nums;font-weight:500">{{ leftText }}</span></div></sc-if>
         </div>
         </sc-if>
-        <details style="flex:none;border:1px solid rgba(0,0,0,0.1);border-radius:8.75px;background:#ffffff;padding:10.5px 14px">
-          <summary style="font-size:12.25px;font-weight:500;color:#4b5563;cursor:pointer">도움말</summary>
-          <div style="display:flex;flex-direction:column;gap:5px;margin-top:10.5px;font-size:12.25px;color:#4b5563;line-height:1.6">
-            <div><b style="font-weight:500;color:#0a0a0a">선결제권</b> 선택한 선결제권 금액</div>
-            <div><b style="font-weight:500;color:#0a0a0a">예약금</b> 미리 받은 금액 (선결제권은 수납액에 포함)</div>
-            <div><b style="font-weight:500;color:#0a0a0a">수납액</b> 선결제권에 지금까지 실제로 받은 금액 (예약금 포함)</div>
-            <div><b style="font-weight:500;color:#0a0a0a">미수금</b> 앞으로 받아야 할 금액</div>
-            <div><b style="font-weight:500;color:#0a0a0a">잔액</b> 프로그램에 사용하고 남은 선결제권 금액</div>
-            <div>수납액이 선결제권 금액의 10% 이상이면 서명할 수 있습니다 (300만 원권 30만 원 · 400만 원권 40만 원 · 500만 원권 50만 원).</div>
-          </div>
-        </details>
       </sc-if>
     </div>
 
