@@ -405,6 +405,7 @@ body,body *{word-break:keep-all;overflow-wrap:break-word;line-break:strict}
           </div>
         </div>
         </sc-if>
+        <sc-if value="{{ payCardShow }}" hint-placeholder-val="{{ true }}">
         <div style="flex:none;border:1px solid rgba(0,0,0,0.1);border-radius:8.75px;overflow:hidden;background:#ffffff">
           <div style="padding:11px 16px;border-bottom:1px solid rgba(0,0,0,0.1);font-size:14px;font-weight:500;color:#0a0a0a">결제</div>
           <sc-if value="{{ notPreNew }}" hint-placeholder-val="{{ true }}">
@@ -457,6 +458,7 @@ body,body *{word-break:keep-all;overflow-wrap:break-word;line-break:strict}
           <sc-if value="{{ noNeed }}" hint-placeholder-val="{{ false }}"><div style="padding:14px 16px;font-size:14px;color:#717182">오늘 받을 금액이 없습니다</div></sc-if>
           <sc-if value="{{ hasLeft }}" hint-placeholder-val="{{ false }}"><div style="display:flex;justify-content:space-between;padding:10px 16px 14px;font-size:12.25px;color:#4b5563"><span>예약금 중 계약금액 초과분 (처리 확인 필요)</span><span style="font-variant-numeric:tabular-nums;font-weight:500">{{ leftText }}</span></div></sc-if>
         </div>
+        </sc-if>
         <details style="flex:none;border:1px solid rgba(0,0,0,0.1);border-radius:8.75px;background:#ffffff;padding:10.5px 14px">
           <summary style="font-size:12.25px;font-weight:500;color:#4b5563;cursor:pointer">도움말</summary>
           <div style="display:flex;flex-direction:column;gap:5px;margin-top:10.5px;font-size:12.25px;color:#4b5563;line-height:1.6">

@@ -1429,10 +1429,12 @@ test('선결제권 10% 기준: 미만 서명 불가 · 정확히 10% 가능 · �
     await toStep3(p, 'PGM-0033', '얼굴전체', '기준' + tier, async () => { await click(p, '선결제권'); await click(p, tier); await click(p, '신규 구매 ' + won.toLocaleString('en-US') + '원'); });
     await click(p, '현금', 0);
     assert.match(await body(p), new RegExp('수납액이 10%\\(' + min + '원\\) 이상이면 서명할 수 있어요'));
-    assert.match(await body(p), /오늘 받을 금액이 없습니다/, '프로그램 대금은 선결제권으로 사용');
+    assert.doesNotMatch(await body(p), /오늘 받을 금액이 없습니다|완납 결제|예약금 결제/, '별도로 결제할 항목이 없으면 결제 박스 숨김 (미수금을 오늘 받을 금액으로 처리하지 않음)');
     const lo = Number(tier) * 1000;
     assert.equal(await canSign(p, lo - 1), false, tier + ': 10% 미만');
     assert.equal(await canSign(p, lo), true, tier + ': 정확히 10%');
+    assert.match(await body(p), new RegExp('미수금\\s*' + (won - lo).toLocaleString('en-US') + '원'), tier + ': 남은 금액은 미수금으로만 표시');
+    assert.doesNotMatch(await body(p), /오늘 받을 금액이 없습니다/);
   }
   assert.deepEqual(p.errors, []);
 });

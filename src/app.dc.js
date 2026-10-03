@@ -1281,6 +1281,7 @@ class Component extends DCLogic {
       preBuyTitle: '선결제권 ' + won(preBuy) + '원',
       preShortText: preRcvOver ? '수납액이 선결제권 금액보다 큽니다' : '수납액이 10%(' + won(preMin) + '원) 이상이면 서명할 수 있어요',
       hasNeed: needNum > 0, noNeed: needNum <= 0,
+      payCardShow: !preNew || needNum > 0 || pdOver > 0,   // 선결제권 신규 구매로 별도 결제할 항목이 없으면 '결제' 박스 숨김
       // 결제 내용: 수납액(오늘) · 결제수단 · 예약금 · 미수금 · 프로그램 사용 · 잔액 (같은 금액 반복 없이 결과만)
       sumRows: (() => {
         const rest = Math.max(0, needNum - nowNum), unpaid = preUnpaid + rest;
