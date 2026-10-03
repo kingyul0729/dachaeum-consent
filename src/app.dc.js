@@ -501,7 +501,7 @@ class Component extends DCLogic {
       ['birth', '생년월일', '970727', 'numeric', fmtBirth, v => v.length === 6, '6자리 숫자로 입력해 주세요 (예: 970727)'],
       ['phone', '연락처', '01012345678', 'tel', fmtPhone, v => v.length >= 12, '연락처를 확인해 주세요']];
     const pFields = pfDefs.map(([k, label, ph, im, fmt, ok, msg]) => { const v = P[k] || ''; const bad = !!s.tried1 && !ok(v);
-      return { label, ph, im, value: v, hasErr: bad, errText: msg, bd: bad ? '#d64545' : '#d5d9de', bg: bad ? '#fff6f6' : '#ffffff',
+      return { label, ph, im, value: v, hasErr: bad, errText: msg, bd: bad ? '#d4183d' : 'transparent', bg: '#f3f3f5',
         onInput: e => { const nv = fmt(e.target.value); this.setState(st => ({ patient: { ...(st.patient || {}), [k]: nv } })); } }; });
     const p1ok = pfDefs.every(d => d[5](P[d[0]] || ''));
     // 동명이인·기존 환자 안내: 이름 입력 시 같은 이름의 기존 계약을 환자별로 묶어 표시. 생년월일까지 같으면 '동일인 가능성'
@@ -519,9 +519,9 @@ class Component extends DCLogic {
 
     const steps = ['환자 정보', '프로그램 · 구성', '결제 등록', '미리보기 · 서명'].map((label, i) => {
       const n = i + 1, done = n < s.step, cur = n === s.step;
-      return { n, label, done, notDone: !done, weight: cur ? 600 : 500, fg: cur ? '#1c1f23' : done ? '#5c636b' : '#a4abb3',
-        dotBg: cur ? '#345b80' : done ? '#ffffff' : '#ffffff', dotFg: cur ? '#ffffff' : done ? '#345b80' : '#a4abb3',
-        dotBd: cur ? '#345b80' : done ? '#345b80' : '#dde1e6', lineBg: done ? '#345b80' : '#e3e6ea' };
+      return { n, label, done, notDone: !done, weight: cur ? 600 : 500, fg: cur ? '#0a0a0a' : done ? '#4b5563' : '#9ca3af',
+        dotBg: cur ? '#030213' : done ? '#ffffff' : '#ffffff', dotFg: cur ? '#ffffff' : done ? '#030213' : '#9ca3af',
+        dotBd: cur ? '#030213' : done ? '#030213' : 'rgba(0,0,0,0.1)', lineBg: done ? '#030213' : 'rgba(0,0,0,0.1)' };
     });
 
     const db = s.db;
@@ -546,7 +546,7 @@ class Component extends DCLogic {
       .concat(catsSorted.filter(c => dbAll.some(p => p.cat === c && !p.event)).map(c => ({ label: this.catLabel(c), v: c })))
       .concat([{ label: '전체', v: '전체' }])
       .map(t => { const on = s.pcat === t.v; return { ...t,
-        bg: 'transparent', fg: on ? '#1c1f23' : '#6d747c', bd: on ? '#345b80' : 'transparent', tbg: on ? '#ffffff' : 'transparent', tbd: on ? '#e3e6ea' : 'transparent',
+        bg: 'transparent', fg: on ? '#0a0a0a' : '#717182', bd: on ? '#030213' : 'transparent', tbg: on ? '#ffffff' : 'transparent', tbd: on ? 'rgba(0,0,0,0.1)' : 'transparent',
         onClick: () => this.setState({ pcat: t.v, psub: '', paxis: {}, prog: -1, progId: '' }) }; }) : [];
 
     // 실제 프로그램이 없는 소분류 탭은 숨김
@@ -554,8 +554,8 @@ class Component extends DCLogic {
     const subDef = cfg.subs.find(x => x.label === s.psub) || null;
     const scope = inPcat.filter(p => !subDef || subDef.test(p));
     const pSubs = cfg.subs.length > 1 ? cfg.subs.map(sb => { const on = !!subDef && subDef.label === sb.label; return {
-      label: sb.label, fg: on ? '#345b80' : '#6d747c', fw: on ? 600 : 500,
-      line: on ? '#345b80' : 'transparent',
+      label: sb.label, fg: on ? '#030213' : '#717182', fw: on ? 600 : 500,
+      line: on ? '#030213' : 'transparent',
       onClick: () => this.setState({ psub: on ? '' : sb.label, paxis: {}, prog: -1, progId: '' }) }; }) : [];
 
     const axMatch = (a, p, v) => a.test ? a.test(p, v) : (p.filters || {})[a.key] === v;
@@ -614,7 +614,7 @@ class Component extends DCLogic {
       return sw ? { ...sw, cat: i.cat, qty: sw.qty || i.qty || '1', swappedFrom: i.name } : i; }).filter(Boolean) } : null;
     const svcEditRows = cur0 ? (cur0.items || []).map((i, k) => ({ i, k })).filter(x => x.i.kind === '서비스권' && !/약\s?처방|염증주사/.test(x.i.name)).map(({ i, k }) => {
       const off = svcOff.includes(k), sw = svcSwap[k] || '';
-      return { name: i.name, off, on: !off, strike: off ? 'line-through' : 'none', fg: off ? '#a4abb3' : '#1c1f23',
+      return { name: i.name, off, on: !off, strike: off ? 'line-through' : 'none', fg: off ? '#9ca3af' : '#0a0a0a',
         swap: sw, swapOpts: [{ v: '', label: '그대로' }].concat(SVC_POOL.filter(x => x.name !== i.name).map(x => ({ v: x.name, label: '→ ' + x.name }))),
         onSwap: e => this.setState({ svcSwap: { ...svcSwap, [k]: e.target.value } }),
         toggle: () => this.setState({ svcOff: off ? svcOff.filter(x => x !== k) : svcOff.concat(k) }),
@@ -721,7 +721,7 @@ class Component extends DCLogic {
     const { isEvProg, isYearSB, noPreHair, noRet, discOk, discKey, preTier, preBase, discRate, discBase, totalNum, discLabel, options: discOptions, eventId: discEventId } =
       PR.discount({ cur, held, hairParts: hairPs, hairRate, listNum, optAddSum, all: dbAll, disc: s.disc, preTier: s.preTier, evDef: evDefCur, rateEvents: rateEvs });
     const DK = PR.DISCOUNTS;
-    const chip = on => ({ bd: on ? '#345b80' : '#d5d9de', bg: on ? '#345b80' : '#ffffff', fg: on ? '#ffffff' : '#2b3036' });
+    const chip = on => ({ bd: on ? '#030213' : 'rgba(0,0,0,0.1)', bg: on ? '#030213' : '#ffffff', fg: on ? '#ffffff' : '#0a0a0a' });
 
     const flat = progList.map((p, i) => {
       // 제모: 여러 부위를 한 번에 선택 (누르면 추가/해제)
@@ -731,8 +731,8 @@ class Component extends DCLogic {
       return { ...p, on, hair, pick: hair
         ? () => this.setState(st => { const h = st.hairIds || []; return { ...reset, prog: -1, progId: '', hairIds: h.includes(p.id) ? h.filter(x => x !== p.id) : h.concat(p.id) }; })
         : () => this.setState({ ...reset, prog: i, progId: p.id || '', hairIds: [] }),
-        bd: on ? '#345b80' : '#e3e6ea', bg: on ? '#f6f9fc' : '#ffffff',
-        dot: on ? '#345b80' : '#c9ced4', inner: on ? '#345b80' : 'transparent', showOpts: false, opts: [] }; });
+        bd: on ? '#030213' : 'rgba(0,0,0,0.1)', bg: on ? '#e9ebef' : '#ffffff',
+        dot: on ? '#030213' : 'rgba(0,0,0,0.1)', inner: on ? '#030213' : 'transparent', showOpts: false, opts: [] }; });
     const oCnt = n => (String(n || '').match(/(\d+)\s*회$/) || [])[1] || '1';
     const oLab = m => m.o || (oCnt(m.baseName || m.name) + '회');
     // 카테고리별 구역(programs.json → sections). 없으면 장비 카드를 데이터 순서대로 나열
@@ -759,9 +759,9 @@ class Component extends DCLogic {
         if (hits.length) {
           const m0 = hits[0].D.areas[0].members[0], sel = hits.some(b => b.D.areas[0].members[0].on);
           out.push({ ...T0, isPick: true, head: S.pick.head, area: hits[0].D.areas[0].area, cnt: oCnt(m0.baseName || m0.name) + '회', price: m0.price,
-            bd: sel ? '#345b80' : '#e3e6ea', bg: sel ? '#f6f9fc' : '#ffffff',
+            bd: sel ? '#030213' : 'rgba(0,0,0,0.1)', bg: sel ? '#e9ebef' : '#ffffff',
             btns: hits.map(b => { const m = b.D.areas[0].members[0]; return { label: b.label, pick: m.pick,
-              bd: m.on ? '#345b80' : '#c9d3de', bg: m.on ? '#345b80' : '#ffffff', fg: m.on ? '#ffffff' : '#2b3036' }; }) });
+              bd: m.on ? '#030213' : 'rgba(0,0,0,0.1)', bg: m.on ? '#030213' : '#ffffff', fg: m.on ? '#ffffff' : '#0a0a0a' }; }) });
         }
       }
       (S.devs || []).forEach(d => { if (devMap[d]) { out.push(devMap[d]); devCards.push(devMap[d]); } });
@@ -771,52 +771,52 @@ class Component extends DCLogic {
       D.areas.forEach(A => A.members.sort((a, b) => (parseInt(oLab(a)) || 0) - (parseInt(oLab(b)) || 0)));
       D.rows = D.areas.map((A, ai) => {
         const parts = AREA_SPLIT.includes(A.members[0].cat) ? A.area.split('+') : [A.area], key = D.dev + '|' + A.area;
-        const base = { areaMain: parts[0], areaRest: parts.length > 1 ? '+ ' + parts.slice(1).join(' + ') : '', sep: ai > 0 ? '1px solid #eef0f2' : '0' };
+        const base = { areaMain: parts[0], areaRest: parts.length > 1 ? '+ ' + parts.slice(1).join(' + ') : '', sep: ai > 0 ? '1px solid rgba(0,0,0,0.1)' : '0' };
         const unpick = extra => this.setState({ prog: -1, progId: '', addArea: '', ...extra });
         if (A.members.length === 1) { const m = A.members[0];
           return { ...base, price: m.price, cnt: oLab(m), pick: () => m.on && !m.hair ? unpick({ oGrp: '' }) : (m.pick(), this.setState({ oGrp: '' })), showOpts: false, opts: [],
-            bg: m.on ? '#f6f9fc' : '#ffffff', dot: m.on ? '#345b80' : '#c9ced4', inner: m.on ? '#345b80' : 'transparent' }; }
+            bg: m.on ? '#e9ebef' : '#ffffff', dot: m.on ? '#030213' : 'rgba(0,0,0,0.1)', inner: m.on ? '#030213' : 'transparent' }; }
         const sel = A.members.some(m => m.on), open = sel || s.oGrp === key;
         return { ...base, price: '', cnt: A.members.length > 3 ? oLab(A.members[0]) + ' ~ ' + oLab(A.members[A.members.length - 1]) : A.members.map(oLab).join(' · '), showOpts: open,
           pick: () => open ? unpick({ oGrp: '' }) : unpick({ oGrp: key }),
-          bg: open ? '#f6f9fc' : '#ffffff', dot: open ? '#345b80' : '#c9ced4', inner: sel ? '#345b80' : 'transparent',
+          bg: open ? '#e9ebef' : '#ffffff', dot: open ? '#030213' : 'rgba(0,0,0,0.1)', inner: sel ? '#030213' : 'transparent',
           opts: A.members.map(m => ({ label: oLab(m), sub: m.price, pick: () => m.hair
               // 제모: 같은 부위는 횟수 하나만, 다른 부위는 계속 추가
               ? this.setState(st => { const ids = A.members.map(x => x.id), h = (st.hairIds || []).filter(x => !ids.includes(x));
                   return { prog: -1, progId: '', addArea: '', disc: 'none', preTier: '', preNew: false, preRcvAmt: '', preBuyM: '', oGrp: key, hairIds: m.on ? h : h.concat(m.id) }; })
               : m.on ? unpick({ oGrp: key }) : (m.pick(), this.setState({ oGrp: key })),
-            bd: m.on ? '#345b80' : '#c9d3de', bg: m.on ? '#345b80' : '#ffffff', fg: m.on ? '#ffffff' : '#345b80' })) };
+            bd: m.on ? '#030213' : 'rgba(0,0,0,0.1)', bg: m.on ? '#030213' : '#ffffff', fg: m.on ? '#ffffff' : '#030213' })) };
       });
     });
 
     // 결제수단 타일: 선택 = 남색 테두리 + 연한 파랑 배경, 미선택 = 회색 배경. 아이콘은 카드·현금·계좌이체
-    const payIcon = (m, on) => { const c = on ? '#345b80' : '#7d8fa3', h = React.createElement, P = { fill: 'none', stroke: c, strokeWidth: 1.8, strokeLinecap: 'round', strokeLinejoin: 'round' };
+    const payIcon = (m, on) => { const c = on ? '#030213' : '#717182', h = React.createElement, P = { fill: 'none', stroke: c, strokeWidth: 1.8, strokeLinecap: 'round', strokeLinejoin: 'round' };
       const parts = m === '카드' ? [h('rect', { key: 1, x: 3, y: 5.5, width: 18, height: 13, rx: 2.5, ...P }), h('path', { key: 2, d: 'M3 10h18M7 15h4', ...P })]
         : m === '현금' ? [h('rect', { key: 1, x: 2.5, y: 6, width: 19, height: 12, rx: 2.5, ...P }), h('circle', { key: 2, cx: 12, cy: 12, r: 2.6, ...P }), h('path', { key: 3, d: 'M6 9.5v5M18 9.5v5', ...P })]
         : [h('path', { key: 1, d: 'M3 9.5L12 4l9 5.5M5 10v7M9.7 10v7M14.3 10v7M19 10v7M3 19.5h18', ...P })];
       return h('svg', { width: 24, height: 24, viewBox: '0 0 24 24' }, parts); };
-    const tile = (m, on) => ({ tbd: on ? '#345b80' : '#f2f4f6', tbg: on ? '#f3f7fb' : '#f2f4f6', icon: payIcon(m, on) });
+    const tile = (m, on) => ({ tbd: on ? '#030213' : '#f9fafb', tbg: on ? '#e9ebef' : '#f9fafb', icon: payIcon(m, on) });
     // 선택 표시: 선택 = 채운 원 + 흰 체크, 미선택 = 연한 테두리 + 연한 체크
-    const ck = on => ({ ckBg: on ? '#345b80' : '#ffffff', ckBd: on ? '#345b80' : '#c9ced4', ckFg: on ? '#ffffff' : '#c9ced4' });
+    const ck = on => ({ ckBg: on ? '#030213' : '#ffffff', ckBd: on ? '#030213' : 'rgba(0,0,0,0.1)', ckFg: on ? '#ffffff' : 'rgba(0,0,0,0.1)' });
     // 결제수단 최대 2개(분할결제). 세 번째를 누르면 두 번째를 교체
     const selM = s.mSel || [];
     const methods = ['카드', '현금', '계좌이체'].map(m => { const on = selM.includes(m);
-      return { label: m, ...ck(on), ...tile(m, on), fg: on ? '#1c1f23' : '#5c636b', fw: on ? 600 : 500,
+      return { label: m, ...ck(on), ...tile(m, on), fg: on ? '#0a0a0a' : '#4b5563', fw: on ? 600 : 500,
         pick: () => { const next = on ? selM.filter(x => x !== m) : (selM.length >= 2 ? [selM[0], m] : selM.concat(m));
           this.setState({ mSel: next, method: next.join(' + ') }); } }; });
 
     const tabs = [['status', '계약 정보'], ['docs', '문서']].map(([k, label]) => ({
       label, pick: () => this.setState({ tab: k }), weight: s.tab === k ? 600 : 500,
-      fg: s.tab === k ? '#1c1f23' : '#8d949b', bd: s.tab === k ? '#345b80' : 'transparent', tbg: s.tab === k ? '#ffffff' : 'transparent', tbd: s.tab === k ? '#e3e6ea' : 'transparent' }));
+      fg: s.tab === k ? '#0a0a0a' : '#717182', bd: s.tab === k ? '#030213' : 'transparent', tbg: s.tab === k ? '#ffffff' : 'transparent', tbd: s.tab === k ? 'rgba(0,0,0,0.1)' : 'transparent' }));
 
     const curP = (s.contract && s.contract.patient) || {};
     const curPk = (curP.name || '') + '|' + (curP.birth || '');
     const docPg = this.pager((s.docs || []).filter(d => d.pk === curPk).length, 6, 'docPage');
     const docList = (s.docs || []).filter(d => d.pk === curPk).slice().reverse().map(d => ({ title: d.title, fileName: d.fileName,
       meta: d.program + ' · 서명 ' + d.signedAt + ' · v' + d.version,
-      verLabel: d.superseded ? '대체됨' : '최종본', verBg: d.superseded ? '#f2f3f5' : 'rgba(52,91,128,0.08)', verFg: d.superseded ? '#8d949b' : '#2a4b6b',
-      titleFg: d.superseded ? '#8d949b' : '#1c1f23', thumbOp: d.superseded ? 0.55 : 1,
-      thumb: React.createElement('div', { style: { width: 148, height: 209, overflow: 'hidden', background: '#ffffff', boxShadow: '0 1px 6px rgba(28,31,35,0.14)', pointerEvents: 'none', position: 'relative' } },
+      verLabel: d.superseded ? '대체됨' : '최종본', verBg: d.superseded ? '#f9fafb' : 'rgba(3,2,19,.08)', verFg: d.superseded ? '#717182' : '#1c1b2b',
+      titleFg: d.superseded ? '#717182' : '#0a0a0a', thumbOp: d.superseded ? 0.55 : 1,
+      thumb: React.createElement('div', { style: { width: 148, height: 209, overflow: 'hidden', background: '#ffffff', boxShadow: '0 1px 6px rgba(0,0,0,.14)', pointerEvents: 'none', position: 'relative' } },
         d.html ? React.createElement('div', { style: { width: 740, transform: 'scale(0.2)', transformOrigin: '0 0', position: 'absolute', top: 0, left: 0 }, dangerouslySetInnerHTML: { __html: this.cleanHtml(d.html) } }) : null),
       canResign: !d.superseded && d.kind === '이용동의서' && s.cStatus === '등록완료',
       // 서명된 문서(동의서·환불 정산서)는 일반 삭제 대상이 아님 → 삭제 버튼 숨김
@@ -944,7 +944,7 @@ class Component extends DCLogic {
       const canInc = isAdd ? u < 99 : !(it.qty && u >= it.qty) && !(C.cap && usedCnt >= C.cap);
       const vsel = (s.rfVar && s.rfVar[k]) || [];
       const variants = (it.variants || []).map(v => { const on = vsel.includes(v); return { label: v,
-        bd: on ? '#345b80' : '#dde1e6', bg: on ? '#f6f9fc' : '#fff', fg: on ? '#345b80' : '#6d747c',
+        bd: on ? '#030213' : 'rgba(0,0,0,0.1)', bg: on ? '#e9ebef' : '#fff', fg: on ? '#030213' : '#717182',
         pick: () => this.setState(st => { const cur0 = (st.rfVar && st.rfVar[k]) || [];
           return { rfVar: { ...(st.rfVar || {}), [k]: cur0.includes(v) ? cur0.filter(x => x !== v) : cur0.concat([v]) } }; }) }; });
       return { hasVar: variants.length > 0, variants,
@@ -954,15 +954,15 @@ class Component extends DCLogic {
         isLes: act(it) && u > 0, lesNote: isBS(it) ? '실제 시술 병변별 크기 선택 · ' + RF.tiersOf(it, db).map(t => t.short + ' ' + won(t.price)).join(' / ') : act(it) ? (Number(it.price) ? '1개 ' + won(it.price) + '원부터 · 병변별 정상가 입력' : '실제 시술 병변별 정상가 입력') : '',
         lesRows: act(it) ? lesOf(k).map((v, j) => { const bad = RF.lesionRowBad(it, v, db);
           const setL = x => updLes(k, a => { a[j] = x; return a; });
-          return { no: '병변 ' + (j + 1), val: v, bd: bad ? '#d64545' : '#d5d9de', isNum: !isBS(it), isSize: isBS(it),
+          return { no: '병변 ' + (j + 1), val: v, bd: bad ? '#d4183d' : 'transparent', isNum: !isBS(it), isSize: isBS(it),
             sizes: isBS(it) ? RF.tiersOf(it, db).map(t => { const on = v === t.label; return { label: t.label, price: won(t.price), pick: () => setL(t.label),
-              bd: on ? '#1c1f23' : bad ? '#d64545' : '#d5d9de', bg: on ? '#1c1f23' : '#ffffff', fg: on ? '#ffffff' : '#1c1f23' }; }) : [],
+              bd: on ? '#0a0a0a' : bad ? '#d4183d' : 'rgba(0,0,0,0.1)', bg: on ? '#0a0a0a' : '#ffffff', fg: on ? '#ffffff' : '#0a0a0a' }; }) : [],
             onVal: e => { const x = e.target.value.replace(/[^0-9]/g, ''); setL(x ? Number(x).toLocaleString('ko-KR') : ''); },
             del: () => updLes(k, a => a.filter((_, i2) => i2 !== j)) }; }) : [],
         docName: isBS(it) && u ? it.name + ' (' + lesOf(k).map(v => v + ' ' + won(RF.tierPrice(RF.tiersOf(it, db), v)) + '원').join(', ') + ')' : act(it) && u ? it.name + ' (' + lesOf(k).map(v => (v || '0') + '원').join(', ') + ')' : it.name + (vsel.length ? ' (이용: ' + vsel.join(', ') + ')' : ''),
         dec: act(it) ? () => updLes(k, a => a.slice(0, -1)) : () => this.setUsed(k, -1, C),
         inc: act(it) ? () => updLes(k, a => a.concat([''])) : () => this.setUsed(k, 1, C),
-        decFg: u > 0 ? '#1c1f23' : '#c9ced4', incFg: canInc ? '#1c1f23' : '#c9ced4' };
+        decFg: u > 0 ? '#0a0a0a' : 'rgba(0,0,0,0.1)', incFg: canInc ? '#0a0a0a' : 'rgba(0,0,0,0.1)' };
     });
     // 서비스 이용 기록: 모든 프로그램 공통 — 염증주사 · 약처방 · 알러지케어 (DB 정산단가)
     // 계약 당시 서비스 정산단가 우선 (svcPrices가 없는 이전 계약만 현재 가격표 사용)
@@ -992,13 +992,13 @@ class Component extends DCLogic {
       const optText = o => o.price != null ? won(o.price) : (RF.fixOf(C, RF.svcKey({ key: vKey(o) })) != null ? won(RF.fixOf(C, RF.svcKey({ key: vKey(o) }))) + ' (보완)' : '단가 확인 필요');
       // 항목별 기록: 해당 행 바로 아래 작은 태그로 표시 (주차순)
       const recs = V.map((v, vi) => ({ v, vi })).filter(x => (x.v.label || '').split(' · ')[0] === g.title);
-      return { sep: gi ? '1px solid #eef0f2' : '0', title: g.title, optLabel: g.optLabel, week, pick, qty,
+      return { sep: gi ? '1px solid rgba(0,0,0,0.1)' : '0', title: g.title, optLabel: g.optLabel, week, pick, qty,
         hasRecs: recs.length > 0, recSum: won(recs.reduce((t, x) => t + ((RS.visits[x.vi] || {}).price || 0), 0)) + '원',
         recs: recs.map(x => ({ week: x.v.week ? x.v.week + '주' : '', label: (x.v.label.split(' · ')[1] || '1회'),
           del: () => this.setState({ rfVisits: V.filter((_, j) => j !== x.vi) }) })), hasOpts: g.opts.length > 1, noOpts: g.opts.length <= 1,
         single: g.opts[0] ? g.opts[0].label + ' · ' + optText(g.opts[0]) + (g.opts[0].price != null ? '원' : '') : '',
         opts: g.opts.map((o, i) => { const on = String(i) === String(pick) || (g.opts.length === 1);
-          return { v: String(i), label: o.label, price: optText(o), bd: on ? '#345b80' : '#c9ced4', dot: on ? '#345b80' : 'transparent', fg: on ? '#1c1f23' : '#5c636b',
+          return { v: String(i), label: o.label, price: optText(o), bd: on ? '#030213' : 'rgba(0,0,0,0.1)', dot: on ? '#030213' : 'transparent', fg: on ? '#0a0a0a' : '#4b5563',
             pick: () => upd({ pick: String(i) }) }; }),
         onWeek: e => upd({ week: e.target.value }), onPick: e => upd({ pick: e.target.value }),
         dec: () => upd({ qty: Math.max(1, qty - 1) }), inc: () => upd({ qty: Math.min(20, qty + 1) }),
@@ -1033,7 +1033,7 @@ class Component extends DCLogic {
     const rfDraft = () => ({ used: s.rfUsed || null, visits: V, les: s.rfLes || null, vars: s.rfVar || null, alloc: s.rfAlloc || null, reason: rfReason });
     const reasons = ['개인 사정', '이사 · 거리', '건강상 사유', '시술 불만족'].map(r => {
       const on = r === rfReason; return { label: r, pick: () => this.setState({ rfReason: r }),
-        bd: on ? '#345b80' : '#dde1e6', bg: on ? '#f6f9fc' : '#fff', fg: on ? '#345b80' : '#4a5158' }; });
+        bd: on ? '#030213' : 'rgba(0,0,0,0.1)', bg: on ? '#e9ebef' : '#fff', fg: on ? '#030213' : '#4b5563' }; });
     const rDocRows = rItems.map(r => ({ kind: r.kind, name: r.docName, reg: C.cap ? '—' : (C.items[rItems.indexOf(r)].qty || '—'),
       used: r.used, price: r.price, amt: r.amt }))
       // 정산서: 서비스 기록을 항목별 1줄로 묶음 — 예) 염증주사 (4주차 2~5부위, 8주차 1부위)
@@ -1053,7 +1053,7 @@ class Component extends DCLogic {
       rfTotal: won(C.total), rfPaid: won(paidEff), rfPen: won(penNum),
       rfPayRows: rfPays.map((p, i) => { const a = RS.amounts[i], over = RS.over[i];
         return { method: p.prepaid ? '선결제권 잔액 복원' : p.method, paid: won(p.amount) + '원', val: rfAlloc[i] || '', left: won(Math.max(0, Number(p.amount || 0) - a)) + '원',
-          bd: over ? '#d64545' : '#d5d9de', err: over, errText: '원결제 금액을 넘을 수 없습니다',
+          bd: over ? '#d4183d' : 'transparent', err: over, errText: '원결제 금액을 넘을 수 없습니다',
           onVal: e => { const v = e.target.value.replace(/[^0-9]/g, ''); this.setState(st => ({ rfAlloc: { ...(st.rfAlloc || {}), [i]: v ? Number(v).toLocaleString('ko-KR') : '' } })); } }; }),
       rfAllocSum: won(allocSum) + '원', rfMulti: rfPays.length > 1,
       // 실제 납부액 구성: 선결제권 사용분(환불 시 잔액 복원)과 카드·현금·계좌 수납(원결제 수단으로 반환)을 구분해 표시
@@ -1064,7 +1064,7 @@ class Component extends DCLogic {
         paid: won(p.amount) + '원', refund: won(RS.amounts[i] || 0) + '원' })),
       rfMethodSum: won(allocSum) + '원',
       rfAllocMsg: allocMsg,
-      rfAllocFg: allocOk ? '#2f6b45' : '#b4483f',
+      rfAllocFg: allocOk ? '#0a0a0a' : '#d4183d',
       rfUsedAmt: won(usedAmt), rfUsedBreak: '시술 ' + won(trtAmt) + ' + 서비스 ' + won(svcAmt),
       rfMissing: RS.missing.length > 0, rfMissingText: RS.missing.map(m => m.label).join(', '), supplyPrices,
       hasPriceFixes: !!(C.priceFixes && C.priceFixes.length),
@@ -1144,10 +1144,15 @@ class Component extends DCLogic {
       isList: S === 'list', isNew: S === 'new', isDetail: S === 'detail', isRefund: S === 'refund',
       isSign, isRefundSign,
       showBack: S !== 'list', goList: () => { if (S === 'refund') this.saveDraft(); this.setState({ screen: 'list' }); },
+      // 디자인 기준(B) 헤더: 뒤로가기 화살표 + 화면 제목. 새 동의서 작성 중에는 기존 '이전'(1단계는 '취소') 동작, 그 외 화면은 목록으로
+      goBack: () => S === 'new' ? bar.onS() : (S === 'refund' && this.saveDraft(), this.setState({ screen: 'list' })),
+      backTitle: S === 'new' ? (s.step === 1 ? '취소' : '이전') : '목록',
+      headTitle: S === 'new' ? ['환자 정보', '프로그램 · 구성', '결제 등록', '미리보기 · 서명'][s.step - 1] || '' : S === 'detail' ? ((C.patient || {}).name || '') + ' · ' + (C.program || '') : S === 'refund' ? '환불 정산' : '이용·환불 동의서',
+      stepPct: (Math.min(4, Math.max(1, s.step || 1)) * 25) + '%',
       title: t[0],
       rows: rows.slice(listPg.start, listPg.start + listPg.size), noRows: !rows.length, listPg,
-      nameArr: sk === 'name' ? (sd === 'asc' ? '▲' : '▼') : '▲', nameArrFg: sk === 'name' ? '#345b80' : '#c3c8ce',
-      dateArr: sk === 'date' ? (sd === 'asc' ? '▲' : '▼') : '▼', dateArrFg: sk === 'date' ? '#345b80' : '#c3c8ce',
+      nameArr: sk === 'name' ? (sd === 'asc' ? '▲' : '▼') : '▲', nameArrFg: sk === 'name' ? '#030213' : '#9ca3af',
+      dateArr: sk === 'date' ? (sd === 'asc' ? '▲' : '▼') : '▼', dateArrFg: sk === 'date' ? '#030213' : '#9ca3af',
       sortName: () => this.setState({ sortKey: 'name', sortDir: sk === 'name' && sd === 'asc' ? 'desc' : 'asc' }),
       sortDate: () => this.setState({ sortKey: 'date', sortDir: sk === 'date' && sd === 'desc' ? 'asc' : 'desc' }), steps, programs: programs.map(p => p.rows ? { ...p, rows: p.rows.map(r => ({ ...r, step: this.stepOf(r.opts) })) } : p), methods, tabs,
       pq: s.pq, onPq: e => this.setState({ pq: e.target.value, prog: -1, progId: '' }),
@@ -1162,7 +1167,7 @@ class Component extends DCLogic {
       onAmount: e => { const v = e.target.value.replace(/[^0-9]/g, '');
         this.setState(st => ({ amounts: { ...st.amounts, [manualKey]: v } })); },
       hasUnitFix: unitFixLines.length > 0,
-      unitFixRows: unitFixLines.map(l => ({ name: l.name, value: fixVal(l.key) ? won(fixVal(l.key)) : '', bd: s.tried3 && !fixVal(l.key) ? '#d64545' : '#d5d9de',
+      unitFixRows: unitFixLines.map(l => ({ name: l.name, value: fixVal(l.key) ? won(fixVal(l.key)) : '', bd: s.tried3 && !fixVal(l.key) ? '#d4183d' : 'transparent',
         onInput: e => { const v = e.target.value.replace(/[^0-9]/g, ''); this.setState(st => ({ unitFix: { ...(st.unitFix || {}), [fixKey(l.key)]: v } })); } })),
       unitInput: (s.units && s.units[manualKey]) ? Number(s.units[manualKey]).toLocaleString('ko-KR') : '',
       onUnit: e => { const v = e.target.value.replace(/[^0-9]/g, '');
@@ -1170,9 +1175,10 @@ class Component extends DCLogic {
       st1: s.step === 1, st2: s.step === 2, st3: false, st4: s.step === 3,
       // 2단계 우측: 선택 구성 확인 (동의서는 버튼으로만 표시)
       // 3단계(결제 등록)는 고정 미리보기 없이 결제 내용만 표시하고, 상단 '미리보기' 버튼으로 필요할 때만 동의서를 엶
-      notSt2: s.step !== 2, showPv: s.step === 1 || !!s.pvOn, showSel: s.step === 2 && !s.pvOn, showPaySum: s.step === 3 && !s.pvOn,
-      pvHeadShow: s.step === 2 || s.step === 3, pvSubTitle: s.step === 1 ? '실시간 미리보기' : '',
-      pvHead: s.pvOn ? '동의서 미리보기' : s.step === 3 ? '결제 내용' : '선택 프로그램', pvBtn: s.pvOn ? (s.step === 3 ? '닫기' : '구성 보기') : s.step === 3 ? '미리보기' : '동의서 보기',
+      // 한 줄 세로 배치: 동의서 미리보기는 단계마다 '동의서 보기'(미리보기) 버튼을 눌렀을 때만 표시
+      notSt2: s.step !== 2, showPv: !!s.pvOn, showSel: s.step === 2 && !s.pvOn, showPaySum: s.step === 3 && !s.pvOn,
+      pvHeadShow: s.step >= 1 && s.step <= 3, pvSubTitle: '',
+      pvHead: s.pvOn ? '동의서 미리보기' : s.step === 3 ? '결제 내용' : s.step === 2 ? '선택 프로그램' : '', pvBtn: s.pvOn ? (s.step === 2 ? '구성 보기' : '닫기') : s.step === 3 ? '미리보기' : '동의서 보기',
       togglePv: () => this.setState(st => ({ pvOn: !st.pvOn })),
       hasSel: !!cur, noSel: !cur, selPrice: cur ? (listNum ? won(listNum) + '원' : '금액 입력') : '',
       hasBaseSel: docItems.some(i => !i.isAdd && i.kind === '시술'),
@@ -1182,7 +1188,7 @@ class Component extends DCLogic {
       toggleCkRefund: () => this.setState(st => ({ ckRefund: !st.ckRefund })),
       isLesion, notLesion: !isLesion, lesionRows,
       lesionSites: ['이마', '우측 관자', '좌측 관자', '우측 광대', '좌측 광대', '우측 볼', '좌측 볼', '코', '턱', '목', '손등', '기타'].map(v => ({ v })),
-      lesionStep: { label: LS.length + '개', decFg: LS.length > 1 ? '#345b80' : '#c9ced4', incFg: '#345b80',
+      lesionStep: { label: LS.length + '개', decFg: LS.length > 1 ? '#030213' : 'rgba(0,0,0,0.1)', incFg: '#030213',
         dec: () => LS.length > 1 && this.setState(st => ({ lesions: (st.lesions || LS).slice(0, -1) })),
         inc: () => this.setState(st => ({ lesions: (st.lesions || LS).concat([{ site: '', size: '' }]) })) },
       items: isLesion ? lesionRows.map(r => ({ kind: '시술', name: '흑자 ' + r.no + ' · ' + r.siteText + ' ' + r.sizeText + ' — 피코 532 1회 + 레블라이트 SI 4회',
@@ -1215,8 +1221,8 @@ class Component extends DCLogic {
         const paid = Math.round(Number(a.price || 0) * (n - m) / n);
         return { label: a.name.replace(/\s*\(\s*\d+\s*회\s*\)/g, '') + ' ' + n + '회', price: m >= n && on ? '서비스' : '+' + won(on ? paid : a.price) + '원',
           multi: on && n > 1, onSingle: on && n <= 1, stop: e => e.stopPropagation(), svN: m + '회', svDec: e => { e.stopPropagation(); setM(m - 1); }, svInc: e => { e.stopPropagation(); setM(m + 1); },
-          svDecFg: m > 0 ? '#345b80' : '#c9ced4', svIncFg: m < n ? '#345b80' : '#c9ced4', ckBd: on ? '#345b80' : '#c9ced4', ckBg: on ? '#345b80' : '#ffffff', fg: on ? '#1c1f23' : '#4a5158',
-          on, svBd: sv ? '#345b80' : '#c9ced4', svBg: sv ? '#345b80' : '#ffffff', svFg: sv ? '#1c1f23' : '#6d747c', priceFg: sv ? '#345b80' : '#6d747c',
+          svDecFg: m > 0 ? '#030213' : 'rgba(0,0,0,0.1)', svIncFg: m < n ? '#030213' : 'rgba(0,0,0,0.1)', ckBd: on ? '#030213' : 'rgba(0,0,0,0.1)', ckBg: on ? '#030213' : '#ffffff', fg: on ? '#0a0a0a' : '#4b5563',
+          on, svBd: sv ? '#030213' : 'rgba(0,0,0,0.1)', svBg: sv ? '#030213' : '#ffffff', svFg: sv ? '#0a0a0a' : '#717182', priceFg: sv ? '#030213' : '#717182',
           pickSv: e => { e.stopPropagation(); setM(sv ? 0 : n); },
           pick: () => this.setState(st => ({ addSel: on ? addSel.filter(x => x !== a.id) : addSel.concat(a.id), addSvc: addSvc.filter(x => x !== a.id), addSvN: { ...(st.addSvN || {}), [a.id]: 0 } })) }; }) : [],
       capNote: capped,
@@ -1250,7 +1256,7 @@ class Component extends DCLogic {
         { k: '차감 후 남은 선결제권 잔액' + (preNew && !preRcvFull ? ' (예상)' : ''), v: won(preLeft) + '원', strong: true },
         ...(priorDep > 0 ? [{ k: '기납부 예약금 (이 계약에 이미 받은 금액)', v: won(pdUse) + '원' }] : []),
         { k: '추가 결제 필요금액', v: won(needNum) + '원', strong: true }
-      ].map(l => ({ ...l, fw: l.strong ? 600 : 400, fg: l.warn ? '#b3261e' : '#2b3036' })),
+      ].map(l => ({ ...l, fw: l.strong ? 600 : 400, fg: l.warn ? '#d4183d' : '#0a0a0a' })),
       showBalIn: true,
       priorDepIn: s.priorDep ? won(numOf(s.priorDep)) : '', onPriorDep: e => this.setState({ priorDep: e.target.value.replace(/[^0-9]/g, '') }),
       hasPreBal: preBal > 0, preBalText: '− ' + won(Math.min(preBal, totalNum)) + '원',
@@ -1266,9 +1272,9 @@ class Component extends DCLogic {
       isDeposit: dep,
       isPrepaid: !!cur && /선결제/.test([cur.baseName || cur.name, cur.cat, cur.sub].join(' ')),
       pickDeposit: () => this.setState({ pay: 'deposit' }), pickFull: () => this.setState({ pay: 'full' }),
-      depBd: dep ? '#345b80' : '#e3e6ea', depBg: dep ? '#f6f9fc' : '#ffffff',
-      fullBd: dep ? '#e3e6ea' : '#345b80', fullBg: dep ? '#ffffff' : '#f6f9fc',
-      depCk: ck(dep), fullCk: ck(!dep), depFg: dep ? '#1c1f23' : '#5c636b', fullFg: dep ? '#5c636b' : '#1c1f23',
+      depBd: dep ? '#030213' : 'rgba(0,0,0,0.1)', depBg: dep ? '#e9ebef' : '#ffffff',
+      fullBd: dep ? 'rgba(0,0,0,0.1)' : '#030213', fullBg: dep ? '#ffffff' : '#e9ebef',
+      depCk: ck(dep), fullCk: ck(!dep), depFg: dep ? '#0a0a0a' : '#4b5563', fullFg: dep ? '#4b5563' : '#0a0a0a',
       depText: won(depAmt) + '원', fullText: won(needNum) + '원',
       payHero: preNew && !preRcvFull ? '선결제권 미수 ' + won(Math.max(0, preBuy - preRcvAmt)) + '원' : (dep ? depAmt : needNum) > 0 ? won(dep ? depAmt : needNum) + '원을 결제할게요'
         : dep && needNum > 0 ? '추가 예약금 없이 등록할게요 (미수 ' + won(needNum) + '원)' : '추가 결제 없이 등록할게요',
@@ -1290,7 +1296,7 @@ class Component extends DCLogic {
           ...(pdUse > 0 ? [{ k: '이미 받은 예약금', v: won(pdUse) + '원' }] : []),
           ...(preUse > 0 && !partial ? [{ k: '프로그램 사용 (선결제권)', v: won(preUse) + '원' + (balUse > 0 && newUse > 0 ? ' (보유 ' + won(balUse) + ' + 신규 ' + won(newUse) + ')' : '') }] : []),
           ...((balIn > 0 || preNew) && !partial ? [{ k: '남은 선결제권', v: won(preLeft) + '원', strong: true }] : [])];
-        return rows.map((r, i) => ({ ...r, sep: i ? '1px solid #eef0f2' : '0', fs: r.big ? '18px' : '14px', fw: r.big || r.strong ? 700 : 500, fg: r.warn ? '#b3261e' : '#1c1f23' }));
+        return rows.map((r, i) => ({ ...r, sep: i ? '1px solid rgba(0,0,0,0.1)' : '0', fs: r.big ? '18px' : '14px', fw: r.big || r.strong ? 700 : 500, fg: r.warn ? '#d4183d' : '#0a0a0a' }));
       })(),
       payLabel: payLabels.label, payNow: payLabels.now, payRest: payLabels.rest,
       tabStatus: s.tab === 'status', tabDocs: s.tab === 'docs',
@@ -1302,7 +1308,7 @@ class Component extends DCLogic {
       hasSigImg: !!s.sigImg, noSigImg: !s.sigImg,
       sigEl: s.sigImg ? React.createElement('img', { src: s.sigImg,
         style: { position: 'absolute', left: 0, bottom: '1px', width: '100%', height: '25px', objectFit: 'contain' } }) : null,
-      okBg: s.sig ? '#345b80' : '#e8ebee', okFg: s.sig ? '#ffffff' : '#a4abb3',
+      okBg: s.sig ? '#030213' : 'rgba(0,0,0,0.1)', okFg: s.sig ? '#ffffff' : '#9ca3af',
       exitSign: () => this.setState({ screen: 'new', step: 4 }),
       exitRefundSign: () => this.setState({ screen: 'refund' }),
       ...rf,
@@ -1346,7 +1352,7 @@ class Component extends DCLogic {
       dupRows: (dup || []).map((d, i) => ({ sep: i ? '1px solid #f2ead8' : '0', name: d.p.name, birth: d.p.birth || '-', phone: d.p.phone || '-',
         last: d.last + ' ' + (d.lastProg || ''), n: d.n,
         ...(() => { const key = d.p.name + '|' + d.p.birth, on = s.dupPick === key;
-          return { ckBd: on ? '#345b80' : '#c9ced4', ckBg: on ? '#345b80' : '#ffffff',
+          return { ckBd: on ? '#030213' : 'rgba(0,0,0,0.1)', ckBg: on ? '#030213' : '#ffffff',
             use: () => on ? this.setState({ dupPick: '', patient: { ...(s.patient || {}), phone: '' } }) : this.setState({ dupPick: key, patient: { ...(s.patient || {}), ...d.p } }) }; })() })),
       pName: isResign ? C.patient.name : (P.name || ''), pBirth: isResign ? C.patient.birth : (P.birth || ''), pPhone: isResign ? C.patient.phone : (P.phone || ''),
       methodText: isResign ? C.method : methodStr,
@@ -1356,7 +1362,7 @@ class Component extends DCLogic {
       newForPatient: () => this.setState({ ...NEW_RESET, screen: 'new', step: 2, patient: { ...C.patient }, cSel: false }),
       isSplit, hasCash, splitA: selM[0] || '', splitB: selM[1] || '', split1: s.split1 || '', split2Text: won(Math.max(0, nowNum - a1)) + '원',
       onSplit1: e => { const v = e.target.value.replace(/[^0-9]/g, ''); this.setState({ split1: v ? Number(v).toLocaleString('ko-KR') : '' }); },
-      rcptOpts: ['발급', '미발급'].map(v => ({ label: v, ...ck(rcpt === v), fg: rcpt === v ? '#1c1f23' : '#5c636b', pick: () => this.setState({ cashRcpt: v }) })),
+      rcptOpts: ['발급', '미발급'].map(v => ({ label: v, ...ck(rcpt === v), fg: rcpt === v ? '#0a0a0a' : '#4b5563', pick: () => this.setState({ cashRcpt: v }) })),
       // 결제 정보: 입력은 임시(payDraft)에만 반영 → [저장] → 1차 확인 → [확인 후 저장]에서만 계약에 기록
       ...(() => { const saved = (C && C.payments) || [], draft = s.payDraft, dirty = !!draft;
         const doSave = () => this.setState(st => { const c = { ...st.contract, payments: st.payDraft };
@@ -1370,13 +1376,13 @@ class Component extends DCLogic {
             this.setState({ payConfirm: true }); },
           payCancelConfirm: () => this.setState({ payConfirm: false }), payDoSave: doSave,
           payRevert: () => this.setState({ payDraft: null }),
-          paySaveBg: dirty ? '#345b80' : '#c3ccd6',
+          paySaveBg: dirty ? '#030213' : 'rgba(0,0,0,0.1)',
           payConfirmRows: cur2.map(p => ({ title: p.method + ' ' + won(p.amount) + '원',
             lines: p.method === '카드'
               ? [['카드사', p.bank === '기타' ? (p.bankEtc || '-') : (p.bank || '-')], ['카드번호 뒤 4자리', p.cardNo || '-'], ['결제일', p.payDate || C.date || '-'], ['승인번호', p.approval || '-'], ['할부', p.inst || '일시불']]
               : [['현금영수증', p.rcpt || '미발급']].concat(p.rcpt === '발급' ? [['용도', p.rcptUse || '소득공제'], ['발급번호', p.rcptNo || '-'], ['승인번호', p.rcptAppr || '-']] : []),
-            ok: this.payDone({ ...p, payDate: p.payDate || C.date }) })).map(r => ({ ...r, lines: r.lines.map(([k, v]) => ({ k, v, fg: v === '-' ? '#b3261e' : '#1c1f23' })),
-              okText: r.ok ? '입력 완료' : '빈 항목 있음', okFg: r.ok ? '#6d747c' : '#7a5115' })) }; })(),
+            ok: this.payDone({ ...p, payDate: p.payDate || C.date }) })).map(r => ({ ...r, lines: r.lines.map(([k, v]) => ({ k, v, fg: v === '-' ? '#d4183d' : '#0a0a0a' })),
+              okText: r.ok ? '입력 완료' : '빈 항목 있음', okFg: r.ok ? '#717182' : '#4b5563' })) }; })(),
       payInfo: (s.payDraft || (C && C.payments) || []).map((p, i) => {
         const upd = (k, fmt) => e => { const v = fmt ? fmt(e.target.value) : e.target.value;
           this.setState(st => { const base = st.payDraft || (st.contract && st.contract.payments) || [];
@@ -1396,8 +1402,8 @@ class Component extends DCLogic {
           onRcptNo: upd('rcptNo', v => { const d = v.replace(/[^0-9]/g, '').slice(0, 11);
             if (/^01/.test(d)) return d.length > 7 ? d.slice(0, 3) + '-' + d.slice(3, 7) + '-' + d.slice(7) : d.length > 3 ? d.slice(0, 3) + '-' + d.slice(3) : d;
             return d.length > 5 ? d.slice(0, 3) + '-' + d.slice(3, 5) + '-' + d.slice(5, 10) : d.length > 3 ? d.slice(0, 3) + '-' + d.slice(3) : d; }),
-          ...(s.payDraft ? { stateText: '저장 안 됨', stateBg: '#eef3f8', stateFg: '#345b80' }
-            : { stateText: todo ? '입력 필요' : '입력 완료', stateBg: todo ? '#fdf6ec' : '#f2f3f5', stateFg: todo ? '#7a5115' : '#6d747c' }) }; }),
+          ...(s.payDraft ? { stateText: '저장 안 됨', stateBg: '#e9ebef', stateFg: '#030213' }
+            : { stateText: todo ? '입력 필요' : '입력 완료', stateBg: todo ? '#f9fafb' : '#f9fafb', stateFg: todo ? '#4b5563' : '#717182' }) }; }),
       hasPayInfo: !!(C && C.payments && C.payments.length),
       // 잔금 결제: 예약금 계약의 남은 금액을 결제수단별로 기록 → 결제내역(payments)·납부금액(paid)에 누적. 기존 결제 기록은 그대로 두고 추가만 함
       ...(() => {
@@ -1423,8 +1429,8 @@ class Component extends DCLogic {
           this.flash('잔금 결제가 기록되었습니다');
         };
         return { balShow: show, balRest: won(rest), balAmt: s.balAmt ? won(numOf(s.balAmt)) : '', balDate: date, balIsCash: !!bm && bm !== '카드',
-          balMethods: ['카드', '현금', '계좌이체'].map(m => { const on = bm === m; return { label: m, ...ck(on), ...tile(m, on), fg: on ? '#1c1f23' : '#5c636b', fw: on ? 600 : 500, pick: () => this.setState({ balMethod: m }) }; }),
-          balRcptOpts: ['발급', '미발급'].map(v => ({ label: v, ...ck(brc === v), fg: brc === v ? '#1c1f23' : '#5c636b', pick: () => this.setState({ balRcpt: v }) })),
+          balMethods: ['카드', '현금', '계좌이체'].map(m => { const on = bm === m; return { label: m, ...ck(on), ...tile(m, on), fg: on ? '#0a0a0a' : '#4b5563', fw: on ? 600 : 500, pick: () => this.setState({ balMethod: m }) }; }),
+          balRcptOpts: ['발급', '미발급'].map(v => ({ label: v, ...ck(brc === v), fg: brc === v ? '#0a0a0a' : '#4b5563', pick: () => this.setState({ balRcpt: v }) })),
           onBalAmt: e => this.setState({ balAmt: e.target.value.replace(/[^0-9]/g, '') }), onBalDate: e => this.setState({ balDate: e.target.value }),
           saveBalance: save };
       })(),
@@ -1437,10 +1443,10 @@ class Component extends DCLogic {
         return { cCount: list.length, cListView: !s.cSel, cDetailView: !!s.cSel,
           backToCList: () => { if (s.payDraft && !confirm('저장하지 않은 결제 정보가 있습니다. 저장하지 않고 나갈까요?')) return; this.setState({ cSel: false, payDraft: null }); },
           cRows: list.map((c, i) => { const todo = payTodo(c), refunded = !!c.refunded;
-            return { sep: i ? '1px solid #eef0f2' : '0', prog: c.program, refunded,
+            return { sep: i ? '1px solid rgba(0,0,0,0.1)' : '0', prog: c.program, refunded,
               sub: c.date + ' 등록 · ' + (c.pay === 'deposit' ? '예약금' : '완납') + ' · ' + (c.method || '-'),
               total: won(c.total) + '원', st: (c.payments && c.payments.length) ? (todo ? '결제정보 입력 필요' : '결제정보 입력 완료') : '결제정보 없음',
-              stBg: todo ? '#fdf6ec' : '#f2f3f5', stFg: todo ? '#7a5115' : '#6d747c',
+              stBg: todo ? '#f9fafb' : '#f9fafb', stFg: todo ? '#4b5563' : '#717182',
               open: () => this.setState({ contract: c, cStatus: this.statusOf(c), cSel: true, ...this.rfStateOf(c) }) }; }) };
       })(),
       isEvent: isResign ? !!C.event : isEventCur, notEvent: !(isResign ? !!C.event : isEventCur),
@@ -1463,9 +1469,9 @@ class Component extends DCLogic {
         this.setState(one ? { docs, delAsk: false, pdfId: null } : { docs, contract: null, delAsk: false, justSaved: null, pdfId: null, screen: 'list' }); this.flash('삭제되었습니다'); },
       pdfOpen: !!pdfDoc, pdfTitle: pdfDoc ? pdfDoc.title : '', pdfFile: pdfDoc ? pdfDoc.fileName : '',
       pdfVerLabel: pdfDoc ? (pdfDoc.superseded ? '대체됨' : '최종본') + ' · v' + pdfDoc.version : '',
-      pdfVerBg: pdfDoc && pdfDoc.superseded ? '#f2f3f5' : 'rgba(52,91,128,0.08)', pdfVerFg: pdfDoc && pdfDoc.superseded ? '#8d949b' : '#2a4b6b',
-      pdfEl: pdfDoc ? React.createElement('div', { id: 'pdfv', style: { width: 740, flex: 'none', background: '#ffffff', boxShadow: '0 2px 14px rgba(28,31,35,0.12)' },
-        dangerouslySetInnerHTML: { __html: this.cleanHtml(pdfDoc.html) || '<div style="padding:60px;text-align:center;color:#8d949b">문서 내용이 없습니다</div>' } }) : null,
+      pdfVerBg: pdfDoc && pdfDoc.superseded ? '#f9fafb' : 'rgba(3,2,19,.08)', pdfVerFg: pdfDoc && pdfDoc.superseded ? '#717182' : '#1c1b2b',
+      pdfEl: pdfDoc ? React.createElement('div', { id: 'pdfv', style: { width: 740, flex: 'none', background: '#ffffff', boxShadow: '0 2px 14px rgba(0,0,0,.12)' },
+        dangerouslySetInnerHTML: { __html: this.cleanHtml(pdfDoc.html) || '<div style="padding:60px;text-align:center;color:#717182">문서 내용이 없습니다</div>' } }) : null,
       closePdf: () => this.setState({ pdfId: null }),
       sharePdf: () => this.sharePdf(),
       pdfBtnLabel: s.pdfReady === true ? 'PDF 저장·공유·인쇄' : s.pdfReady === 'fail' ? 'PDF 생성 실패 · 다시 시도' : 'PDF 만드는 중…',
@@ -1486,7 +1492,7 @@ class Component extends DCLogic {
           bkCur: '현재 기기: 계약 ' + Math.max(0, cur.contracts) + '건 · 문서 ' + Math.max(0, cur.docs) + '건',
           bkPw: s.bkPw || '', bkPw2: s.bkPw2 || '', bkPwR: s.bkPwR || '',
           onBkPw: e => this.setState({ bkPw: e.target.value }), onBkPw2: e => this.setState({ bkPw2: e.target.value }), onBkPwR: e => this.setState({ bkPwR: e.target.value }),
-          hasBkMsg: !!s.bkMsg, bkMsg: s.bkMsg || '', bkMsgFg: s.bkErr ? '#b3261e' : '#2f6b45',
+          hasBkMsg: !!s.bkMsg, bkMsg: s.bkMsg || '', bkMsgFg: s.bkErr ? '#d4183d' : '#0a0a0a',
           bkExport: async () => {
             if (s.bkBusy) return;
             if (!(window.crypto && crypto.subtle)) return msg('이 브라우저 환경에서는 암호화 백업을 만들 수 없습니다. https 주소(병원 페이지)에서 열어 주세요', true);
@@ -1550,11 +1556,11 @@ class Component extends DCLogic {
         const tab = s.pmTab === 'event' ? 'event' : 'price';
         const out = { pmShow: () => this.setState({ pmOpen: true, pmTab: 'price', ...RESET }), pmOpen: !!s.pmOpen, pmClose: close,
           pmTabPrice: tab === 'price', pmTabEvent: tab === 'event', evCards: [], evNewName: '', evNewPct: '', evNewStart: '', evNewEnd: '',
-          pmTabs: [['price', '가격 · 이름'], ['event', '이벤트']].map(([k, l]) => ({ label: l, bd: tab === k ? '#345b80' : '#d5d9de', bg: tab === k ? '#345b80' : '#ffffff', fg: tab === k ? '#ffffff' : '#2b3036',
+          pmTabs: [['price', '가격 · 이름'], ['event', '이벤트']].map(([k, l]) => ({ label: l, bd: tab === k ? '#030213' : 'rgba(0,0,0,0.1)', bg: tab === k ? '#030213' : '#ffffff', fg: tab === k ? '#ffffff' : '#0a0a0a',
             pick: () => this.setState({ pmTab: k, pmMsg: '' }) })),
           pmQ: s.pmQ || '', onPmQ: e => this.setState({ pmQ: e.target.value }), pmReady: !!(CT && base), pmLoading: !(CT && base),
           pmRows: [], pmHint: '', pmChanged: [], pmHasChanged: false, pmOther: '', pmHasOther: false,
-          hasPmMsg: !!s.pmMsg, pmMsg: s.pmMsg || '', pmMsgFg: s.pmErr ? '#b3261e' : '#2f6b45' };
+          hasPmMsg: !!s.pmMsg, pmMsg: s.pmMsg || '', pmMsgFg: s.pmErr ? '#d4183d' : '#0a0a0a' };
         if (!s.pmOpen || !CT || !base) return out;
         const ov = CT.readOverride(), uo = CT.readUnits(), eo = CT.readEvents();
         const cur = CT.applyEventOv(CT.applyUnits(CT.applyOverride(base, ov), uo), eo);
@@ -1707,10 +1713,10 @@ class Component extends DCLogic {
           const addPid = String((s.evAdd || {})[e.id] || '').trim().toUpperCase();
           return { id: e.id, kindText: kind === 'rate' ? '할인율 이벤트 · 할인 항목에서 직원이 선택 (다른 할인과 중복 불가)'
               : kind === 'service' ? '서비스 제공 이벤트 · 해당 프로그램에 서비스권 추가' : '정액 적용가 이벤트 · 이벤트 프로그램의 총 등록금액이 적용가 (다른 할인과 중복 불가)',
-            statusText: !active ? '사용 중지' : on ? '사용 중' : '적용 기간 아님', statusFg: !active ? '#8d949b' : on ? '#2f6b45' : '#7a5115',
+            statusText: !active ? '사용 중지' : on ? '사용 중' : '적용 기간 아님', statusFg: !active ? '#717182' : on ? '#0a0a0a' : '#4b5563',
             nameVal: v('name') || '', onName: ev => set('name', ev.target.value),
             startVal: v('start') || '', endVal: v('end') || '', onStart: ev => set('start', ev.target.value), onEnd: ev => set('end', ev.target.value),
-            activeOpts: [[true, '사용'], [false, '중지']].map(([k, l]) => ({ label: l, bd: active === k ? '#345b80' : '#d5d9de', bg: active === k ? '#345b80' : '#ffffff', fg: active === k ? '#ffffff' : '#2b3036', pick: () => set('active', k) })),
+            activeOpts: [[true, '사용'], [false, '중지']].map(([k, l]) => ({ label: l, bd: active === k ? '#030213' : 'rgba(0,0,0,0.1)', bg: active === k ? '#030213' : '#ffffff', fg: active === k ? '#ffffff' : '#0a0a0a', pick: () => set('active', k) })),
             isPackage: kind === 'package', isRate: kind === 'rate', isService: kind === 'service',
             pctVal: pct, onPct: ev => set('ratePct', ev.target.value.replace(/[^0-9]/g, '')),
             progRows: kind === 'package' ? (cur.programs || []).filter(p => p.event === e.id).map(p => ({ ...row(p), listText: p.listTotal ? '정상가 ' + won(p.listTotal) + '원' : '' })) : [],

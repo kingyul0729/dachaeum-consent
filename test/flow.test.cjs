@@ -78,7 +78,7 @@ test('환불: 계약 간 기록 분리 → 작성 중 저장·복원 → 서명 
   await p.getByText('+', { exact: true }).nth(0).click(); await p.waitForTimeout(200);
   assert.equal(await finalRefund(p), '700,000');
   await allocInputs(p).nth(0).fill('400000'); await p.waitForTimeout(500);
-  await p.mouse.click(38, 32); await p.waitForTimeout(300);          // 뒤로가기(취소 버튼 없이 나감)
+  await p.locator('[title="목록"]').click(); await p.waitForTimeout(300);          // 헤더 뒤로가기(취소 버튼 없이 나감)
   await click(p, '프로그램 B'); await click(p, '환불 정산');
   assert.equal(await finalRefund(p), '900,000', 'B에 A의 이용 기록이 섞이면 안 됨');
   await p.goto(URL); await p.waitForTimeout(2000);
@@ -143,7 +143,7 @@ test('새 동의서 작성: 이전 환자의 기납부 예약금·결제수단�
   const dep = p.locator('xpath=//span[text()="이미 받은 예약금"]/following-sibling::span//input');
   await dep.fill('100000'); await click(p, '현금');
   assert.match(await body(p), /오늘 수납\s*230,000원/);
-  await p.mouse.click(38, 32); await p.waitForTimeout(300);
+  for (let i = 0; i < 4 && await p.locator('[title="이전"], [title="취소"]').count(); i++) { await p.locator('[title="이전"], [title="취소"]').first().click(); await p.waitForTimeout(300); }
   await start('환자B');
   assert.match(await body(p), /오늘 수납\s*330,000원/);
   assert.equal(await dep.inputValue(), '');
@@ -1296,16 +1296,16 @@ const swipeUp = async (p, x, y, dy) => {
 // 결제 단계 왼쪽 입력 영역: 끝까지 밀어 올린 뒤 마지막 내용이 화면 안에 보이는지, 잘린 카드가 없는지
 const payPaneState = p => p.evaluate(() => {
   const lab = [...document.querySelectorAll('div')].find(d => d.textContent.trim() === '오늘 수납');
-  let pane = lab; while (pane && !(pane.style.width === '451px')) pane = pane.parentElement;
+  const pane = lab && lab.closest('[data-scroll="new"]');   // 디자인 기준(B) 한 줄 세로 본문 스크롤 영역
   if (!pane) return { missing: true, screen: document.body.innerText.slice(0, 200) };
   const vh = window.visualViewport ? visualViewport.height : innerHeight, last = pane.lastElementChild.getBoundingClientRect();
   const root = [...document.querySelectorAll('div')].find(d => d.style.maxWidth === '820px');
   const hit = document.elementFromPoint(220, Math.min(vh - 40, last.bottom - 5));
-  return { clipped: [...pane.children].filter(c => c.scrollHeight > c.clientHeight + 1).length, atEnd: pane.scrollTop >= pane.scrollHeight - pane.clientHeight - 1,
+  return { clipped: [...pane.querySelectorAll('div')].filter(c => getComputedStyle(c).overflowY === 'hidden' && c.scrollHeight > c.clientHeight + 1 && c.getBoundingClientRect().height > 0).length, atEnd: pane.scrollTop >= pane.scrollHeight - pane.clientHeight - 1,
     lastBottom: Math.round(last.bottom), vh: Math.round(vh), rootH: Math.round(root.getBoundingClientRect().height), docScroll: Math.round(scrollY),
     hitInPane: !!hit && pane.contains(hit), fixedOverlays: [...document.querySelectorAll('div')].filter(d => getComputedStyle(d).position === 'fixed' && d.id !== '__bundler_err' && d.getBoundingClientRect().height > 0).length };
 });
-const scrollPayToEnd = async p => { for (let i = 0; i < 6; i++) await swipeUp(p, 220, 700, 500); return payPaneState(p); };
+const scrollPayToEnd = async p => { for (let i = 0; i < 8; i++) await swipeUp(p, 220, 700, 500); return payPaneState(p); };
 const toPrepaidPay = async (p, who) => {
   await toStep3(p, 'PGM-0033', '얼굴전체', who, async () => { await click(p, '선결제권'); await click(p, '300'); await click(p, '신규 구매 3,000,000원'); });
   await click(p, '카드', 0);
@@ -1338,7 +1338,7 @@ test('iPad Safari 세로 결제 화면: 선결제권 신규 구매 3,000,000원 
   await click(p, '동의서 미리보기 · 서명');
   assert.match(await body(p), /터치하여 서명/, '미리보기 화면으로 이동');
   await click(p, '직원');   // 서명 화면 → 직원 화면 복귀
-  if (!/결제 방식/.test(await body(p))) await click(p, '이전');
+  if (!/받을 금액/.test(await body(p))) { await p.locator('[title="이전"]').click(); await p.waitForTimeout(400); }
   assertScrollable(await scrollPayToEnd(p), '미리보기 다녀온 뒤');
   assert.match(await body(p), /최종 계약금액\s*3,465,000원/);
   assert.deepEqual(p.errors, []);
