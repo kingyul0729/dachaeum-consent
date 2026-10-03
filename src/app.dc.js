@@ -428,7 +428,9 @@ class Component extends DCLogic {
       }
     } catch (err) {}
     try {
-      fetch((window.__resources && window.__resources.programsDb) || 'programs.json').then(r => r.json()).then(base => new Promise(res => { const w = () => window.DachaeumCatalog ? res(base) : setTimeout(w, 40); w(); })).then(base => {
+      // 가격표: 번들에 들어 있는 파일(Blob)을 직접 읽음. 보안 정책상 blob: 주소 fetch를 막는 환경(예: claude.ai 시험 페이지)에서도 동작. 없으면 기존 fetch
+      const dbSrc = (window.__resources && window.__resources.programsDb) || 'programs.json', dbBlob = window.__resourceBlobs && window.__resourceBlobs[dbSrc];
+      (dbBlob && dbBlob.text ? dbBlob.text().then(t => JSON.parse(t)) : fetch(dbSrc).then(r => r.json())).then(base => new Promise(res => { const w = () => window.DachaeumCatalog ? res(base) : setTimeout(w, 40); w(); })).then(base => {
         // 최신 programs.json + 가격 관리 override(변경 항목만)
         const merge = b => window.DachaeumCatalog.withOverride(b);
         const db = merge(base);
