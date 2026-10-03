@@ -1107,7 +1107,8 @@ class Component extends DCLogic {
                  return this.setState({ screen: 'sign', signFrom: 'new', sig: false, sigOpen: false, sigImg: null, ckRefund: false, pendingSign: false, pendingProg: cur ? progTitle(cur) : '', pendingTotal: won(totalNum) });
                }
                if (s.step === 1 && !p1ok) { this.setState({ tried1: true }); return this.flash('환자 정보를 확인해 주세요'); }
-               if (s.step === 2 && !cur) return this.flash('프로그램을 선택해 주세요');
+               // 횟수 묶음(예: 정상가 1회·3회)은 줄을 펼친 뒤 횟수까지 골라야 선택됨
+               if (s.step === 2 && !cur) return this.flash(s.oGrp ? '횟수를 선택해 주세요 (+ 버튼으로 1회 · 3회 등 선택)' : '프로그램을 선택해 주세요');
                if (s.step === 2 && isLesion && !lesionOk) return this.flash('흑자별 부위와 크기(3cm 이하)를 입력해 주세요');
                // 계약금액(할인·선결제권 기준·총 등록금액·1회 정상가)은 2단계에서 확정 → 결제 등록으로 넘어가기 전에 확인
                if (s.step === 2) {
