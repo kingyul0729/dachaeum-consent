@@ -381,11 +381,11 @@ body,body *{word-break:keep-all;overflow-wrap:break-word;line-break:strict}
         <sc-if value="{{ preNewOn }}" hint-placeholder-val="{{ false }}">
         <div style="flex:none;border:1px solid rgba(0,0,0,0.1);border-radius:8.75px;overflow:hidden;background:#ffffff">
           <div style="padding:11px 16px;border-bottom:1px solid rgba(0,0,0,0.1);font-size:14px;font-weight:500;color:#0a0a0a">{{ preBuyTitle }}</div>
-          <div style="padding:12px 16px">
-                    <div style="display:flex;flex-direction:column;gap:10px">
-                      <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px">
-                        <div sc-camel-on-click="{{ pickPreFull }}" style="box-sizing:border-box;border-radius:8.75px;padding:12px 14px;display:flex;flex-direction:column;gap:4px;cursor:pointer;border:1.5px solid {{ preFullBd }};background:{{ preFullBg }}"><span style="font-size:15.75px;font-weight:500;color:{{ preFullFg }}">완납 결제</span><span style="font-size:12.25px;color:#717182;font-variant-numeric:tabular-nums">{{ preFullText }}</span></div>
-                        <div sc-camel-on-click="{{ pickPreDep }}" style="box-sizing:border-box;border-radius:8.75px;padding:12px 14px;display:flex;flex-direction:column;gap:4px;cursor:pointer;border:1.5px solid {{ preDepBd }};background:{{ preDepBg }}"><span style="font-size:15.75px;font-weight:500;color:{{ preDepFg }}">예약금 결제</span><span style="font-size:12.25px;color:#717182;font-variant-numeric:tabular-nums">{{ preDepText }}</span></div>
+          <div style="padding:10px 16px">
+                    <div style="display:flex;flex-direction:column;gap:8px">
+                      <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
+                        <div sc-camel-on-click="{{ pickPreFull }}" style="height:31.5px;padding:0 12px;box-sizing:border-box;border-radius:6.75px;display:flex;align-items:center;gap:6px;font-size:12.25px;font-weight:500;cursor:pointer;font-variant-numeric:tabular-nums;border:1px solid {{ preFullBd }};background:{{ preFullBg }};color:{{ preFullFg }}"><span>완납 결제</span><span style="font-weight:400;opacity:0.75">{{ preFullText }}</span></div>
+                        <div sc-camel-on-click="{{ pickPreDep }}" style="height:31.5px;padding:0 12px;box-sizing:border-box;border-radius:6.75px;display:flex;align-items:center;gap:6px;font-size:12.25px;font-weight:500;cursor:pointer;font-variant-numeric:tabular-nums;border:1px solid {{ preDepBd }};background:{{ preDepBg }};color:{{ preDepFg }}"><span>예약금 결제</span><span style="font-weight:400;opacity:0.75">{{ preDepText }}</span></div>
                       </div>
                       <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
                         <span style="font-size:12.25px;color:#4b5563;flex:none">결제수단</span>

@@ -737,7 +737,7 @@ test('선결제권 신규 구매: 완납·예약금 선택 전 서명 불가·�
   await toStep3(p, 'PGM-0018', '여드름 8주 프로그램', '신규구매테스트', async () => { await click(p, '선결제권'); await click(p, '300'); await click(p, '신규 구매 3,000,000원'); });
   await click(p, '카드', 0);
   let b = await body(p);
-  for (const re of [/선결제권 3,000,000원/, /완납 결제\s*3,000,000원/, /예약금 결제\s*300,000원/, /미수금\s*3,000,000원/, /서명\s*완납 또는 예약금 선택 후 가능/]) assert.match(b, re);
+  for (const re of [/선결제권\s*완납 결제\s*3,000,000원/, /예약금 결제\s*300,000원/, /미수금\s*3,000,000원/, /서명\s*완납 또는 예약금 선택 후 가능/]) assert.match(b, re);
   assert.doesNotMatch(b, /도움말|선결제권 구매|선결제권 미수|남은 선결제권|이미 받은 예약금|오늘 수납|차감 후|예상|실제 수납액|구매 미수금|추가 결제 필요금액/);
   assert.equal(await p.locator('xpath=//label[starts-with(normalize-space(.),"수납액")]//input').count(), 0, '금액 직접 입력 없음 (예약금 10% 자동)');
   await click(p, '동의서 미리보기 · 서명');
@@ -754,7 +754,7 @@ test('선결제권 신규 구매: 완납·예약금 선택 전 서명 불가·�
   await click(p, '이어서 작성');
   await click(p, '예약금 결제', 0);
   b = await body(p);
-  for (const re of [/예약금\s*300,000원/, /결제수단\s*선결제권 카드 300,000원/, /미수금\s*2,700,000원/, /프로그램 사용 \(선결제권\)\s*891,000원/, /\n잔액\s*2,109,000원/, /서명\s*가능/]) assert.match(b, re);
+  for (const re of [/예약금\s*300,000원/, /결제수단\s*카드\n/, /미수금\s*2,700,000원/, /\n잔액\s*2,109,000원/, /서명\s*가능/]) assert.match(b, re);
   await signAndSave(p);
   const [c] = await contracts(p);
   assert.deepEqual([c.total, c.paid, c.priorDep], [891000, 891000, 0], '납부액 = 이번 계약 사용액 (선결제권 금액 3,000,000 아님)');
@@ -798,7 +798,7 @@ test('선결제권 보유 잔액: 충분(1,000,000)·부족(300,000)·0원(할�
   // 충분
   await balIn.fill('1000000'); await p.waitForTimeout(300); await click(p, '다음 단계');
   let b = await body(p);
-  for (const re of [/선결제권\s*보유 잔액 1,000,000원/, /프로그램 사용 \(선결제권\)\s*891,000원/, /\n잔액\s*109,000원/, /수납액\s*0원/]) assert.match(b, re);
+  for (const re of [/선결제권\s*보유 잔액 1,000,000원/, /\n잔액\s*109,000원/, /수납액\s*0원/]) assert.match(b, re);
   assert.doesNotMatch(b, /미수/);
   await signAndSave(p);
   let c = (await contracts(p))[0];
@@ -819,8 +819,7 @@ test('선결제권 보유 잔액: 충분(1,000,000)·부족(300,000)·0원(할�
   await toStep3(p, 'PGM-0018', '여드름 8주 프로그램', '함께사용', async () => { await click(p, '선결제권'); await click(p, '300'); await balIn.fill('200000'); await click(p, '신규 구매 3,000,000원'); });
   await click(p, '현금', 0); await click(p, '완납 결제', 0);
   b = await body(p);
-  for (const re of [/선결제권\s*보유 잔액 200,000원/, /선결제권 3,000,000원/, /결제수단\s*선결제권 현금 3,000,000원/,
-    /프로그램 사용 \(선결제권\)\s*891,000원 \(보유 200,000 \+ 신규 691,000\)/, /\n잔액\s*2,309,000원/, /완납\s*3,000,000원/, /최종 계약금액\s*891,000원/]) assert.match(b, re);
+  for (const re of [/선결제권\s*보유 잔액 200,000원/, /완납 결제\s*3,000,000원/, /결제수단\s*현금\n/, /\n잔액\s*2,309,000원/, /완납\s*3,000,000원/, /최종 계약금액\s*891,000원/]) assert.match(b, re);
   assert.doesNotMatch(b, /미수금/, '전액 받으면 미수금 없음');
   await signAndSave(p);
   c = (await contracts(p)).find(x => x.patient.name === '함께사용');
@@ -1087,10 +1086,10 @@ test('iPad 세로 전체 흐름 ②: 기존 잔액 + 신규 구매 완납·예�
   await click(p, '임시 저장');
   await p.reload(); await p.waitForTimeout(2000);
   await click(p, '이어서 작성');
-  assert.match(await body(p), /선결제권\s*보유 잔액 200,000원[\s\S]*선결제권 3,000,000원/, '확정한 선결제권 정보 유지');
+  assert.match(await body(p), /선결제권\s*보유 잔액 200,000원[\s\S]*완납 결제\s*3,000,000원/, '확정한 선결제권 정보 유지');
   await click(p, '완납 결제', 0);
   b = await body(p);
-  for (const re of [/프로그램 사용 \(선결제권\)\s*891,000원 \(보유 200,000 \+ 신규 691,000\)/, /\n잔액\s*2,309,000원/, /최종 계약금액\s*891,000원/, /완납\s*3,000,000원/]) assert.match(b, re);
+  for (const re of [/\n잔액\s*2,309,000원/, /최종 계약금액\s*891,000원/, /완납\s*3,000,000원/]) assert.match(b, re);
   await click(p, '동의서 미리보기 · 서명'); await signSave(p, '동의하고 저장');
   const [c] = await contracts(p);
   assert.deepEqual([c.total, c.paid], [891000, 891000]);
@@ -1132,7 +1131,7 @@ test('iPad 세로 전체 흐름 ③: 기납부 예약금 + 카드·현금 분할
   await p.locator('xpath=//label[starts-with(normalize-space(.),"예약금")]//input').fill('90000');
   await click(p, '카드'); await click(p, '현금');
   await p.locator('input[placeholder="금액"]').fill('500000'); await p.waitForTimeout(300);
-  assert.match(await body(p), /수납액\s*900,000원/);
+  assert.match(await body(p), /수납액\s*900,000원\s*결제수단\s*카드 500,000원 · 현금 400,000원/, '복합결제는 수단별 금액 유지');
   await noHScroll(p, '분할 결제 (768px)');
   await click(p, '동의서 미리보기 · 서명'); await signSave(p, '동의하고 저장');
   const [c] = await contracts(p);
@@ -1327,7 +1326,7 @@ test('iPad Safari 세로 결제 화면: 선결제권 신규 구매 3,000,000원 
   await p.setViewportSize({ width: 820, height: 700 }); await p.waitForTimeout(300);
   await p.setViewportSize({ width: 820, height: 1047 }); await p.waitForTimeout(400);
   assertScrollable(await scrollPayToEnd(p), '키보드 열고 닫은 뒤');
-  assert.match(await body(p), /결제수단\s*선결제권 카드 3,000,000원/);
+  assert.match(await body(p), /수납액\s*3,465,000원\s*결제수단\s*카드\n/);
   // 동의서 미리보기 → 이전
   await click(p, '예약금 결제', 1);
   await click(p, '동의서 미리보기 · 서명');
@@ -1353,7 +1352,7 @@ test('공유 시트·홈 화면에 추가 전후 이벤트(blur·인쇄 미리�
     await p.setViewportSize({ width: 820, height: 980 }); await p.waitForTimeout(200); await p.setViewportSize({ width: 820, height: 1047 });
     await setVis('visible'); await p.evaluate(() => { window.dispatchEvent(new PageTransitionEvent('pageshow', { persisted: true })); window.dispatchEvent(new Event('focus')); });
     await p.waitForTimeout(600);
-    assert.match(await body(p), /결제수단\s*선결제권 카드 3,000,000원/, '입력값 유지');
+    assert.match(await body(p), /수납액\s*3,465,000원\s*결제수단\s*카드\n/, '입력값 유지');
     assert.equal(await p.evaluate(() => (document.getElementById('__bundler_err') || {}).textContent || ''), '', '오류 표시 없음');
     assertScrollable(await scrollPayToEnd(p), '공유 시트 다녀온 뒤 ' + round);
   }
@@ -1384,8 +1383,9 @@ test('선결제권 300만 · 예약금 결제 → 10% 300,000 자동 / 미수금
   assert.doesNotMatch(b, /도움말|오늘 받을 금액이 없습니다/);
   await click(p, '현금', 0); await click(p, '예약금 결제', 0);
   b = await body(p);
-  for (const re of [/예약금\s*300,000원\s*결제수단\s*선결제권 현금 300,000원/, /미수금\s*2,700,000원/, /프로그램 사용 \(선결제권\)\s*891,000원/, /\n잔액\s*2,109,000원/, /서명\s*가능/]) assert.match(b, re);
-  assert.doesNotMatch(b, /초과분/);
+  for (const re of [/예약금\s*300,000원\s*결제수단\s*현금\n/, /미수금\s*2,700,000원/, /\n잔액\s*2,109,000원/, /서명\s*가능/]) assert.match(b, re);
+  assert.doesNotMatch(b, /초과분|프로그램 사용|선결제권 현금|선결제권 3,000,000원/, '계약금액·선결제권 금액·결제수단 반복 없음');
+  assert.equal((b.match(/3,000,000원/g) || []).length, 1, '선결제권 금액은 완납 버튼에 한 번만');
   await click(p, '동의서 미리보기 · 서명'); await signSave(p, '동의하고 저장');
   const [c] = await contracts(p);
   assert.deepEqual([c.total, c.paid, c.priorDep], [891000, 891000, 0], '받은 돈을 프로그램 예약금으로 다시 넣지 않음');

@@ -1255,8 +1255,8 @@ class Component extends DCLogic {
       preBuyMOpts: ['카드', '현금', '계좌이체'].map(m => ({ label: m, ...chip(preBuyM === m), pick: () => this.setState({ preBuyM: m }) })),
       // 선결제권 받는 방식: 완납(전액) / 예약금(10% 자동). 다시 누르면 선택 해제
       preFullText: won(preBuy) + '원', preDepText: won(preMin) + '원',
-      preFullBd: preIsFull ? '#030213' : 'rgba(0,0,0,0.1)', preFullBg: preIsFull ? '#e9ebef' : '#ffffff', preFullFg: preIsFull ? '#0a0a0a' : '#4b5563',
-      preDepBd: preIsDep ? '#030213' : 'rgba(0,0,0,0.1)', preDepBg: preIsDep ? '#e9ebef' : '#ffffff', preDepFg: preIsDep ? '#0a0a0a' : '#4b5563',
+      preFullBd: chip(preIsFull).bd, preFullBg: chip(preIsFull).bg, preFullFg: chip(preIsFull).fg,
+      preDepBd: chip(preIsDep).bd, preDepBg: chip(preIsDep).bg, preDepFg: chip(preIsDep).fg,
       pickPreFull: () => this.setState({ preRcvAmt: preIsFull ? '' : String(preBuy) }), pickPreDep: () => this.setState({ preRcvAmt: preIsDep ? '' : String(preMin) }),
       preNeedDraft: preNew && !preSignOk, notPreNew: !preNew, saveNewDraft: () => this.saveNewDraft({ prog: cur ? progTitle(cur) : '', note: '선결제권 ' + won(preBuy) + '원 · ' + (preRcvAmt ? preRcvLabel + ' ' + won(preRcvAmt) + '원 · ' : '') + '미수금 ' + won(preUnpaid) + '원' }),
       showBalIn: true,
@@ -1283,20 +1283,24 @@ class Component extends DCLogic {
         ...(discRate || hairRate ? [{ k: '할인', v: [hairRate ? '제모 결합 ' + Math.round(hairRate * 100) + '%' : '', discRate ? discLabel : ''].filter(Boolean).join(' · ') }] : []),
         ...(balIn > 0 ? [{ k: '선결제권', v: '보유 잔액 ' + won(balIn) + '원' }] : [])   // 새 선결제권 금액은 아래 카드 제목에 한 번만
       ].map(r => ({ ...r, fw: r.fw || 500 })),
-      preBuyTitle: '선결제권 ' + won(preBuy) + '원',
+      preBuyTitle: '선결제권',   // 금액은 완납 버튼에 한 번만
       preShortText: '완납 또는 예약금을 선택해 주세요',
       hasNeed: needNum > 0, noNeed: needNum <= 0,
       payCardShow: !preNew || needNum > 0 || pdOver > 0,   // 선결제권 신규 구매로 별도 결제할 항목이 없으면 '결제' 박스 숨김
       // 결제 내용: 수납액(오늘) · 결제수단 · 예약금 · 미수금 · 프로그램 사용 · 잔액 (같은 금액 반복 없이 결과만)
       sumRows: (() => {
         const rest = Math.max(0, needNum - nowNum), unpaid = preUnpaid + rest;
-        const pm = [preRcvAmt > 0 ? '선결제권 ' + (preBuyM || '') + ' ' + won(preRcvAmt) + '원' : '',
-          nowNum > 0 && selM.length ? payments.map(x => x.method + (isSplit || preRcvAmt > 0 ? ' ' + won(x.amount) + '원' : '')).join(' · ') + (hasCash ? ' (현금영수증 ' + rcpt + ')' : '') : ''].filter(Boolean);
+        // 결제수단: 실제 선택한 수단만 (금액은 위 금액 항목). 수단이 둘 이상이면 수단별 금액 표시 (복합결제)
+        const byM = [];
+        [...(preRcvAmt > 0 && preBuyM ? [{ method: preBuyM, amount: preRcvAmt }] : []), ...(nowNum > 0 && selM.length ? payments : [])].forEach(x => {
+          const f = byM.find(y => y.method === x.method); if (f) f.amount += x.amount; else byM.push({ method: x.method, amount: x.amount }); });
+        const pm = byM.length ? [byM.map(x => x.method + (byM.length > 1 ? ' ' + won(x.amount) + '원' : '')).join(' · ') + (hasCash && nowNum > 0 ? ' (현금영수증 ' + rcpt + ')' : '')] : [];
         const rows = [{ k: preNew && !nowNum && preRcvAmt ? preRcvLabel : '수납액', v: won(nowNum + preRcvAmt) + '원', big: true },
           ...(pm.length ? [{ k: '결제수단', v: pm.join(' · ') }] : []),
           ...(pdAll > 0 ? [{ k: '예약금', v: won(pdAll) + '원' }] : []),
           ...(unpaid > 0 ? [{ k: '미수금', v: won(unpaid) + '원', warn: true }] : []),
-          ...(preUse > 0 ? [{ k: '프로그램 사용 (선결제권)', v: won(preUse) + '원' + (balUse > 0 && newUse > 0 ? ' (보유 ' + won(balUse) + ' + 신규 ' + won(newUse) + ')' : '') }] : []),
+          // 계약금액 전부를 선결제권으로 쓰면 최종 계약금액과 같은 금액이라 다시 표시하지 않음 (일부만 쓸 때만)
+          ...(preUse > 0 && preUse < totalNum ? [{ k: '프로그램 사용 (선결제권)', v: won(preUse) + '원' }] : []),
           ...(balIn > 0 || preNew ? [{ k: '잔액', v: won(preLeft) + '원', strong: true }] : []),
           ...(preNew ? [{ k: '서명', v: preSignOk ? '가능' : '완납 또는 예약금 선택 후 가능', warn: !preSignOk }] : [])];
         return rows.map((r, i) => ({ ...r, sep: i ? '1px solid rgba(0,0,0,0.1)' : '0', fs: r.big ? '18px' : '14px', fw: r.big || r.strong ? 700 : 500, fg: r.warn ? '#d4183d' : '#0a0a0a' }));
