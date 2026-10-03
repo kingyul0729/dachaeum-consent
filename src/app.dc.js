@@ -453,9 +453,9 @@ class Component extends DCLogic {
     } catch (err) {}
   }
 
-  // 횟수 선택지 목록 → − / + 스테퍼 (선택된 항목 = 파란 테두리)
+  // 횟수 선택지 목록 → − / + 스테퍼 (선택된 항목 = 기본색 테두리)
   stepOf(list) {
-    const L = list || [], ix = L.findIndex(o => o.bd === '#345b80');
+    const L = list || [], ix = L.findIndex(o => o.bd === '#030213');
     const go = j => { const o = L[j]; if (o && j !== ix) o.pick(); };
     return { label: ix >= 0 ? L[ix].label : '횟수 선택', sub: ix >= 0 ? (L[ix].sub || '') : L.length + '가지',
       decFg: ix > 0 ? '#345b80' : '#c9ced4', incFg: ix < L.length - 1 ? '#345b80' : '#c9ced4',
