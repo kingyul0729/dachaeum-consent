@@ -1376,7 +1376,8 @@ body,body *{word-break:keep-all;overflow-wrap:break-word;line-break:strict}
       <div style="margin-top:4px;font-size:21px;font-weight:500;letter-spacing:-0.03em;color:#0a0a0a;font-variant-numeric:tabular-nums;line-height:1.3">{{ rfHero }}</div>
       <div style="margin-top:14px;display:flex;flex-direction:column;gap:11px;font-size:14px">
         <div style="display:flex;justify-content:space-between"><span style="color:#4b5563">납부금액</span><span style="font-variant-numeric:tabular-nums">{{ rfPaid }}원</span></div>
-        <sc-if value="{{ hasRfPrepaid }}" hint-placeholder-val="{{ false }}"><div style="display:flex;justify-content:space-between;font-size:12.25px;margin-top:-6px"><span style="color:#717182">└ 이 중 선결제권 사용분</span><span style="font-variant-numeric:tabular-nums;color:#4b5563">{{ rfPrepaidUse }}</span></div></sc-if>
+        <sc-if value="{{ hasRfCash }}" hint-placeholder-val="{{ false }}"><div style="display:flex;justify-content:space-between;font-size:12.25px;margin-top:-6px"><span style="color:#717182">└ 수납 (카드·현금·계좌·예약금)</span><span style="font-variant-numeric:tabular-nums;color:#4b5563">{{ rfCashText }}</span></div></sc-if>
+        <sc-if value="{{ hasRfPrepaid }}" hint-placeholder-val="{{ false }}"><div style="display:flex;justify-content:space-between;font-size:12.25px;margin-top:-6px"><span style="color:#717182">└ 선결제권 사용</span><span style="font-variant-numeric:tabular-nums;color:#4b5563">{{ rfPrepaidUse }}</span></div></sc-if>
         <div style="display:flex;justify-content:space-between"><span style="color:#4b5563">위약금 (총 계약금액 × 10%)</span><span style="font-variant-numeric:tabular-nums;color:#d4183d">− {{ rfPen }}원</span></div>
         <div style="display:flex;justify-content:space-between"><span style="color:#4b5563">이용금액 (정상가)</span><span style="font-variant-numeric:tabular-nums;color:#d4183d">− {{ rfUsedAmt }}원</span></div>
         <div style="height:1px;background:rgba(0,0,0,0.1)"></div>
@@ -1433,8 +1434,7 @@ body,body *{word-break:keep-all;overflow-wrap:break-word;line-break:strict}
             <div style="padding:6px 14px;background:#f7f8f9;border-bottom:1px solid #d5d9de;font-weight:500">등록일</div><div style="padding:6px 14px;border-bottom:1px solid #d5d9de">{{ rfDate }}</div>
             <div style="padding:6px 14px;background:#f7f8f9;border-bottom:1px solid #d5d9de;font-weight:500">이용기간 만료일</div><div style="padding:6px 14px;border-bottom:1px solid #d5d9de">{{ rfExpiry }}</div>
             <div style="padding:6px 14px;background:#f7f8f9;border-bottom:1px solid #d5d9de;font-weight:500">총 결제금액</div><div style="padding:6px 14px;border-bottom:1px solid #d5d9de">{{ rfTotal }}원</div>
-            <div style="padding:6px 14px;background:#f7f8f9;border-bottom:1px solid #d5d9de;font-weight:500">납부금액</div><div style="padding:6px 14px;border-bottom:1px solid #d5d9de">{{ rfPaid }}원 ({{ rfPayState }})</div>
-<sc-if value="{{ hasRfPrepaid }}" hint-placeholder-val="{{ false }}"><div style="padding:6px 14px;background:#f7f8f9;border-bottom:1px solid #d5d9de;font-weight:500">선결제권 사용분</div><div style="padding:6px 14px;border-bottom:1px solid #d5d9de;grid-column:span 3">{{ rfPrepaidUse }} (납부금액에 포함)</div></sc-if>
+            <div style="padding:6px 14px;background:#f7f8f9;border-bottom:1px solid #d5d9de;font-weight:500">납부금액</div><div style="padding:6px 14px;border-bottom:1px solid #d5d9de;white-space:normal">{{ rfPaidDoc }}</div>
             <div style="padding:6px 14px;background:#f7f8f9;border-bottom:1px solid #d5d9de;font-weight:500">해지 구분</div><div style="padding:6px 14px;border-bottom:1px solid #d5d9de">{{ rfStage }}</div>
             <div style="padding:6px 14px;background:#f7f8f9;border-bottom:1px solid #d5d9de;font-weight:500">환불 사유</div><div style="padding:6px 14px;border-bottom:1px solid #d5d9de">{{ rfReason }}</div>
           </div>
@@ -1450,7 +1450,7 @@ body,body *{word-break:keep-all;overflow-wrap:break-word;line-break:strict}
           <sc-if value="{{ hasCap }}" hint-placeholder-val="{{ false }}"><div style="margin-top:6px;font-size:10.4px;color:#5c636b;font-family:Pretendard,sans-serif">{{ rfCapNote }}</div></sc-if>
           <div style="margin-top:16px;font-size:12px;font-weight:600">3. 정산 계산</div>
           <div style="margin-top:7px;display:grid;grid-template-columns:1fr 130px;border-top:1.2px solid #1c1f23;font-size:11.5px">
-            <div style="padding:6px 14px;border-bottom:1px solid #e3e6ea">납부금액</div><div style="padding:6px 14px;border-bottom:1px solid #e3e6ea;text-align:right">{{ rfPaid }}원</div>
+            <div style="padding:6px 14px;border-bottom:1px solid #e3e6ea">{{ rfPaidLabel }}</div><div style="padding:6px 14px;border-bottom:1px solid #e3e6ea;text-align:right">{{ rfPaid }}원</div>
             <div style="padding:6px 14px;border-bottom:1px solid #e3e6ea">− 위약금 (총 계약금액 {{ rfTotal }}원 × 10%)</div><div style="padding:6px 14px;border-bottom:1px solid #e3e6ea;text-align:right">{{ rfPen }}원</div>
             <div style="padding:6px 14px;border-bottom:1px solid #e3e6ea">− 이용금액 ({{ rfUsedBreak }})</div><div style="padding:6px 14px;border-bottom:1px solid #e3e6ea;text-align:right">{{ rfUsedAmt }}원</div>
             <div style="padding:9px 14px;border-bottom:1.2px solid #1c1f23;font-weight:600">= 최종 환불금액</div><div style="padding:9px 14px;border-bottom:1.2px solid #1c1f23;text-align:right;font-weight:600"><span style="background:linear-gradient(100deg, rgba(255,236,120,0) 0%, rgba(255,236,120,0.55) 2%, rgba(255,232,110,0.5) 50%, rgba(255,236,120,0.55) 97%, rgba(255,236,120,0) 100%) 0 62% / 100% 68% no-repeat;padding:0 2px;margin:0 -1px;border-radius:2px 5px 3px 6px;-webkit-box-decoration-break:clone;box-decoration-break:clone;color:#1f2226">{{ rfRefund }}원</span></div>

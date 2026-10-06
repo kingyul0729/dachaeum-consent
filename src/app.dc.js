@@ -1069,6 +1069,12 @@ class Component extends DCLogic {
       rfAllocSum: won(allocSum) + '원', rfMulti: rfPays.length > 1,
       // 실제 납부액 구성: 선결제권 사용분(환불 시 잔액 복원)과 카드·현금·계좌 수납(원결제 수단으로 반환)을 구분해 표시
       hasRfPrepaid: rfPays.some(p => p.prepaid), rfPrepaidUse: won(rfPays.filter(p => p.prepaid).reduce((t, p) => t + Number(p.amount || 0), 0)) + '원',
+      // 납부금액 문구: 정산 기준 납부금액(계산 그대로)을 실제 수납(카드·현금·계좌·예약금)과 선결제권 사용으로 나눠 표시 — 선결제권 사용분을 받은 돈으로 적지 않음
+      ...(() => { const use = rfPays.filter(p => p.prepaid).reduce((t, p) => t + Number(p.amount || 0), 0), cash = Math.max(0, paidEff - use);
+        const st = payStateOf(C), parts = [cash > 0 ? '수납 ' + won(cash) + '원' : '', use > 0 ? '선결제권 사용 ' + won(use) + '원' : ''].filter(Boolean).join(' + ');
+        return { hasRfCash: use > 0 && cash > 0, rfCashText: won(cash) + '원',
+          rfPaidDoc: won(paidEff) + '원 (' + (use > 0 ? parts + (st !== '완납' ? ' · ' + st : '') : st) + ')',
+          rfPaidLabel: use > 0 ? '납부금액 (선결제권 사용 포함)' : '납부금액' }; })(),
       rfSingle: rfPays.length === 1, rfSingleText: rfPays.length === 1 ? (rfPays[0].prepaid ? '선결제권 잔액 복원' : rfPays[0].method + ' 반환') + ' ' + (RS.missing.length ? '정상가 확인 후 계산' : won(RS.amounts[0] || 0) + '원') : '',
       // 정산서 '환불 방법': 결제수단별 원결제(사용)액 · 반환(복원)액. 합계 = 최종 환불금액 (자동 배분 없음 — 직원 입력값 그대로)
       rfMethodRows: rfPays.map((p, i) => ({ method: p.prepaid ? '선결제권 (잔액 복원)' : p.priorDep ? '기납부 예약금' : p.method,

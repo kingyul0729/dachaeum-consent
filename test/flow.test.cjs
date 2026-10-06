@@ -767,14 +767,15 @@ test('선결제권 신규 구매: 완납·예약금 선택 전 서명 불가·�
   await click(p, '여드름 8주 프로그램'); await click(p, '환불 정산');
   b = await body(p);
   assert.equal(await finalRefund(p), '801,900');
-  assert.match(b, /이 중 선결제권 사용분\s*891,000원/);
+  assert.match(b, /납부금액\s*891,000원\s*└ 선결제권 사용\s*891,000원/);
+  assert.doesNotMatch(b, /└ 수납/, '받은 돈(수납)과 선결제권 사용을 구분 — 이 계약은 수납 없음');
   assert.match(b, /환불 방법\s*선결제권 잔액 복원 801,900원/);
   const svcBox = p.locator('xpath=//*[text()="추가 건수"]/ancestor::div[2]');
   await svcBox.getByText('+', { exact: true }).first().click(); await p.waitForTimeout(200);
   assert.equal(await finalRefund(p), '801,900', '입력 대기 건수는 차감 안 됨');
   await click(p, '정산서 생성 · 환자 서명');
   const st = (await body(p)).replace(/\s+/g, ' ');
-  for (const re of [/납부금액 891,000원/, /선결제권 사용분 891,000원 \(납부금액에 포함\)/, /위약금 \(총 계약금액 891,000원 × 10%\) 89,100원/, /= 최종 환불금액 801,900원/,
+  for (const re of [/납부금액 891,000원 \(선결제권 사용 891,000원\) 해지 구분/, /납부금액 \(선결제권 사용 포함\) 891,000원/, /위약금 \(총 계약금액 891,000원 × 10%\) 89,100원/, /= 최종 환불금액 801,900원/,
     /4\. 환불 방법/, /선결제권 \(잔액 복원\) 891,000원 801,900원/, /합계 \(= 최종 환불금액\) 801,900원/, /선결제권 잔액으로 복원/]) assert.match(st, re);
   await sign(p); await p.getByText('서명 완료 · 저장', { exact: true }).last().click(); await p.waitForTimeout(800);
   const done = (await contracts(p))[0];
@@ -782,7 +783,7 @@ test('선결제권 신규 구매: 완납·예약금 선택 전 서명 불가·�
   assert.deepEqual([done.refund.refundNum, done.refund.penNum, done.refund.paidEff], [801900, 89100, 891000]);
   assert.deepEqual(done.refund.pays.map(x => [x.method, x.prepaid, x.paid, x.refund]), [['선결제권 잔액 복원', true, 891000, 801900]]);
   const rt = (await docs(p)).find(x => x.kind !== '이용동의서').html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ');
-  for (const re of [/납부금액 891,000 원/, /선결제권 사용분 891,000원 \(납부금액에 포함\)/, /위약금 \(총 계약금액 891,000 원 × 10%\) 89,100 원/, /= 최종 환불금액 801,900 원/,
+  for (const re of [/납부금액 891,000원 \(선결제권 사용 891,000원\)/, /납부금액 \(선결제권 사용 포함\) 891,000 원/, /위약금 \(총 계약금액 891,000 원 × 10%\) 89,100 원/, /= 최종 환불금액 801,900 원/,
     /선결제권 \(잔액 복원\) 891,000원 801,900원/, /합계 \(= 최종 환불금액\) 801,900원/]) assert.match(rt, re, '저장 문서(PDF 원본)도 같은 금액');
   assert.deepEqual(p.errors, []);
 });
