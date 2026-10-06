@@ -203,16 +203,18 @@ test('PGM-0037 남성 턱밑라인: 환불용 1회 정상가 입력 전 서명 �
   assert.deepEqual(p.errors, []);
 });
 
-test('얼굴 전체 CO₂ 제거 추가옵션: 가격 데이터의 1회·110,000원으로 계약 저장, 점 CO₂(병변별)와 별도 차감', async () => {
+test('얼굴 전체 병변 제거 추가옵션: 가격 데이터의 1회·110,000원으로 계약 저장, 얼굴 전체 점 CO₂ 제거(병변별)와 용어·차감 구분', async () => {
   const p = await open();
   await pickProgram(p, 'PGM-0004', '스페셜 토닝 3');
   assert.doesNotMatch(await body(p), /환불용 1회 정상가 확인 필요/, '가격 데이터에 정상가가 있으므로 입력 요구 없음');
   await signAndSave(p);
   const [c] = await contracts(p);
-  const k = c.items.findIndex(i => i.name === '얼굴 전체 CO₂ 제거');
+  const k = c.items.findIndex(i => i.name === '얼굴 전체 병변 제거');
   assert.deepEqual([c.items[k].kind, c.items[k].qty, c.items[k].price, !!c.items[k].unitInput, !!c.items[k].actual], ['추가', 1, 110000, false, false]);
-  assert.ok(c.items.some(i => i.name === '얼굴 점 CO₂ 제거' && i.actual), '점 CO₂는 병변별 입력 항목으로 유지');
-  assert.match((await docs(p))[0].html.replace(/<[^>]+>/g, ' '), /얼굴 전체 CO₂ 제거\s+1회/);
+  assert.ok(c.items.some(i => i.name === '얼굴 전체 점 CO₂ 제거' && i.actual), '점 CO₂는 병변별 입력 항목으로 유지');
+  const dt = plain((await docs(p))[0].html);
+  assert.match(dt, /포함 서비스 · 선택 추가 구분 항목 추가금 서비스 얼굴 전체 점 CO₂ 제거 포함 추가 얼굴 전체 병변 제거 \+110,000원/, '포함 서비스는 횟수 없이 포함, 선택 추가는 추가금만');
+  assert.doesNotMatch(dt, /CO₂ 제거 2회|얼굴 전체 CO₂ 제거|제공 횟수/);
   await p.goto(URL); await p.waitForTimeout(1500);
   await click(p, '스페셜 토닝 3'); await click(p, '환불 정산');
   assert.equal(await finalRefund(p), '1,485,000');

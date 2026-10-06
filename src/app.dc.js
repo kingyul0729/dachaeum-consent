@@ -631,7 +631,9 @@ class Component extends DCLogic {
     const isManual = !!cur && !cur.total && !cur.lesion;
     const manualUnit = isManual ? Number(String((s.units && s.units[cur.id]) || '').replace(/[^0-9]/g, '') || 0) : 0;
     const effUnit = i => isManual && (i.unitFromTotal || !Number(i.unitPrice || 0)) ? manualUnit : Number(i.unitPrice || 0);
-    const svcName = n => /스킨보톡스/.test(n) && /뉴럭스/.test(n) ? '스킨보톡스 (뉴럭스)'
+    // 용어 구분: 토닝 포함 서비스 '얼굴 전체 점 CO₂ 제거'(병변별 실제 이용) ↔ 선택 추가 '얼굴 전체 병변 제거'(pig-co2-fullface)
+    const svcName = n => /점\s*CO₂\s*제거/.test(n) ? '얼굴 전체 점 CO₂ 제거'
+      : /스킨보톡스/.test(n) && /뉴럭스/.test(n) ? '스킨보톡스 (뉴럭스)'
       : /LDM\s*Triple/i.test(n) ? 'LDM Triple'
       : n.replace(/\s*\d+\s*회\s*S\/V\s*$/i, '').replace(/\s*S\/V\s*$/i, '');
     const cu = (db && db.capriUnit) || {};
@@ -651,7 +653,8 @@ class Component extends DCLogic {
     const optAddSum = curAdds.filter(a => a.optional).reduce((t, a) => t + Number(a.price || 0), 0);
     const addUnit = a => /capri-full/.test(a.id || '') ? Number(cu['풀페이스'] || 0)
       : a.needArea ? Number(cu[s.addArea] || 0) : Number(a.unitPrice || 0);
-    const addName = a => /capri/.test(a.id || '')
+    const addName = a => a.id === 'pig-co2-fullface' ? '얼굴 전체 병변 제거'
+      : /capri/.test(a.id || '')
       ? a.name.replace(/\s*\d+\s*회/, '').replace(/\s*\(1부위\)/, '') + (a.needArea && s.addArea ? ' (' + s.addArea + ')' : '')
       : a.name;
     const isSvcItem = i => /염증주사|약\s?처방/.test(i.name || '');
@@ -676,7 +679,8 @@ class Component extends DCLogic {
       ? (cur.items || []).filter(i => !isSvcItem(i)).map(i => ({
           kind: i.kind === '서비스권' ? '서비스' : '시술',
           name: i.kind === '서비스권' ? svcName(i.name) : i.name,
-          qtyText: i.kind === '서비스권' ? (i.qty ? i.qty + '회' : '실제 이용분')
+          // 얼굴 전체 점 CO₂ 제거: 특정 회차에 포함되는 서비스 → 독립 서비스 'N회 제공'으로 적지 않음
+          qtyText: i.id === 'SERVICE_TONING_CO2' ? '포함' : i.kind === '서비스권' ? (i.qty ? i.qty + '회' : '실제 이용분')
             : i.qtyDash ? '선택' : (i.qtyBasis === '공통 총회차 상한' ? '회차별 선택' : (i.qty ? i.qty + (i.unit || '회') : '실제 이용분')),
           priceText: i.priceNote ? i.priceNote
             : itemNoUnit(i) ? (fixVal(itemFixKey(i)) ? won(fixVal(itemFixKey(i))) : '1회 정상가 입력')
@@ -684,11 +688,11 @@ class Component extends DCLogic {
             : i.kind === '서비스권' && !i.unitPrice && !i.perPiece ? '실제 이용 기준'
             : (i.unitPrice ? won(i.unitPrice) : (i.perPiece ? won(i.perPiece) + '/개' : '미확정'))
         })).concat(curAdds.map(a => { const u = addUnit(a);
-          // 수량이 없으면 같은 계열 서비스(예: 얼굴 점 CO₂ 제거) 횟수를 따름 — 표시용, 금액 계산에는 사용 안 함
-          const isLes = /흑자|병변/.test(addName(a)), q = a.qty || (/CO₂|CO2/.test(addName(a)) ? ((cur.items || []).find(i => /CO₂|CO2/.test(i.name || '')) || {}).qty : '');
-          return { kind: a.svc ? '서비스' : '추가', svc: !!a.svc,
+          // 표시용 (금액 계산에는 사용 안 함): 흑자 제거는 병변 개수, 얼굴 전체 병변 제거는 선택 추가 1회 — 동의서에는 제공 횟수로 적지 않음
+          const isLes = a.id === 'pig-blackspot-pico532', q = a.qty || '';
+          return { kind: a.svc ? '서비스' : '추가', svc: !!a.svc, addId: a.id,
           name: addName(a) + (addNoUnit(a) && fixVal(addFixKey(a)) ? ' · 환불 기준 1회 ' + won(fixVal(addFixKey(a))) + '원' : ''), isAdd: true, addPrice: Number(a.price || 0), addUnitNum: u,
-          addQtyText: isLes ? '-' : q ? q + '회' : '-',
+          addQtyText: isLes || a.id === 'pig-co2-fullface' ? '-' : q ? q + '회' : '-',
           qtyText: isLes ? (a.qty || 1) + '개' : q ? q + '회' : '—',
           priceText: Number(a.price || 0) ? '+' + won(Number(a.price)) + '원' : '실제 이용 기준' }; }))
       : [];
@@ -1216,9 +1220,10 @@ class Component extends DCLogic {
       baseRows: docItems.filter(i => !i.isAdd && i.kind === '시술').map(i => ({ ...i, scrQty: /^\d/.test(i.qtyText || '') ? '×' + i.qtyText : i.qtyText })),
       swapNotes: cur ? (cur.items || []).filter(i => i.swappedFrom).map(i => ({ text: '변경 · ' + svcName(i.swappedFrom) + ' → ' + svcName(i.name) })) : [],
       hasSwap: !!cur && (cur.items || []).some(i => i.swappedFrom),
-      extraRows: docItems.filter(i => i.isAdd || i.kind !== '시술').map(i => ({ kind: i.kind, name: i.name,
+      extraRows: docItems.filter(i => i.isAdd || i.kind !== '시술').map((i, n) => ({ i, n, o: !i.isAdd ? 0 : i.addId === 'pig-blackspot-pico532' ? 1 : 2 })).sort((a, b) => a.o - b.o || a.n - b.n).map(({ i }) => ({ kind: i.kind, name: i.name,
         qtyText: i.isAdd ? i.addQtyText : (/^\d/.test(i.qtyText || '') ? i.qtyText : '-'),
-        feeText: i.svc ? '무상' : i.isAdd && i.addPrice ? '+' + won(i.addPrice) + '원' : '-' })),
+        feeText: i.svc ? '무상' : i.isAdd && i.addPrice ? '+' + won(i.addPrice) + '원' : !i.isAdd ? '포함' : '-' })),
+      extraQtyShow: docItems.filter(i => i.isAdd || i.kind !== '시술').some(i => (i.isAdd ? i.addQtyText : (/^\d/.test(i.qtyText || '') ? i.qtyText : '-')) !== '-'),
       hasExtra: docItems.some(i => i.isAdd || i.kind !== '시술'),
       // 1회성(당일 종료) 프로그램: 쁘띠·점제거 전체, 또는 시술 1개·1회 구성 → 이용금액 ※ 생략
       noSvcNote: !(cur && (cur.cat === '쁘띠(보톡스·필러)' || cur.cat === 'CO₂·병변제거' || (() => {

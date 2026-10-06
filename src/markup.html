@@ -351,7 +351,7 @@ body,body *{word-break:keep-all;overflow-wrap:break-word;line-break:strict}
           </sc-for>
           <sc-if value="{{ hasSwap }}" hint-placeholder-val="{{ false }}"><div style="display:flex;flex-direction:column;gap:3px;padding:9px 16px;border-bottom:1px solid rgba(0,0,0,0.1)"><sc-for list="{{ swapNotes }}" as="w" hint-placeholder-count="1"><div style="font-size:12.25px;color:#030213">{{ w.text }}</div></sc-for></div></sc-if>
           <sc-if value="{{ hasExtra }}" hint-placeholder-val="{{ false }}">
-          <div style="padding:14px 16px 0;font-size:12.25px;font-weight:500;color:#4b5563">2. 서비스 · 추가</div>
+          <div style="padding:14px 16px 0;font-size:12.25px;font-weight:500;color:#4b5563">2. 포함 서비스 · 선택 추가</div>
           <div style="display:grid;grid-template-columns:52px minmax(0,1fr) 72px 110px;column-gap:6px;border-bottom:1px solid rgba(0,0,0,0.1);padding:0 16px"><div style="font-size:12.25px;font-weight:500;color:#717182;padding:11px 0">구분</div><div style="font-size:12.25px;font-weight:500;color:#717182;padding:11px 0">항목</div><div style="font-size:12.25px;font-weight:500;color:#717182;padding:11px 0;text-align:right">제공 횟수</div><div style="font-size:12.25px;font-weight:500;color:#717182;padding:11px 0;text-align:right">추가금</div></div>
           <sc-for list="{{ extraRows }}" as="it" hint-placeholder-count="2">
             <div style="display:grid;grid-template-columns:52px minmax(0,1fr) 72px 110px;column-gap:6px;padding:0 16px;border-bottom:1px solid rgba(0,0,0,0.1)"><div style="padding:12px 0;font-size:12.25px;color:#717182;">{{ it.kind }}</div><div style="padding:12px 0;font-size:14px;white-space:pre-line">{{ it.name }}</div><div style="padding:12px 0;font-size:14px;text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap">{{ it.qtyText }}</div><div style="padding:12px 0;font-size:14px;text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap">{{ it.feeText }}</div></div>
@@ -526,13 +526,13 @@ body,body *{word-break:keep-all;overflow-wrap:break-word;line-break:strict}
 </sc-for>
 <sc-if value="{{ hasSwap }}" hint-placeholder-val="{{ false }}"><div style="display:flex;flex-direction:column;gap:2px;padding:5px 14px;border-bottom:1px solid #e3e6ea"><sc-for list="{{ swapNotes }}" as="w" hint-placeholder-count="1"><div>{{ w.text }}</div></sc-for></div></sc-if>
 <sc-if value="{{ hasExtra }}" hint-placeholder-val="{{ false }}">
-<div style="padding:8px 14px 5px;font-weight:600;border-bottom:1px solid #d5d9de">서비스·추가</div>
+<div style="padding:8px 14px 5px;font-weight:600;border-bottom:1px solid #d5d9de">포함 서비스 · 선택 추가</div>
 <div style="display:flex;background:#f7f8f9;border-bottom:1px solid #d5d9de;font-weight:500">
-<div style="width:132px;box-sizing:border-box;padding:6px 14px">구분</div><div style="flex:1;min-width:0;padding:6px 14px">서비스·추가</div><div style="width:100px;box-sizing:border-box;padding:6px 14px;text-align:right;white-space:nowrap">제공 횟수</div><div style="width:150px;box-sizing:border-box;padding:6px 20px 6px 14px;text-align:right">추가금</div>
+<div style="width:132px;box-sizing:border-box;padding:6px 14px">구분</div><div style="flex:1;min-width:0;padding:6px 14px">항목</div><sc-if value="{{ extraQtyShow }}" hint-placeholder-val="{{ true }}"><div style="width:100px;box-sizing:border-box;padding:6px 14px;text-align:right;white-space:nowrap">제공 횟수</div></sc-if><div style="width:150px;box-sizing:border-box;padding:6px 20px 6px 14px;text-align:right">추가금</div>
 </div>
 <sc-for list="{{ extraRows }}" as="d" hint-placeholder-count="3">
 <div style="display:flex;border-bottom:1px solid #e3e6ea">
-<div style="width:132px;box-sizing:border-box;padding:6px 14px">{{ d.kind }}</div><div style="flex:1;min-width:0;padding:6px 14px;text-wrap:pretty;white-space:pre-line">{{ d.name }}</div><div style="width:100px;box-sizing:border-box;padding:6px 14px;text-align:right;white-space:nowrap">{{ d.qtyText }}</div><div style="width:150px;box-sizing:border-box;padding:6px 20px 6px 14px;text-align:right">{{ d.feeText }}</div>
+<div style="width:132px;box-sizing:border-box;padding:6px 14px">{{ d.kind }}</div><div style="flex:1;min-width:0;padding:6px 14px;text-wrap:pretty;white-space:pre-line">{{ d.name }}</div><sc-if value="{{ extraQtyShow }}" hint-placeholder-val="{{ true }}"><div style="width:100px;box-sizing:border-box;padding:6px 14px;text-align:right;white-space:nowrap">{{ d.qtyText }}</div></sc-if><div style="width:150px;box-sizing:border-box;padding:6px 20px 6px 14px;text-align:right">{{ d.feeText }}</div>
 </div>
 </sc-for>
 </sc-if>
@@ -873,13 +873,13 @@ body,body *{word-break:keep-all;overflow-wrap:break-word;line-break:strict}
 </sc-for>
 <sc-if value="{{ hasSwap }}" hint-placeholder-val="{{ false }}"><div style="display:flex;flex-direction:column;gap:2px;padding:5px 14px;border-bottom:1px solid #e3e6ea"><sc-for list="{{ swapNotes }}" as="w" hint-placeholder-count="1"><div>{{ w.text }}</div></sc-for></div></sc-if>
 <sc-if value="{{ hasExtra }}" hint-placeholder-val="{{ false }}">
-<div style="padding:8px 14px 5px;font-weight:600;border-bottom:1px solid #d5d9de">서비스·추가</div>
+<div style="padding:8px 14px 5px;font-weight:600;border-bottom:1px solid #d5d9de">포함 서비스 · 선택 추가</div>
 <div style="display:flex;background:#f7f8f9;border-bottom:1px solid #d5d9de;font-weight:500">
-<div style="width:132px;box-sizing:border-box;padding:6px 14px">구분</div><div style="flex:1;min-width:0;padding:6px 14px">서비스·추가</div><div style="width:100px;box-sizing:border-box;padding:6px 14px;text-align:right;white-space:nowrap">제공 횟수</div><div style="width:150px;box-sizing:border-box;padding:6px 20px 6px 14px;text-align:right">추가금</div>
+<div style="width:132px;box-sizing:border-box;padding:6px 14px">구분</div><div style="flex:1;min-width:0;padding:6px 14px">항목</div><sc-if value="{{ extraQtyShow }}" hint-placeholder-val="{{ true }}"><div style="width:100px;box-sizing:border-box;padding:6px 14px;text-align:right;white-space:nowrap">제공 횟수</div></sc-if><div style="width:150px;box-sizing:border-box;padding:6px 20px 6px 14px;text-align:right">추가금</div>
 </div>
 <sc-for list="{{ extraRows }}" as="d" hint-placeholder-count="3">
 <div style="display:flex;border-bottom:1px solid #e3e6ea">
-<div style="width:132px;box-sizing:border-box;padding:6px 14px">{{ d.kind }}</div><div style="flex:1;min-width:0;padding:6px 14px;text-wrap:pretty;white-space:pre-line">{{ d.name }}</div><div style="width:100px;box-sizing:border-box;padding:6px 14px;text-align:right;white-space:nowrap">{{ d.qtyText }}</div><div style="width:150px;box-sizing:border-box;padding:6px 20px 6px 14px;text-align:right">{{ d.feeText }}</div>
+<div style="width:132px;box-sizing:border-box;padding:6px 14px">{{ d.kind }}</div><div style="flex:1;min-width:0;padding:6px 14px;text-wrap:pretty;white-space:pre-line">{{ d.name }}</div><sc-if value="{{ extraQtyShow }}" hint-placeholder-val="{{ true }}"><div style="width:100px;box-sizing:border-box;padding:6px 14px;text-align:right;white-space:nowrap">{{ d.qtyText }}</div></sc-if><div style="width:150px;box-sizing:border-box;padding:6px 20px 6px 14px;text-align:right">{{ d.feeText }}</div>
 </div>
 </sc-for>
 </sc-if>
