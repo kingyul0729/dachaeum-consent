@@ -677,7 +677,7 @@ class Component extends DCLogic {
           kind: i.kind === '서비스권' ? '서비스' : '시술',
           name: i.kind === '서비스권' ? svcName(i.name) : i.name,
           qtyText: i.kind === '서비스권' ? (i.qty ? i.qty + '회' : '실제 이용분')
-            : i.qtyDash ? '-회' : (i.qtyBasis === '공통 총회차 상한' ? '회차별 선택' : (i.qty ? i.qty + (i.unit || '회') : '실제 이용분')),
+            : i.qtyDash ? '선택' : (i.qtyBasis === '공통 총회차 상한' ? '회차별 선택' : (i.qty ? i.qty + (i.unit || '회') : '실제 이용분')),
           priceText: i.priceNote ? i.priceNote
             : itemNoUnit(i) ? (fixVal(itemFixKey(i)) ? won(fixVal(itemFixKey(i))) : '1회 정상가 입력')
             : isManual && (i.unitFromTotal || !Number(i.unitPrice || 0)) ? (effUnit(i) ? won(effUnit(i)) : '1회 정상가 입력')
@@ -1213,7 +1213,7 @@ class Component extends DCLogic {
         amount: (/[^0-9,]/.test(i.priceText) || !/^\d/.test(i.qtyText)) ? '—'
           : won(Number(i.priceText.replace(/,/g, '')) * (parseInt(i.qtyText, 10) || 0)) })),
       svcNote, svcWhat,
-      baseRows: docItems.filter(i => !i.isAdd && i.kind === '시술'),
+      baseRows: docItems.filter(i => !i.isAdd && i.kind === '시술').map(i => ({ ...i, scrQty: /^\d/.test(i.qtyText || '') ? '×' + i.qtyText : i.qtyText })),
       swapNotes: cur ? (cur.items || []).filter(i => i.swappedFrom).map(i => ({ text: '변경 · ' + svcName(i.swappedFrom) + ' → ' + svcName(i.name) })) : [],
       hasSwap: !!cur && (cur.items || []).some(i => i.swappedFrom),
       extraRows: docItems.filter(i => i.isAdd || i.kind !== '시술').map(i => ({ kind: i.kind, name: i.name,
@@ -1371,7 +1371,7 @@ class Component extends DCLogic {
       pName: isResign ? C.patient.name : (P.name || ''), pBirth: isResign ? C.patient.birth : (P.birth || ''), pPhone: isResign ? C.patient.phone : (P.phone || ''),
       // 동의서 상단 결제 정보: 저장할 계약 값(재서명은 저장된 계약)에서 표시만 만듦 — 계산·수납 기록은 바꾸지 않음
       ...(() => { const D = isResign ? C : buildContract();
-        if (!D) return { docMethod: '', docListText: '', hasDocDisc: false, docDiscText: '', docPayText: '', hasDocDepA: false, hasDocDepB: false, docDepText: '', hasDocDue: false, docDueText: '', hasDocLeftA: false, hasDocLeftB: false, docLeftText: '' };
+        if (!D) return { docMethod: '', docListText: '', hasDocDisc: false, docDiscText: '', docPayText: '', hasDocDepA: false, hasDocDepB: false, docDepText: '', hasDocDue: false, docDueText: '', hasDocLeftA: false, hasDocLeftB: false, docLeftText: '', hasDocPre: false };
         const q = D.prepaid || null, pays = D.payments || [], d = D.disc || {}, hc = D.hairCombo || null;
         // 결제수단: 실제 적용된 수단만 '/'로 연결 (금액 없이). 현금영수증은 발급 기록이 있을 때만
         const ms = [];
@@ -1395,7 +1395,7 @@ class Component extends DCLogic {
         return { docMethod: ms.join(' / ') || D.method || '', docListText: won(base) + '원',
           hasDocDisc: !!discText, docDiscText: discText, docPayText: won(total) + '원',
           hasDocDepA: dep > 0 && !discText, hasDocDepB: dep > 0 && !!discText, docDepText: '(예약금: ' + won(dep) + '원)',
-          hasDocDue: due > 0, docDueText: won(due) + '원',
+          hasDocDue: due > 0, docDueText: won(due) + '원', hasDocPre: preUseAmt > 0,
           // 잔액(사용하고 남은 선결제권): 예약금처럼 결제금액(할인 없으면 프로그램 금액) 아래에 (잔액: N원)
           hasDocLeftA: !!q && !discText, hasDocLeftB: !!q && !!discText, docLeftText: q ? '(잔액: ' + won(q.balAfter || 0) + '원)' : '' }; })(),
       isBrief, notBrief: !isBrief, briefOK, briefPriorDate: isResign ? (C.priorDate || '') : (priorFull ? priorFull.date : ''),
