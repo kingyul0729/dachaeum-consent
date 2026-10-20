@@ -11,7 +11,7 @@
 <helmet data-dc-atomics="">
 <meta name="format-detection" content="telephone=no">
 <meta name="viewport" content="width=820, initial-scale=1, maximum-scale=1, minimum-scale=1, user-scalable=no, viewport-fit=cover">
-<script>['https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css','https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@400;500;600;700&display=swap'].forEach(function(u){var l=document.createElement('link');l.rel='stylesheet';l.href=u;document.head.appendChild(l);});</script>
+<script>['https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css'].forEach(function(u){var l=document.createElement('link');l.rel='stylesheet';l.href=u;document.head.appendChild(l);});</script>
 <script>
 // 오류 추적 (개발·실기기 확인용): 주소 끝에 #debug 를 붙였을 때만 켜짐. 평소 운영 화면에는 아무것도 표시·기록하지 않음
 // 원본 오류(메시지·파일·줄·stack)·처리되지 않은 Promise 오류와 화면 전환 이벤트(공유 시트·인쇄·숨김·복귀·크기 변경)를 시간순으로 기록
@@ -59,7 +59,7 @@ body,body *{word-break:keep-all;overflow-wrap:break-word;line-break:strict}
 <script src="6e4fe348-9c15-4758-8ef5-4ac9b4ddad79"></script>
 </helmet>
 
-<div style="width:100%;max-width:820px;height:1180px;height:100vh;height:100dvh;position:relative;overflow:hidden;background:#ffffff;font-family:ui-sans-serif,system-ui,sans-serif,'Apple Color Emoji','Segoe UI Emoji','Segoe UI Symbol','Noto Color Emoji';color:#0a0a0a;display:flex;flex-direction:column">
+<div style="width:100%;max-width:820px;height:1180px;height:100vh;height:100dvh;position:relative;overflow:hidden;background:#ffffff;font-family:'Pretendard Variable',Pretendard,-apple-system,BlinkMacSystemFont,'Apple SD Gothic Neo','Noto Sans KR',sans-serif,'Apple Color Emoji','Segoe UI Emoji';color:#0a0a0a;display:flex;flex-direction:column">
 
 <sc-if value="{{ isChrome }}" hint-placeholder-val="{{ true }}">
 <div style="flex:none;display:flex;align-items:center;padding:14px;border-bottom:1px solid rgba(0,0,0,0.1);background:#ffffff">
@@ -478,9 +478,9 @@ body,body *{word-break:keep-all;overflow-wrap:break-word;line-break:strict}
       <div style="width:340px;flex:none;height:481px;overflow-x:hidden;overflow-y:auto;-webkit-overflow-scrolling:touch;touch-action:pan-y;background:#fff;border:1px solid rgba(0,0,0,0.1);box-shadow:0 2px 10px rgba(0,0,0,.06)">
         <div style="width:340px;overflow:hidden">
         <div ref="{{ pvRef }}" style="width:740px;transform:translateZ(0) scale(0.4595);transform-origin:top left;will-change:transform;backface-visibility:hidden;margin-bottom:{{ pvMb }}px">
-          <div style="width:740px;max-width:740px;overflow:hidden;min-height:1046px;padding:30px 40px;box-sizing:border-box;display:flex;flex-direction:column;word-break:keep-all;overflow-wrap:break-word;font-family:'Noto Serif KR',serif;color:#1c1f23">
+          <div style="width:740px;max-width:740px;overflow:hidden;min-height:1046px;padding:30px 40px;box-sizing:border-box;display:flex;flex-direction:column;word-break:keep-all;overflow-wrap:break-word;font-family:'Pretendard Variable',Pretendard,-apple-system,BlinkMacSystemFont,'Apple SD Gothic Neo','Noto Sans KR',sans-serif;color:#1c1f23">
             <div style="text-align:center;font-size:23px;font-weight:600;letter-spacing:0.06em"><sc-if value="{{ isEvent }}" hint-placeholder-val="{{ false }}">이벤트 </sc-if>프로그램 이용 동의서</div>
-            <div style="text-align:center;font-size:11.5px;color:#7b828a;margin-top:7px;font-family:Pretendard,sans-serif">다채움피부과의원 · 등록일 {{ docDate }}</div>
+            <div style="text-align:center;font-size:11.5px;color:#7b828a;margin-top:7px;font-family:'Pretendard Variable',Pretendard,-apple-system,BlinkMacSystemFont,'Apple SD Gothic Neo','Noto Sans KR',sans-serif">다채움피부과의원 · 등록일 {{ docDate }}</div>
             <div style="height:1.5px;background:#1c1f23;margin:9px 0 10px"></div>
             <div style="display:grid;grid-template-columns:132px 1fr 132px 1fr;border-top:1px solid #d5d9de;font-size:var(--tbl,11.5px);line-height:1.5;white-space:nowrap">
               <div style="padding:6px 14px;background:#f7f8f9;border-bottom:1px solid #d5d9de;font-weight:500">성명</div><div style="padding:6px 14px;border-bottom:1px solid #d5d9de">{{ pName }}</div>
@@ -787,9 +787,9 @@ body,body *{word-break:keep-all;overflow-wrap:break-word;line-break:strict}
     <div style="width:100%;height:100%;box-sizing:border-box;padding-bottom:100px;overflow-x:hidden;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;touch-action:pan-y;background:#fff">
       <div style="width:820px;overflow:hidden">
       <div ref="{{ sgRef }}" style="width:740px;transform:translateZ(0) scale(1.1081);transform-origin:top left;will-change:transform;backface-visibility:hidden;margin-bottom:{{ sgMb }}px">
-        <div style="width:740px;max-width:740px;overflow:hidden;min-height:0px;padding:24px 34px;box-sizing:border-box;display:flex;flex-direction:column;--lh:1.72;--sg:11px;--bg:4px;--tt:14px;--tb:4px;--cp:16px 20px;word-break:keep-all;overflow-wrap:break-word;font-family:'Noto Serif KR',serif;color:#1c1f23">
+        <div style="width:740px;max-width:740px;overflow:hidden;min-height:0px;padding:24px 34px;box-sizing:border-box;display:flex;flex-direction:column;--lh:1.72;--sg:11px;--bg:4px;--tt:14px;--tb:4px;--cp:16px 20px;word-break:keep-all;overflow-wrap:break-word;font-family:'Pretendard Variable',Pretendard,-apple-system,BlinkMacSystemFont,'Apple SD Gothic Neo','Noto Sans KR',sans-serif;color:#1c1f23">
           <div style="text-align:center;font-size:23px;font-weight:600;letter-spacing:0.06em"><sc-if value="{{ isEvent }}" hint-placeholder-val="{{ false }}">이벤트 </sc-if>프로그램 이용 동의서</div>
-          <div style="text-align:center;font-size:11.5px;color:#7b828a;margin-top:7px;font-family:Pretendard,sans-serif">다채움피부과의원 · 등록일 {{ docDate }}</div>
+          <div style="text-align:center;font-size:11.5px;color:#7b828a;margin-top:7px;font-family:'Pretendard Variable',Pretendard,-apple-system,BlinkMacSystemFont,'Apple SD Gothic Neo','Noto Sans KR',sans-serif">다채움피부과의원 · 등록일 {{ docDate }}</div>
           <div style="height:1.5px;background:#1c1f23;margin:9px 0 10px"></div>
           <div style="display:grid;grid-template-columns:132px 1fr 132px 1fr;border-top:1px solid #d5d9de;font-size:var(--tbl,11.5px);line-height:1.5;white-space:nowrap">
             <div style="padding:6px 14px;background:#f7f8f9;border-bottom:1px solid #d5d9de;font-weight:500">성명</div><div style="padding:6px 14px;border-bottom:1px solid #d5d9de">{{ pName }}</div>
@@ -877,7 +877,7 @@ body,body *{word-break:keep-all;overflow-wrap:break-word;line-break:strict}
                 {{ sigEl }}
               </sc-if>
               <sc-if value="{{ noSigImg }}" hint-placeholder-val="{{ true }}">
-                <span style="position:absolute;left:0;right:0;bottom:4px;text-align:center;font-size:9.5px;color:#9aa0a7;font-family:Pretendard,sans-serif">터치하여 서명</span>
+                <span style="position:absolute;left:0;right:0;bottom:4px;text-align:center;font-size:9.5px;color:#9aa0a7;font-family:'Pretendard Variable',Pretendard,-apple-system,BlinkMacSystemFont,'Apple SD Gothic Neo','Noto Sans KR',sans-serif">터치하여 서명</span>
               </sc-if>
             </span></div>
           </div>
@@ -1342,9 +1342,9 @@ body,body *{word-break:keep-all;overflow-wrap:break-word;line-break:strict}
     <div style="width:100%;height:100%;box-sizing:border-box;padding-bottom:100px;overflow-x:hidden;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;touch-action:pan-y;background:#fff">
       <div style="width:820px;overflow:hidden">
       <div ref="{{ sgRef }}" style="width:740px;transform:translateZ(0) scale(1.1081);transform-origin:top left;will-change:transform;backface-visibility:hidden;margin-bottom:{{ sgMb }}px">
-        <div style="width:740px;max-width:740px;overflow:hidden;min-height:0px;padding:24px 34px;box-sizing:border-box;display:flex;flex-direction:column;--lh:1.72;--sg:11px;--bg:4px;--tt:14px;--tb:4px;--cp:16px 20px;word-break:keep-all;overflow-wrap:break-word;font-family:'Noto Serif KR',serif;color:#1c1f23">
+        <div style="width:740px;max-width:740px;overflow:hidden;min-height:0px;padding:24px 34px;box-sizing:border-box;display:flex;flex-direction:column;--lh:1.72;--sg:11px;--bg:4px;--tt:14px;--tb:4px;--cp:16px 20px;word-break:keep-all;overflow-wrap:break-word;font-family:'Pretendard Variable',Pretendard,-apple-system,BlinkMacSystemFont,'Apple SD Gothic Neo','Noto Sans KR',sans-serif;color:#1c1f23">
           <div style="text-align:center;font-size:23px;font-weight:600;letter-spacing:0.06em">환불 정산서</div>
-          <div style="text-align:center;font-size:11.5px;color:#7b828a;margin-top:7px;font-family:Pretendard,sans-serif">다채움피부과의원 · 정산일 {{ rfToday }}</div>
+          <div style="text-align:center;font-size:11.5px;color:#7b828a;margin-top:7px;font-family:'Pretendard Variable',Pretendard,-apple-system,BlinkMacSystemFont,'Apple SD Gothic Neo','Noto Sans KR',sans-serif">다채움피부과의원 · 정산일 {{ rfToday }}</div>
           <div style="height:1.5px;background:#1c1f23;margin:9px 0 10px"></div>
           <div style="display:grid;grid-template-columns:132px 1fr 132px 1fr;border-top:1px solid #d5d9de;font-size:var(--tbl,11.5px);line-height:1.5;white-space:nowrap">
             <div style="padding:6px 14px;background:#f7f8f9;border-bottom:1px solid #d5d9de;font-weight:500">성명</div><div style="padding:6px 14px;border-bottom:1px solid #d5d9de">{{ rfName }}</div>
@@ -1362,7 +1362,7 @@ body,body *{word-break:keep-all;overflow-wrap:break-word;line-break:strict}
             <div style="padding:6px 14px;background:#f7f8f9;border-bottom:1px solid #d5d9de;font-weight:500">해지 구분</div><div style="padding:6px 14px;border-bottom:1px solid #d5d9de">{{ rfStage }}</div>
             <div style="padding:6px 14px;background:#f7f8f9;border-bottom:1px solid #d5d9de;font-weight:500">환불 사유</div><div style="padding:6px 14px;border-bottom:1px solid #d5d9de">{{ rfReason }}</div>
           </div>
-          <div style="margin-top:7px;font-size:10.5px;color:#7b828a;font-family:Pretendard,sans-serif">※ <span style="background:#fdf3b5;padding:1px 3px;color:#2b2f34">등록 당시 금액 및 규정</span>을 기준으로 정산하며, <b style="font-weight:700;color:#111418">이후의 가격 변경과 무관합니다</b>.</div>
+          <div style="margin-top:7px;font-size:10.5px;color:#7b828a;font-family:'Pretendard Variable',Pretendard,-apple-system,BlinkMacSystemFont,'Apple SD Gothic Neo','Noto Sans KR',sans-serif">※ <span style="background:#fdf3b5;padding:1px 3px;color:#2b2f34">등록 당시 금액 및 규정</span>을 기준으로 정산하며, <b style="font-weight:700;color:#111418">이후의 가격 변경과 무관합니다</b>.</div>
           <div style="margin-top:16px;font-size:12px;font-weight:600">2. 이용내역 (공제 근거)</div>
           <div style="margin-top:7px;display:grid;grid-template-columns:132px 1fr 58px 58px 92px 100px;border-top:1.2px solid #1c1f23;font-size:var(--tbl,11.5px);line-height:1.5;font-variant-numeric:tabular-nums">
             <div style="padding:6px 14px;background:#f7f8f9;border-bottom:1px solid #d5d9de;font-weight:500">구분</div><div style="padding:6px 14px;background:#f7f8f9;border-bottom:1px solid #d5d9de;font-weight:500">항목</div><div style="padding:6px 14px;background:#f7f8f9;border-bottom:1px solid #d5d9de;font-weight:500;text-align:right">등록</div><div style="padding:6px 14px;background:#f7f8f9;border-bottom:1px solid #d5d9de;font-weight:500;text-align:right">진행</div><div style="padding:6px 14px;background:#f7f8f9;border-bottom:1px solid #d5d9de;font-weight:500;text-align:right">1회 정상가</div><div style="padding:6px 14px;background:#f7f8f9;border-bottom:1px solid #d5d9de;font-weight:500;text-align:right">차감금액</div>
@@ -1371,7 +1371,7 @@ body,body *{word-break:keep-all;overflow-wrap:break-word;line-break:strict}
             </sc-for>
             <div style="padding:7px 14px;border-bottom:1.2px solid #1c1f23;grid-column:span 5;font-weight:600">이용금액 합계</div><div style="padding:7px 14px;border-bottom:1.2px solid #1c1f23;text-align:right;font-weight:600">{{ rfUsedAmt }}</div>
           </div>
-          <sc-if value="{{ hasCap }}" hint-placeholder-val="{{ false }}"><div style="margin-top:6px;font-size:10.4px;color:#5c636b;font-family:Pretendard,sans-serif">{{ rfCapNote }}</div></sc-if>
+          <sc-if value="{{ hasCap }}" hint-placeholder-val="{{ false }}"><div style="margin-top:6px;font-size:10.4px;color:#5c636b;font-family:'Pretendard Variable',Pretendard,-apple-system,BlinkMacSystemFont,'Apple SD Gothic Neo','Noto Sans KR',sans-serif">{{ rfCapNote }}</div></sc-if>
           <div style="margin-top:16px;font-size:12px;font-weight:600">3. 정산 계산</div>
           <div style="margin-top:7px;display:grid;grid-template-columns:1fr 130px;border-top:1.2px solid #1c1f23;font-size:11.5px">
             <div style="padding:6px 14px;border-bottom:1px solid #e3e6ea">{{ rfPaidLabel }}</div><div style="padding:6px 14px;border-bottom:1px solid #e3e6ea;text-align:right">{{ rfPaid }}원</div>
@@ -1403,7 +1403,7 @@ body,body *{word-break:keep-all;overflow-wrap:break-word;line-break:strict}
                 {{ sigEl }}
               </sc-if>
               <sc-if value="{{ noSigImg }}" hint-placeholder-val="{{ true }}">
-                <span style="position:absolute;left:0;right:0;bottom:4px;text-align:center;font-size:9.5px;color:#9aa0a7;font-family:Pretendard,sans-serif">터치하여 서명</span>
+                <span style="position:absolute;left:0;right:0;bottom:4px;text-align:center;font-size:9.5px;color:#9aa0a7;font-family:'Pretendard Variable',Pretendard,-apple-system,BlinkMacSystemFont,'Apple SD Gothic Neo','Noto Sans KR',sans-serif">터치하여 서명</span>
               </sc-if>
             </span></div>
           </div>

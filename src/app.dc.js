@@ -143,7 +143,7 @@ class Component extends DCLogic {
   snapshotDoc() {
     const wrap = (this._els || {}).sgH; const src = wrap && wrap.firstElementChild; if (!src || typeof document === 'undefined') return '';
     const c = src.cloneNode(true);
-    c.style.zoom = ''; c.style.fontFamily = "'Noto Serif KR', serif"; c.style.color = '#1c1f23'; c.style.width = '740px'; c.style.maxWidth = '740px'; c.style.minHeight = '0px';
+    c.style.zoom = ''; c.style.fontFamily = "'Pretendard Variable',Pretendard,-apple-system,BlinkMacSystemFont,'Apple SD Gothic Neo','Noto Sans KR',sans-serif"; c.style.color = '#1c1f23'; c.style.width = '740px'; c.style.maxWidth = '740px'; c.style.minHeight = '0px';
     const box = document.createElement('div'); box.style.cssText = 'position:fixed;left:-10000px;top:0;width:740px;visibility:hidden';
     box.appendChild(c); document.body.appendChild(box);
     const T = Component.TIERS; let t = T[T.length - 1];
@@ -224,7 +224,7 @@ class Component extends DCLogic {
     const apply = z => { doc.style.zoom = z === 1 ? '' : String(z); doc.style.width = (W / z) + 'px'; doc.style.maxWidth = (W / z) + 'px'; };
     const prevKey = (doc.style.zoom || '1') + '|' + doc.style.getPropertyValue('--tx');
     const padMode = wrap === (this._els || {}).sgH && !this._printing;
-    doc.style.fontFamily = padMode ? "Pretendard, 'Apple SD Gothic Neo', sans-serif" : '';
+    doc.style.fontFamily = padMode ? "'Pretendard Variable',Pretendard,-apple-system,BlinkMacSystemFont,'Apple SD Gothic Neo','Noto Sans KR',sans-serif" : '';
     doc.style.color = padMode ? '#111418' : '';
     let z = 1;
     if (padMode) {
