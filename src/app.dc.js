@@ -412,6 +412,12 @@ class Component extends DCLogic {
   }
 
   componentDidMount() {
+    // 이용 동의서 제목·병원명 줄·하단 날짜·성명 줄 글꼴(교보손글씨 2020): 번들 안의 글꼴 파일을 읽어 등록 (인터넷 없이도 표시)
+    try {
+      const fs = (window.__resources && window.__resources.handFont), fb = fs && window.__resourceBlobs && window.__resourceBlobs[fs];
+      const read = fb ? fb.arrayBuffer() : (fs && fs.indexOf('data:') === 0 ? Promise.resolve(Uint8Array.from(atob(fs.slice(fs.indexOf(',') + 1)), c => c.charCodeAt(0)).buffer) : null);
+      if (read && window.FontFace && document.fonts) read.then(buf => { const f = new FontFace('KyoboHand2020A', buf); return f.load().then(() => document.fonts.add(f)); }).catch(() => {});
+    } catch (e) {}
     // 환불 정산 작성 중 화면을 닫거나 다른 앱으로 전환하면 바로 저장
     const flushDraft = () => { if (this.state.screen === 'refund' || this.state.screen === 'refundSign') { clearTimeout(this._draftT); this.saveDraft(); } };
     window.addEventListener('pagehide', flushDraft);
