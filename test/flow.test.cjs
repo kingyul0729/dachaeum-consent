@@ -58,7 +58,7 @@ test('새 계약: 계약 당시 값·상태·서비스 단가 저장, 동의서 
   assert.ok(c.svcPrices && c.svcPrices.acne.some(r => r.range === '14일 미만' && r.price === 15000));
   const d = await docs(p);
   assert.equal(d.length, 1); assert.equal(d[0].contractId, c.id); assert.match(d[0].html, /data-onepage="1"/);
-  assert.match(d[0].html.replace(/<[^>]+>/g, ''), /시술 후납부금액 − 이용금액 − 위약금\(결제금액의 10%\)※ 위약금은 계약 취소·해지 시 정해진 조건에 따라 부담하는 금액으로, 이미 낸 금액에서 공제하고 환불합니다\./);
+  assert.match(d[0].html.replace(/<[^>]+>/g, ''), /①위약금이란 계약 취소·해지 시 정해진 조건과 관련 기준에 따라 부담하는 금액입니다\.②환자 사유로 계약을 취소·해지하는 경우, 실제 결제금액에서 이용한 시술비와 적용 가능한 위약금을 공제한 후 환불합니다\.시술 전실제 결제금액 − 위약금\(결제금액의 10%\)시술 후실제 결제금액 − 이용한 시술비 − 위약금\(결제금액의 10%\)③이용한 시술비는 상단에 표시된 시술별 1회 정상가\(할인 전\)를 기준으로 산정하며, 이용한 서비스를 포함합니다\./);
   assert.match(d[0].html.replace(/<[^>]+>/g, ''), /본인은 위 이용 및 환불 규정을 충분히 설명받고 이해하였으며, 이에 동의합니다/);
   // 재서명: 화면 구성이 계약과 같으면 허용 → 이전 버전 보존 + 새 버전
   await p.getByText(/재서명/).first().click(); await p.waitForTimeout(400);
