@@ -1217,6 +1217,8 @@ class Component extends DCLogic {
         amount: (/[^0-9,]/.test(i.priceText) || !/^\d/.test(i.qtyText)) ? '—'
           : won(Number(i.priceText.replace(/,/g, '')) * (parseInt(i.qtyText, 10) || 0)) })),
       svcNote, svcWhat,
+      // 약 처방 문장: 프로그램 구성에 약처방(서비스)이 실제로 있는 경우에만
+      hasRxNote: !!cur && !cur.lesion && (cur.items || []).some(i => /약\s?처방/.test(i.name || '')),
       baseRows: docItems.filter(i => !i.isAdd && i.kind === '시술').map(i => ({ ...i, scrQty: /^\d/.test(i.qtyText || '') ? '×' + i.qtyText : i.qtyText })),
       swapNotes: cur ? (cur.items || []).filter(i => i.swappedFrom).map(i => ({ text: '변경 · ' + svcName(i.swappedFrom) + ' → ' + svcName(i.name) })) : [],
       hasSwap: !!cur && (cur.items || []).some(i => i.swappedFrom),
