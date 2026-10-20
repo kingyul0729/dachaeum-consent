@@ -50,7 +50,7 @@ test('새 계약: 계약 당시 값·상태·서비스 단가 저장, 동의서 
   await click(p, '다음 단계'); await click(p, '카드');
   assert.match(await body(p), /수납액\s*330,000원/);
   await click(p, '동의서 미리보기 · 서명'); await p.waitForTimeout(400);
-  await p.getByText(/위 환불 규정/).last().click(); await sign(p);
+  await p.getByText(/이용 및 환불 규정을 충분히/).last().click(); await sign(p);
   await p.getByText('동의하고 저장', { exact: true }).last().click(); await p.waitForTimeout(800);
   const [c] = await contracts(p);
   assert.equal(c.status, '등록완료'); assert.equal(c.total, 330000); assert.equal(c.paid, 330000);
@@ -58,10 +58,11 @@ test('새 계약: 계약 당시 값·상태·서비스 단가 저장, 동의서 
   assert.ok(c.svcPrices && c.svcPrices.acne.some(r => r.range === '14일 미만' && r.price === 15000));
   const d = await docs(p);
   assert.equal(d.length, 1); assert.equal(d[0].contractId, c.id); assert.match(d[0].html, /data-onepage="1"/);
-  assert.match(d[0].html.replace(/<[^>]+>/g, ''), /실제 납부금액 − 위약금 10%/);
+  assert.match(d[0].html.replace(/<[^>]+>/g, ''), /시술 후납부금액 − 이용금액 − 결제금액의 10%/);
+  assert.match(d[0].html.replace(/<[^>]+>/g, ''), /본인은 위 이용 및 환불 규정을 충분히 설명받고 이해하였으며, 이에 동의합니다/);
   // 재서명: 화면 구성이 계약과 같으면 허용 → 이전 버전 보존 + 새 버전
   await p.getByText(/재서명/).first().click(); await p.waitForTimeout(400);
-  await p.getByText(/위 환불 규정/).last().click(); await sign(p);
+  await p.getByText(/이용 및 환불 규정을 충분히/).last().click(); await sign(p);
   await click(p, '동의하고 저장'); await p.waitForTimeout(600);
   assert.deepEqual((await docs(p)).map(x => [x.version, !!x.superseded]), [[1, true], [2, false]]);
   // 새로고침 후에는 화면 구성이 없으므로 재서명 차단
@@ -179,7 +180,7 @@ const pickProgram = async (p, id, label, opt = {}) => {
   await click(p, '다음 단계'); await click(p, '카드');
 };
 const signAndSave = async p => {
-  await click(p, '동의서 미리보기 · 서명'); await p.getByText(/위 환불 규정/).last().click(); await sign(p);
+  await click(p, '동의서 미리보기 · 서명'); await p.getByText(/이용 및 환불 규정을 충분히/).last().click(); await sign(p);
   await click(p, '동의하고 저장'); await p.waitForTimeout(700);
 };
 
@@ -913,7 +914,7 @@ test('동의서 저장 실패: 계약·문서 저장 실패 시 임시 저장본
   await click(p, '동의서 미리보기 · 서명'); await click(p, '임시 저장');
   await p.goto(URL); await p.waitForTimeout(1500);
   await click(p, '이어서 작성'); await click(p, '완납 결제', 0);
-  await click(p, '동의서 미리보기 · 서명'); await p.getByText(/위 환불 규정/).last().click(); await sign(p);
+  await click(p, '동의서 미리보기 · 서명'); await p.getByText(/이용 및 환불 규정을 충분히/).last().click(); await sign(p);
   const draftsBefore = await lsJ(p, 'dachaeum.v3.newDrafts');
   assert.equal(draftsBefore.length, 1);
   const sigShown = () => p.locator('img[src^="data:image/png"]').count();
@@ -1036,7 +1037,7 @@ async function pdfCheck(p, n, name) {
   assert.doesNotMatch(await body(p), /PDF 저장·공유·인쇄|PDF 만드는 중/, name + ': PDF 화면 닫힘');
   return buf.length;
 }
-const signSave = async (p, label) => { await p.getByText(/위 환불 규정/).last().click(); await sign(p); await click(p, label); await p.waitForTimeout(800); };
+const signSave = async (p, label) => { await p.getByText(/이용 및 환불 규정을 충분히/).last().click(); await sign(p); await click(p, label); await p.waitForTimeout(800); };
 
 test('iPad 세로 전체 흐름 ①: 기납부 예약금 + 예약금 결제 → 서명·저장·PDF → 시술 1회 이용 → 환불 정산(0원 하한) → 정산서 서명·PDF', async () => {
   const p = await openPad();
