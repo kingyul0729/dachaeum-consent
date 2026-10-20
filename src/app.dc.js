@@ -882,7 +882,8 @@ class Component extends DCLogic {
     // 결제수단 표시: 당일 수납 수단 + 선결제권 사용분 (기존 잔액 사용과 당일 카드·현금·계좌 수납을 구분)
     const methodStr = [payText, preUse > 0 ? preLabel + ' ' + won(preUse) + '원' : ''].filter(Boolean).join(' + ') || (needNum ? '카드' : preLabel);
     // 재등록 간이 동의서: 같은 환자가 1년 이내 같은 약관 버전으로 전체 동의서에 서명한 적이 있으면 약관 요약본으로 대체
-    const TERMS_VER = 'T-2026-09';
+    // 약관 버전: 'T-2026-10' = 이용 및 환불 규정 01~05. 이전 버전(T-2026-09)으로 서명한 환자는 간이 동의서 대신 전체 동의서
+    const TERMS_VER = 'T-2026-10';
     const pkP = (P.name || '') + '|' + (P.birth || '');
     const yearAgo = (() => { const x = new Date(todayStr); x.setFullYear(x.getFullYear() - 1); return x.toISOString().slice(0, 10); })();
     const priorFull = (s.contracts || []).filter(c => (c.patient.name || '') + '|' + (c.patient.birth || '') === pkP
