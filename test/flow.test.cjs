@@ -26,7 +26,20 @@ const body = p => p.innerText('body');
 const finalRefund = async p => (await body(p)).match(/최종 환불금액\s*([\d,]+)/)[1];
 const contracts = p => p.evaluate(() => JSON.parse(localStorage.getItem('dachaeum.v3.contracts') || '[]'));
 const docs = p => p.evaluate(() => JSON.parse(localStorage.getItem('dachaeum.v3.docs') || '[]'));
+// 전체 동의서 04의 따라 쓰기 칸(회색 글씨)을 모두 따라 씀: 회색 글씨 픽셀을 가로줄로 따라 그음
+async function trace(p) {
+  for (let k = 0; k < 4 && await p.locator('[data-tr]').count(); k++) {
+    await p.locator('[data-tr]').first().click(); await p.waitForTimeout(300);
+    const g = p.locator('canvas[width="768"][height="200"]').nth(0), bb = await g.boundingBox();
+    const runs = await g.evaluate(c => { const d = c.getContext('2d').getImageData(0, 0, c.width, c.height).data, W = c.width, R = [];
+      for (let y = 0; y < c.height; y += 5) { let st = -1; for (let x = 0; x <= W; x++) { const on = x < W && d[(y * W + x) * 4 + 3] > 100; if (on && st < 0) st = x; if (!on && st >= 0) { R.push([st, x, y]); st = -1; } } } return R; });
+    const sx = bb.width / 768, sy = bb.height / 200;
+    for (const [x0, x1, y] of runs) { await p.mouse.move(bb.x + x0 * sx, bb.y + y * sy); await p.mouse.down(); await p.mouse.move(bb.x + (x1 + 0.5) * sx, bb.y + y * sy); await p.mouse.up(); }
+    await click(p, '따라 쓰기 완료');
+  }
+}
 async function sign(p) {
+  await trace(p);
   await click(p, '터치하여 서명');
   const bb = await p.locator('canvas').first().boundingBox();
   await p.mouse.move(bb.x + 30, bb.y + 40); await p.mouse.down();
@@ -58,7 +71,8 @@ test('새 계약: 계약 당시 값·상태·서비스 단가 저장, 동의서 
   assert.ok(c.svcPrices && c.svcPrices.acne.some(r => r.range === '14일 미만' && r.price === 15000));
   const d = await docs(p);
   assert.equal(d.length, 1); assert.equal(d[0].contractId, c.id); assert.match(d[0].html, /data-onepage="1"/);
-  assert.match(d[0].html.replace(/<[^>]+>/g, ''), /04 중도 해지 시 환불금액환자 사유로 계약을 취소·해지하는 경우, 이미 낸 금액에서 아래 금액을 공제한 후 환불합니다\.시술 전실제 결제금액 − 위약금시술 후실제 결제금액 − 이용한 시술비 − 위약금위약금계약 취소·해지 시 정해진 조건과 관련 기준에 따라 부담하는 금액으로, 결제금액\(할인 후 최종 금액\)의 10%입니다\.이용한 시술비상단 시술별 1회 정상가\(할인 전\)를 기준으로 산정하며, 이용한 서비스를 포함합니다\./);
+  assert.equal((d[0].html.match(/<img[^>]*alt="(결제금액의 10%|1회 정상가)"/g) || []).length, 2, '따라 쓴 두 문구가 서명 문서에 그림으로 보관됨');
+  assert.match(d[0].html.replace(/<img[^>]*alt="([^"]*)"[^>]*>/g, '$1').replace(/<[^>]+>/g, ''), /04 중도 해지 시 환불금액환자 사유로 계약을 취소·해지하는 경우, 이미 낸 금액에서 아래 금액을 공제한 후 환불합니다\.시술 전실제 결제금액 − 위약금시술 후실제 결제금액 − 이용한 시술비 − 위약금위약금계약 취소·해지 시 정해진 조건과 관련 기준에 따라 부담하는 금액으로, 결제금액의 10%입니다\.이용한 시술비상단 시술별 1회 정상가\(할인 전\)를 기준으로 산정하며, 이용한 서비스를 포함합니다\./);
   assert.match(d[0].html.replace(/<[^>]+>/g, ''), /본인은 위 이용 및 환불 규정을 충분히 설명받고 이해하였으며, 이에 동의합니다/);
   // 재서명: 화면 구성이 계약과 같으면 허용 → 이전 버전 보존 + 새 버전
   await p.getByText(/재서명/).first().click(); await p.waitForTimeout(400);
@@ -1496,17 +1510,20 @@ test('간이(재등록) 동의서: 새 규정(T-2026-10)으로 서명한 환자�
     await click(p, '여드름 8주 프로그램'); await click(p, '다음 단계'); await click(p, '카드');
     await click(p, '동의서 미리보기 · 서명');
     const b = (await body(p)).replace(/\s+/g, ' ');
+    const tr = await p.locator('[data-tr]').count();
     await p.context().close();
-    return b;
+    return { b, tr };
   };
-  const brief = await run('T-2026-10');
+  const R1 = await run('T-2026-10'), brief = R1.b;
+  assert.equal(R1.tr, 0, '간이 동의서에는 따라 쓰기 칸 없음');
   for (const re of [/2\. 이용 및 환불 규정 \(재등록 요약\) 01 이용기간 결제일로부터 1년이며/, /02 관리 변경 약 처방은 피부 상태와 의료진 판단에 따릅니다\. 관리 변경은 환자 동의 후/,
     /04 중도 해지 시 환불금액 환자 사유로 계약을 취소·해지하는 경우, 이미 낸 금액에서 아래 금액을 공제한 후 환불합니다\. 시술 전 실제 결제금액 − 위약금 시술 후 실제 결제금액 − 이용한 시술비 − 위약금/,
-    /위약금 계약 취소·해지 시 정해진 조건과 관련 기준에 따라 부담하는 금액으로, 결제금액\(할인 후 최종 금액\)의 10%입니다\./, /이용한 시술비 상단 시술별 1회 정상가\(할인 전\)를 기준으로 산정하며, 이용한 서비스를 포함합니다\./,
+    /위약금 계약 취소·해지 시 정해진 조건과 관련 기준에 따라 부담하는 금액으로, 결제금액의 10%입니다\./, /이용한 시술비 상단 시술별 1회 정상가\(할인 전\)를 기준으로 산정하며, 이용한 서비스를 포함합니다\./,
     /05 환불 방법 원결제 수단으로 진행하며, 어려운 경우 별도 협의합니다\./, /2026-10-01 서명한 프로그램 이용 동의서의 이용 및 환불 규정 전문과 동일한 조건/,
     /본인은 위 이용 및 환불 규정을 충분히 설명받고 이해하였으며, 이에 동의합니다\. \(필수\)/]) assert.match(brief, re);
   assert.doesNotMatch(brief, /약관 전문|총 결제금액의 10%|정가로 정산/, '이전 요약 문구 없음');
-  const full = await run('T-2026-09');
+  const R2 = await run('T-2026-09'), full = R2.b;
+  assert.equal(R2.tr, 2, '전체 동의서에는 따라 쓰기 칸 두 곳');
   assert.match(full, /2\. 이용 및 환불 규정 01 이용기간 결제일로부터 1년/, '이전 약관으로 서명한 환자는 전체 동의서');
   assert.doesNotMatch(full, /서명한 프로그램 이용 동의서의 이용 및 환불 규정 전문과 동일한 조건/);
   assert.doesNotMatch(full, /재등록 요약/);
