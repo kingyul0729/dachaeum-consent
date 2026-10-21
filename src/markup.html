@@ -517,11 +517,11 @@ body,body *{word-break:keep-all;overflow-wrap:break-word;line-break:strict}
             <div style="margin-top:7px;border-top:1.2px solid #1c1f23;font-size:var(--tbl,11.5px);line-height:1.5;font-variant-numeric:tabular-nums">
 <div style="padding:8px 14px 5px;font-weight:600;border-bottom:1px solid #d5d9de">기본 시술</div>
 <div style="display:flex;background:#f7f8f9;border-bottom:1px solid #d5d9de;font-weight:500">
-<div style="width:132px;box-sizing:border-box;padding:6px 14px">구분</div><div style="flex:1;min-width:0;padding:6px 14px">기본 시술</div><div style="width:100px;box-sizing:border-box;padding:6px 14px;text-align:right;white-space:nowrap">횟수</div><div style="width:150px;box-sizing:border-box;padding:6px 20px 6px 14px;text-align:right"><sc-if value="{{ isManualProg }}" hint-placeholder-val="{{ false }}">환불용 1회 정상가</sc-if><sc-if value="{{ notManualProg }}" hint-placeholder-val="{{ true }}">1회 정상가</sc-if></div>
+<div style="flex:1;min-width:0;padding:6px 14px">시술명</div><div style="width:100px;box-sizing:border-box;padding:6px 14px;text-align:right;white-space:nowrap">횟수</div><div style="width:150px;box-sizing:border-box;padding:6px 20px 6px 14px;text-align:right"><sc-if value="{{ isManualProg }}" hint-placeholder-val="{{ false }}">환불용 1회 정상가</sc-if><sc-if value="{{ notManualProg }}" hint-placeholder-val="{{ true }}">1회 정상가</sc-if></div>
 </div>
 <sc-for list="{{ baseRows }}" as="d" hint-placeholder-count="3">
 <div style="display:flex;border-bottom:1px solid #e3e6ea">
-<div style="width:132px;box-sizing:border-box;padding:6px 14px">{{ d.kind }}</div><div style="flex:1;min-width:0;padding:6px 14px;text-wrap:pretty;white-space:pre-line">{{ d.name }}</div><div style="width:100px;box-sizing:border-box;padding:6px 14px;text-align:right;white-space:nowrap">{{ d.qtyText }}</div><div style="width:150px;box-sizing:border-box;padding:6px 20px 6px 14px;text-align:right">{{ d.priceText }}</div>
+<div style="flex:1;min-width:0;padding:6px 14px;text-wrap:pretty;white-space:pre-line">{{ d.name }}</div><div style="width:100px;box-sizing:border-box;padding:6px 14px;text-align:right;white-space:nowrap">{{ d.qtyText }}</div><div style="width:150px;box-sizing:border-box;padding:6px 20px 6px 14px;text-align:right">{{ d.priceText }}</div>
 </div>
 </sc-for>
 <sc-if value="{{ hasSwap }}" hint-placeholder-val="{{ false }}"><div style="display:flex;flex-direction:column;gap:2px;padding:5px 14px;border-bottom:1px solid #e3e6ea"><sc-for list="{{ swapNotes }}" as="w" hint-placeholder-count="1"><div>{{ w.text }}</div></sc-for></div></sc-if>
@@ -826,11 +826,11 @@ body,body *{word-break:keep-all;overflow-wrap:break-word;line-break:strict}
           <div style="margin-top:7px;border-top:1.2px solid #1c1f23;font-size:var(--tbl,11.5px);line-height:1.5;font-variant-numeric:tabular-nums">
 <div style="padding:8px 14px 5px;font-weight:600;border-bottom:1px solid #d5d9de">기본 시술</div>
 <div style="display:flex;background:#f7f8f9;border-bottom:1px solid #d5d9de;font-weight:500">
-<div style="width:132px;box-sizing:border-box;padding:6px 14px">구분</div><div style="flex:1;min-width:0;padding:6px 14px">기본 시술</div><div style="width:100px;box-sizing:border-box;padding:6px 14px;text-align:right;white-space:nowrap">횟수</div><div style="width:150px;box-sizing:border-box;padding:6px 20px 6px 14px;text-align:right"><sc-if value="{{ isManualProg }}" hint-placeholder-val="{{ false }}">환불용 1회 정상가</sc-if><sc-if value="{{ notManualProg }}" hint-placeholder-val="{{ true }}">1회 정상가</sc-if></div>
+<div style="flex:1;min-width:0;padding:6px 14px">시술명</div><div style="width:100px;box-sizing:border-box;padding:6px 14px;text-align:right;white-space:nowrap">횟수</div><div style="width:150px;box-sizing:border-box;padding:6px 20px 6px 14px;text-align:right"><sc-if value="{{ isManualProg }}" hint-placeholder-val="{{ false }}">환불용 1회 정상가</sc-if><sc-if value="{{ notManualProg }}" hint-placeholder-val="{{ true }}">1회 정상가</sc-if></div>
 </div>
 <sc-for list="{{ baseRows }}" as="d" hint-placeholder-count="3">
 <div style="display:flex;border-bottom:1px solid #e3e6ea">
-<div style="width:132px;box-sizing:border-box;padding:6px 14px">{{ d.kind }}</div><div style="flex:1;min-width:0;padding:6px 14px;text-wrap:pretty;white-space:pre-line">{{ d.name }}</div><div style="width:100px;box-sizing:border-box;padding:6px 14px;text-align:right;white-space:nowrap">{{ d.qtyText }}</div><div style="width:150px;box-sizing:border-box;padding:6px 20px 6px 14px;text-align:right">{{ d.priceText }}</div>
+<div style="flex:1;min-width:0;padding:6px 14px;text-wrap:pretty;white-space:pre-line">{{ d.name }}</div><div style="width:100px;box-sizing:border-box;padding:6px 14px;text-align:right;white-space:nowrap">{{ d.qtyText }}</div><div style="width:150px;box-sizing:border-box;padding:6px 20px 6px 14px;text-align:right">{{ d.priceText }}</div>
 </div>
 </sc-for>
 <sc-if value="{{ hasSwap }}" hint-placeholder-val="{{ false }}"><div style="display:flex;flex-direction:column;gap:2px;padding:5px 14px;border-bottom:1px solid #e3e6ea"><sc-for list="{{ swapNotes }}" as="w" hint-placeholder-count="1"><div>{{ w.text }}</div></sc-for></div></sc-if>
