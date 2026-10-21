@@ -1289,6 +1289,7 @@ class Component extends DCLogic {
       ckRefund: !!s.ckRefund, noCkRefund: !s.ckRefund,
       toggleCkRefund: () => this.setState(st => ({ ckRefund: !st.ckRefund })),
       isLesion, notLesion: !isLesion, lesionRows,
+      lesionTierText: tiers.map(t => t.label + ' ' + won(t.price) + '원').join(' / '),
       lesionSites: ['이마', '우측 관자', '좌측 관자', '우측 광대', '좌측 광대', '우측 볼', '좌측 볼', '코', '턱', '목', '손등', '기타'].map(v => ({ v })),
       lesionStep: { label: LS.length + '개', decFg: LS.length > 1 ? '#030213' : 'rgba(0,0,0,0.1)', incFg: '#030213',
         dec: () => LS.length > 1 && this.setState(st => ({ lesions: (st.lesions || LS).slice(0, -1) })),
