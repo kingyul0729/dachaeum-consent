@@ -136,19 +136,26 @@ class Component extends DCLogic {
   static TRACE = ['결제금액의 10%', '1회 정상가'];
   openTrace = (i) => { this._trOk = false; this.setState({ trOpen: i, trMsg: '' }); };
   closeTrace = () => this.setState({ trOpen: -1, trMsg: '' });
-  trFont(x, fs) { x.font = fs + "px 'KyoboHand2020A', 'Pretendard Variable', sans-serif"; x.textAlign = 'center'; x.textBaseline = 'middle'; }
+  // 따라 쓰기 글씨: 본문과 같은 정갈한 고딕(Pretendard, 없으면 기기 기본 고딕)
+  static TR_FF = "'Pretendard Variable', Pretendard, -apple-system, 'Apple SD Gothic Neo', 'Noto Sans KR', sans-serif";
+  trFont(x, fs) { x.font = '400 ' + fs + 'px ' + Component.TR_FF; x.textAlign = 'center'; x.textBaseline = 'middle'; }
   attachTrGuide = (el) => {
     const T = Component.TRACE[this.state.trOpen] || '';
     if (!el) { this._trg = null; return; }
     if (el === this._trg && this._trT === T) return;   // 다시 그려질 때 쓰던 내용·판별 기록 유지
     this._trg = el; this._trT = T;
+    this.drawTrGuide(el, T);
+    // 글꼴이 늦게 받아지면 그 글꼴로 회색 글씨·판별 기준을 다시 그림 (쓰던 선은 유지)
+    if (document.fonts && document.fonts.load) document.fonts.load('400 88px ' + Component.TR_FF, T).then(() => { if (this._trg === el && this._trT === T) this.drawTrGuide(el, T, true); }).catch(() => {});
+  };
+  drawTrGuide(el, T, keepHit) {
     const W = el.width, H = el.height, x = el.getContext('2d');
     let fs = 88; this.trFont(x, fs); const tw = x.measureText(T).width; if (tw > W - 60) { fs = Math.floor(fs * (W - 60) / tw); this.trFont(x, fs); }
     const w = x.measureText(T).width;
     this._trBox = { fs, x0: Math.max(0, Math.floor((W - w) / 2 - fs * 0.15)), x1: Math.min(W, Math.ceil((W + w) / 2 + fs * 0.15)), y0: Math.max(0, Math.floor(H / 2 - fs * 0.75)), y1: Math.min(H, Math.ceil(H / 2 + fs * 0.75)) };
     x.clearRect(0, 0, W, H); x.fillStyle = '#c3c9cf'; x.fillText(T, W / 2, H / 2);
     const mk = () => { const k = document.createElement('canvas'); k.width = W; k.height = H; return k; };
-    this._trMask = mk(); this._trNear = mk(); this._trHit = mk();
+    this._trMask = mk(); this._trNear = mk(); if (!keepHit || !this._trHit) this._trHit = mk();
     const m = this._trMask.getContext('2d'); this.trFont(m, fs); m.fillText(T, W / 2, H / 2);
     const n = this._trNear.getContext('2d'); this.trFont(n, fs); n.lineJoin = 'round'; n.lineWidth = fs * 0.3; n.fillText(T, W / 2, H / 2); n.strokeText(T, W / 2, H / 2);
   };
@@ -961,7 +968,7 @@ class Component extends DCLogic {
       trVals['tr' + i + 'Bd'] = trImg[i] ? 'transparent' : '#8d98a4';
       trVals['tr' + i + 'El'] = trImg[i]
         ? React.createElement('img', { src: trImg[i], alt: t, style: { height: '1.75em', verticalAlign: 'middle', display: 'inline-block' } })
-        : React.createElement('span', { 'data-tr': i, style: { fontFamily: "'KyoboHand2020A','Pretendard Variable',sans-serif", fontSize: '1.3em', color: '#a9b0b7', fontWeight: 400, letterSpacing: 0 } }, t);
+        : React.createElement('span', { 'data-tr': i, style: { fontFamily: Component.TR_FF, fontSize: '1.15em', color: '#a9b0b7', fontWeight: 400, letterSpacing: 0 } }, t);
     });
     const buildContract = () => !cur ? null : {
       docMode: isBrief ? 'brief' : 'full', termsVer: TERMS_VER, priorDate: isBrief && priorFull ? priorFull.date : null,
