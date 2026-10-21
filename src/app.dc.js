@@ -1305,7 +1305,9 @@ class Component extends DCLogic {
       hasSwap: !!cur && (cur.items || []).some(i => i.swappedFrom),
       extraRows: docItems.filter(i => i.isAdd || i.kind !== '시술').map((i, n) => ({ i, n, o: !i.isAdd ? 0 : i.addId === 'pig-blackspot-pico532' ? 1 : 2 })).sort((a, b) => a.o - b.o || a.n - b.n).map(({ i }) => ({ kind: i.kind, name: i.name,
         qtyText: i.isAdd ? i.addQtyText : (/^\d/.test(i.qtyText || '') ? i.qtyText : '-'),
-        feeText: i.svc ? '무상' : i.isAdd && i.addPrice ? '+' + won(i.addPrice) + '원' : !i.isAdd ? '포함' : '-' })),
+        feeText: i.svc ? '무상' : i.isAdd && i.addPrice ? '+' + won(i.addPrice) + '원' : !i.isAdd ? '포함' : '-',
+        // 포함·무상은 연한 회색, 실제 추가금만 진하게 → 구분 열 없이도 한눈에 구별
+        feeColor: i.isAdd && i.addPrice && !i.svc ? '#111418' : '#8a929a', feeWeight: i.isAdd && i.addPrice && !i.svc ? 600 : 400 })),
       extraQtyShow: docItems.filter(i => i.isAdd || i.kind !== '시술').some(i => (i.isAdd ? i.addQtyText : (/^\d/.test(i.qtyText || '') ? i.qtyText : '-')) !== '-'),
       hasExtra: docItems.some(i => i.isAdd || i.kind !== '시술'),
       // 1회성(당일 종료) 프로그램: 쁘띠·점제거 전체, 또는 시술 1개·1회 구성 → 이용금액 ※ 생략
@@ -1317,6 +1319,8 @@ class Component extends DCLogic {
       sgMb: Math.floor((s.sgH || 1046) * 0.1081),
       // 조건별 금액 프로그램: 시술 정상가 합계 미표시 (총 계약금액 · 환불용 1회 정상가만)
       showSum: !singleVisit && !isManual, hideSum: singleVisit || isManual, isManualProg: isManual, notManualProg: !isManual,
+      // 합계는 기본 시술 바로 아래: 아래에 포함 서비스 표가 이어지면 얇은 구분선, 없으면 표 마감선과 겹치지 않게 선 없음
+      sumBd: docItems.some(i => i.isAdd || i.kind !== '시술') ? '1px solid #d5d9de' : 'none',
       sumLabel: isLesion ? '등록 병변 수' : capped ? '총 이용횟수' : '시술 정상가 합계',
       sumValue: isLesion ? LS.length + '개' : capped ? capN + '회' : won(listSumNum - curAdds.reduce((t, a) => t + Number(a.price || 0), 0)),
       svcEditRows, hasSvcEdit: svcEditRows.length > 0,

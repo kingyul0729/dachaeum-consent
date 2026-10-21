@@ -228,7 +228,8 @@ test('얼굴 전체 병변 제거 추가옵션: 가격 데이터의 1회·110,00
   assert.deepEqual([c.items[k].kind, c.items[k].qty, c.items[k].price, !!c.items[k].unitInput, !!c.items[k].actual], ['추가', 1, 110000, false, false]);
   assert.ok(c.items.some(i => i.name === '얼굴 전체 점 CO₂ 제거' && i.actual), '점 CO₂는 병변별 입력 항목으로 유지');
   const dt = plain((await docs(p))[0].html);
-  assert.match(dt, /포함 서비스 · 선택 추가 구분 항목 추가금 서비스 얼굴 전체 점 CO₂ 제거 포함 추가 얼굴 전체 병변 제거 \+110,000원/, '포함 서비스는 횟수 없이 포함, 선택 추가는 추가금만');
+  assert.match(dt, /포함 서비스 · 선택 추가 항목 추가금 얼굴 전체 점 CO₂ 제거 포함 얼굴 전체 병변 제거 \+110,000원/, '포함 서비스는 횟수 없이 포함, 선택 추가는 추가금만 (구분 열 없음)');
+  assert.match(dt, /시술 정상가 합계 [\d,]+ 포함 서비스 · 선택 추가/, '정상가 합계는 기본 시술 바로 아래 (포함 서비스 표 위)');
   assert.doesNotMatch(dt, /CO₂ 제거 2회|얼굴 전체 CO₂ 제거|제공 횟수/);
   await p.goto(URL); await p.waitForTimeout(1500);
   await click(p, '스페셜 토닝 3'); await click(p, '환불 정산');
