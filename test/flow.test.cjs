@@ -38,6 +38,10 @@ async function trace(p) {
     await click(p, '따라 쓰기 완료');
   }
 }
+// 이용 동의서 저장 후 환자용 완료 화면 → 확인을 눌러 직원 화면(상세)으로
+async function doneOk(p) {
+  if (await p.getByText('동의가 완료되었습니다', { exact: true }).count()) { await p.getByText('확인', { exact: true }).last().click(); await p.waitForTimeout(400); }
+}
 async function sign(p) {
   await trace(p);
   await click(p, '터치하여 서명');
@@ -63,8 +67,12 @@ test('새 계약: 계약 당시 값·상태·서비스 단가 저장, 동의서 
   await click(p, '다음 단계'); await click(p, '카드');
   assert.match(await body(p), /수납액\s*330,000원/);
   await click(p, '동의서 미리보기 · 서명'); await p.waitForTimeout(400);
+  assert.match((await body(p)).replace(/\s+/g, ' '), /따라 쓰기 › 2 규정 동의 › 3 서명 › 4 저장 04의 회색 글씨 두 곳을 눌러 따라 써 주세요/, '서명 화면 단계 표시줄: 첫 단계 따라 쓰기');
   await p.getByText(/이용 및 환불 규정을 충분히/).last().click(); await sign(p);
+  assert.match(await body(p), /오른쪽 아래 「동의하고 저장」을 눌러 주세요/, '모든 단계 완료 후 저장 안내');
   await p.getByText('동의하고 저장', { exact: true }).last().click(); await p.waitForTimeout(800);
+  assert.match(await body(p), /동의가 완료되었습니다/, '저장 후 환자용 완료 화면');
+  await doneOk(p);
   const [c] = await contracts(p);
   assert.equal(c.status, '등록완료'); assert.equal(c.total, 330000); assert.equal(c.paid, 330000);
   assert.deepEqual(c.items.map(i => [i.name, i.qty, i.price]), [['인모드 FX', 3, 165000]]);
@@ -77,7 +85,7 @@ test('새 계약: 계약 당시 값·상태·서비스 단가 저장, 동의서 
   // 재서명: 화면 구성이 계약과 같으면 허용 → 이전 버전 보존 + 새 버전
   await p.getByText(/재서명/).first().click(); await p.waitForTimeout(400);
   await p.getByText(/이용 및 환불 규정을 충분히/).last().click(); await sign(p);
-  await click(p, '동의하고 저장'); await p.waitForTimeout(600);
+  await click(p, '동의하고 저장'); await p.waitForTimeout(600); await doneOk(p);
   assert.deepEqual((await docs(p)).map(x => [x.version, !!x.superseded]), [[1, true], [2, false]]);
   // 새로고침 후에는 화면 구성이 없으므로 재서명 차단
   await p.goto(URL); await p.waitForTimeout(2000);
@@ -195,7 +203,7 @@ const pickProgram = async (p, id, label, opt = {}) => {
 };
 const signAndSave = async p => {
   await click(p, '동의서 미리보기 · 서명'); await p.getByText(/이용 및 환불 규정을 충분히/).last().click(); await sign(p);
-  await click(p, '동의하고 저장'); await p.waitForTimeout(700);
+  await click(p, '동의하고 저장'); await p.waitForTimeout(700); await doneOk(p);
 };
 
 test('PGM-0037 남성 턱밑라인: 환불용 1회 정상가 입력 전 서명 불가 → 입력값 계약 저장 → 환불 차감', async () => {
@@ -947,7 +955,7 @@ test('동의서 저장 실패: 계약·문서 저장 실패 시 임시 저장본
   }
   // 저장 공간 확보 후 다시 저장 → 1건씩
   await failWrites(p, []);
-  await p.getByText('동의하고 저장', { exact: true }).last().dblclick(); await p.waitForTimeout(800);
+  await p.getByText('동의하고 저장', { exact: true }).last().dblclick(); await p.waitForTimeout(800); await doneOk(p);
   const cs = await contracts(p), ds = await docs(p);
   assert.equal(cs.length, 1, '중복 계약 없음'); assert.equal(ds.length, 1, '중복 문서 없음');
   assert.deepEqual([ds[0].contractId, ds[0].version, ds[0].kind], [cs[0].id, 1, '이용동의서']);
@@ -1052,7 +1060,7 @@ async function pdfCheck(p, n, name) {
   assert.doesNotMatch(await body(p), /PDF 저장·공유·인쇄|PDF 만드는 중/, name + ': PDF 화면 닫힘');
   return buf.length;
 }
-const signSave = async (p, label) => { await p.getByText(/이용 및 환불 규정을 충분히/).last().click(); await sign(p); await click(p, label); await p.waitForTimeout(800); };
+const signSave = async (p, label) => { await p.getByText(/이용 및 환불 규정을 충분히/).last().click(); await sign(p); await click(p, label); await p.waitForTimeout(800); await doneOk(p); };
 
 test('iPad 세로 전체 흐름 ①: 기납부 예약금 + 예약금 결제 → 서명·저장·PDF → 시술 1회 이용 → 환불 정산(0원 하한) → 정산서 서명·PDF', async () => {
   const p = await openPad();

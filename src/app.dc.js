@@ -536,7 +536,7 @@ class Component extends DCLogic {
     const PR = window.DachaeumPricing, RF = window.DachaeumRefund, CAT = window.DachaeumCatalog;
     if (!PR || !RF || !CAT) { clearTimeout(this._waitRules); this._waitRules = setTimeout(() => this.forceUpdate(), 40); return {}; }
     const s = this.state, S = s.screen;
-    const isSign = S === 'sign', isRefundSign = S === 'refundSign';
+    const isSign = S === 'sign', isRefundSign = S === 'refundSign', isSignDone = S === 'signDone';
     const won = n => Number(n || 0).toLocaleString('ko-KR');
     const todayISO = Component.today();
     const isResign = s.signFrom === 'resign';
@@ -960,7 +960,16 @@ class Component extends DCLogic {
     // 중요 문구 따라 쓰기: 전체 동의서(간이·병변 동의서 제외)에서만, 두 곳 모두 써야 서명·저장 가능
     const needTrace = s.screen === 'sign' && !isBrief && !isLesion, trImg = s.trImg || [], TR_MSG = '04의 회색 글씨 두 곳을 먼저 따라 써 주세요';
     const trLeft = needTrace && Component.TRACE.some((t, i) => !trImg[i]);
-    const trVals = { needTrace, noTrace: !needTrace, trPadOpen: s.trOpen >= 0, trPadText: Component.TRACE[s.trOpen] || '', trMsg: s.trMsg || '',
+    // 서명 화면 단계 표시줄: (따라 쓰기) → 규정 동의 → 서명 → 저장. 지금 할 단계와 안내 문구
+    const signStepsRaw = [needTrace && { label: '따라 쓰기', done: !trLeft }, { label: '규정 동의', done: !!s.ckRefund }, { label: '서명', done: !!s.sigImg }, { label: '저장', done: false }].filter(Boolean);
+    const signCur = signStepsRaw.findIndex(t => !t.done);
+    const signSteps = signStepsRaw.map((t, i) => ({ label: t.label, sep: i ? '›' : '', mark: t.done ? '✓' : String(i + 1),
+      bg: t.done ? '#1c1f23' : i === signCur ? '#1d4f8a' : '#e6e9ed', nfg: t.done || i === signCur ? '#ffffff' : '#8a929a',
+      fg: t.done || i === signCur ? '#1c1f23' : '#8a929a', fw: i === signCur ? 600 : 400 }));
+    const signPct = Math.round(signStepsRaw.filter(t => t.done).length / signStepsRaw.length * 100);
+    const signHint = needTrace && trLeft ? '04의 회색 글씨 두 곳을 눌러 따라 써 주세요' : !s.ckRefund ? '아래 동의 문구를 눌러 체크해 주세요'
+      : !s.sigImg ? '서명 칸을 눌러 서명해 주세요' : '오른쪽 아래 「동의하고 저장」을 눌러 주세요';
+    const trVals = { signSteps, signPct, signHint, needTrace, noTrace: !needTrace, trPadOpen: s.trOpen >= 0, trPadText: Component.TRACE[s.trOpen] || '', trMsg: s.trMsg || '',
       trGRef: this.attachTrGuide, trRef: this.attachTr, trDown: this.trDown, trMove: this.trMove, trUp: this.trUp,
       clearTrace: this.clearTrace, closeTrace: this.closeTrace, confirmTrace: this.confirmTrace };
     Component.TRACE.forEach((t, i) => {
@@ -1242,9 +1251,11 @@ class Component extends DCLogic {
     const t = titles[S] || titles.list;
 
     return {
-      isChrome: !isSign && !isRefundSign, showBar: !isSign && !isRefundSign && S !== 'new',
+      isChrome: !isSign && !isRefundSign && !isSignDone, showBar: !isSign && !isRefundSign && !isSignDone && S !== 'new',
       isList: S === 'list', isNew: S === 'new', isDetail: S === 'detail', isRefund: S === 'refund',
-      isSign, isRefundSign,
+      isSign, isRefundSign, isSignDone,
+      // 서명 완료 화면(환자용) → 확인을 누르면 직원 화면(계약 상세 · 문서 탭)으로
+      signDoneOk: () => this.setState({ screen: 'detail' }),
       showBack: S !== 'list', goList: () => { if (S === 'refund') this.saveDraft(); this.setState({ screen: 'list' }); },
       // 디자인 기준(B) 헤더: 뒤로가기 화살표 + 화면 제목. 새 동의서 작성 중에는 기존 '이전'(1단계는 '취소') 동작, 그 외 화면은 목록으로
       goBack: () => S === 'new' ? bar.onS() : (S === 'refund' && this.saveDraft(), this.setState({ screen: 'list' })),
@@ -1435,7 +1446,7 @@ class Component extends DCLogic {
         setTimeout(() => { this._saving = false; }, 1500);
         // 임시 저장본은 계약·서명 문서가 기기에 저장된 것을 확인한 뒤에만 정리
         if (nc && s.draftId) this.writeDrafts(this.readDrafts().filter(x => x.id !== s.draftId));
-        this.setState({ docs: D.docs, justSaved: D.id, screen: 'detail', tab: 'docs', savedSig: s.sigImg, signedAt: todayStr, signFrom: '', pendingSign: false, ckRefund: false,
+        this.setState({ docs: D.docs, justSaved: D.id, screen: 'signDone', tab: 'docs', savedSig: s.sigImg, signedAt: todayStr, signFrom: '', pendingSign: false, ckRefund: false,
           ...(nc ? { contracts, cSel: false, contract: nc, cStatus: '등록완료', pendingCtId: '', draftId: '', rfUsed: null, rfVisits: null, rfVar: null, lesions: null, rfLes: null, rfAlloc: null, rfReason: '', rfExtra: '' } : {}) }); },
       saveRefund: () => { if (this._saving) return;
         if (RS.error) return this.flash(RS.error);

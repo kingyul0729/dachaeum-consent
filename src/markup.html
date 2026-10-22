@@ -930,12 +930,29 @@ body,body *{word-break:keep-all;overflow-wrap:break-word;line-break:strict}
     </div>
   </sc-if>
 
+  <div style="position:absolute;left:60px;bottom:12px;width:430px;box-sizing:border-box;padding:9px 14px 10px;background:rgba(255,255,255,.96);border:1px solid #e6e9ed;border-radius:10px;box-shadow:0 2px 10px rgba(20,24,28,.06);font-family:inherit;pointer-events:none">
+    <div style="display:flex;align-items:center;gap:6px;font-size:12.5px;white-space:nowrap">
+      <sc-for list="{{ signSteps }}" as="t" hint-placeholder-count="4"><span style="color:#c7ccd1">{{ t.sep }}</span><span style="display:inline-flex;align-items:center;gap:5px;color:{{ t.fg }};font-weight:{{ t.fw }}"><span style="width:18px;height:18px;border-radius:9px;background:{{ t.bg }};color:{{ t.nfg }};display:inline-flex;align-items:center;justify-content:center;font-size:10.5px;font-weight:600">{{ t.mark }}</span>{{ t.label }}</span></sc-for>
+    </div>
+    <div style="margin-top:8px;height:3px;background:#e6e9ed;border-radius:2px;overflow:hidden"><div style="height:100%;width:{{ signPct }}%;background:#1c1f23;border-radius:2px;transition:width .3s"></div></div>
+    <div style="margin-top:6px;font-size:12px;color:#4b5563">{{ signHint }}</div>
+  </div>
   <sc-if value="{{ hasSigImg }}" hint-placeholder-val="{{ false }}">
     <div style="position:absolute;right:20px;bottom:20px;display:flex;align-items:center;gap:12px;font-family:inherit">
       <div sc-camel-on-click="{{ openSigPad }}" style="height:31.5px;padding:0 18px;box-sizing:border-box;border:1px solid rgba(0,0,0,0.1);border-radius:6.75px;display:flex;align-items:center;font-size:14px;font-weight:500;color:#030213;background:#fff;cursor:pointer">서명 다시</div>
       <div sc-camel-on-click="{{ saveSig }}" style="height:35px;padding:0 30px;border-radius:6.75px;display:flex;align-items:center;font-size:15.75px;font-weight:500;background:#030213;color:#fff;cursor:pointer;box-shadow:0 4px 16px rgba(3,2,19,.28)">동의하고 저장</div>
     </div>
   </sc-if>
+</div>
+</sc-if>
+
+<sc-if value="{{ isSignDone }}" hint-placeholder-val="{{ false }}">
+<div style="position:fixed;top:0;left:0;width:820px;height:100vh;height:100dvh;background:#ffffff;z-index:20;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;font-family:inherit">
+  <div style="width:84px;height:84px;border-radius:42px;background:#eef6f1;display:flex;align-items:center;justify-content:center"><svg width="44" height="44" sc-camel-view-box="0 0 24 24" fill="none" stroke="#2a6b4b" sc-camel-stroke-width="2.6" sc-camel-stroke-linecap="round" sc-camel-stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg></div>
+  <div style="font-size:24px;font-weight:600;letter-spacing:-0.02em;color:#111418">동의가 완료되었습니다</div>
+  <div style="font-size:15px;color:#4b5563;text-align:center;line-height:1.65">{{ pName }}님의 프로그램 이용 동의서가 서명과 함께 저장되었습니다.<br>태블릿을 직원에게 전달해 주세요.</div>
+  <div style="width:360px;height:3px;background:#1c1f23;border-radius:2px;margin-top:4px"></div>
+  <div sc-camel-on-click="{{ signDoneOk }}" style="margin-top:6px;width:360px;height:46px;border-radius:8px;background:#030213;color:#ffffff;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:500;cursor:pointer">확인</div>
 </div>
 </sc-if>
 
