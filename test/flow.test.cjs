@@ -1541,7 +1541,8 @@ test('간이(재등록) 동의서: 새 규정(T-2026-11)으로 서명한 환자�
     await p.locator('input[placeholder*="검색"]').fill('PGM-0018'); await p.waitForTimeout(300);
     await click(p, '여드름 8주 프로그램'); await click(p, '카드');
     await click(p, '동의서 미리보기 · 서명'); await toRules(p);
-    const b = (await body(p)).replace(/\s+/g, ' ');
+    // 빨간 펜 표시(그림)가 붙은 말 뒤에 브라우저가 띄어쓰기를 넣어 읽음 → 비교용으로만 제거
+    const b = (await body(p)).replace(/\s+/g, ' ').replace(/ (?=[.,에])/g, '');
     const tr = await p.locator('[data-tr]').count();
     await p.context().close();
     return { b, tr };
@@ -1578,7 +1579,7 @@ test('이벤트 이용기간(개월): 가격 관리에서 이벤트별 수정 �
   await toStep2(p, 'PGM-EV-NB1', '뉴비쥬 2cc');
   await click(p, '카드');
   await click(p, '동의서 미리보기 · 서명'); await toRules(p);
-  const evb = (await body(p)).replace(/\s+/g, ' ');
+  const evb = (await body(p)).replace(/\s+/g, ' ').replace(/ (?=[.,에])/g, '');
   assert.match(evb, /이벤트 프로그램은 첫 시술일로부터 4개월 안에 이용해 주세요\./);
   assert.match(evb, /이벤트 프로그램은 양도할 수 없습니다\./);
   assert.doesNotMatch(evb, /등록일로부터 1년 이내|서로 합의한 경우|선결제권은 1년/, '이벤트 규정만 표시');
