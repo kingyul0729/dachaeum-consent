@@ -269,16 +269,10 @@ class Component extends DCLogic {
     if (this.state.screen !== 'sign') return;
     const el = e.target && e.target.closest ? e.target.closest('b') : null;
     if (!el || !e.currentTarget.contains(el) || el.querySelector('[data-tr],img') || el.closest('[data-tr]')) return;
-    if (Array.from(el.children).some(k => k.getAttribute('data-mk-svg'))) return;   // 이미 밑줄이 그어진 말
-    const old = Array.from(el.children).find(k => k.getAttribute('data-ring'));
-    if (old) { old.remove(); this.setState(st => ({ ringN: Math.max(0, (st.ringN || 0) - 1) })); return; }
-    const r = el.getBoundingClientRect(); if (!r.width || !r.height) return;
-    const ns = 'http://www.w3.org/2000/svg', w = r.width, h = r.height;
-    const sv = document.createElementNS(ns, 'svg'); sv.setAttribute('data-ring', '1'); sv.setAttribute('viewBox', '0 0 ' + w.toFixed(1) + ' ' + h.toFixed(1)); sv.setAttribute('preserveAspectRatio', 'none');
-    sv.setAttribute('style', 'position:absolute;left:0;top:0;width:100%;height:100%;pointer-events:none;overflow:visible;z-index:1');
-    const pth = document.createElementNS(ns, 'path'); pth.setAttribute('d', Component.markSvg('line', w, h)[0]);
-    pth.setAttribute('style', 'fill:none;stroke:#e5120a;stroke-width:2.6;stroke-linecap:round;stroke-linejoin:round;opacity:0.92');
-    sv.appendChild(pth); el.style.position = 'relative'; el.appendChild(sv);
+    if (el.getAttribute('data-mk-done')) return;   // 이미 밑줄이 그어진 말
+    if (el.getAttribute('data-ring')) { el.removeAttribute('data-ring'); el.style.textDecorationLine = ''; el.style.textDecorationColor = ''; el.style.textDecorationThickness = ''; el.style.textUnderlineOffset = '';
+      this.setState(st => ({ ringN: Math.max(0, (st.ringN || 0) - 1) })); return; }
+    el.setAttribute('data-ring', '1'); el.style.textDecorationLine = 'underline'; el.style.textDecorationColor = '#e5120a'; el.style.textDecorationThickness = '2.5px'; el.style.textUnderlineOffset = '5px'; el.style.textDecorationSkipInk = 'none';
     this.setState(st => ({ ringN: (st.ringN || 0) + 1 }));
   };
 
@@ -324,12 +318,13 @@ class Component extends DCLogic {
     const ns = 'http://www.w3.org/2000/svg';
     const cand = Array.from(root.querySelectorAll('[data-rules] b, [data-rules] div, [data-mk]'));
     cand.forEach(el => {
-      if (Array.from(el.children).some(k => k.getAttribute && k.getAttribute('data-mk-svg'))) return;
+      if (el.getAttribute('data-mk-done')) return;
       let kind = el.getAttribute('data-mk');
       if (!kind) { if (el.tagName === 'DIV' && el.children.length) return; const t = (el.textContent || '').replace(/\s+/g, ' ').trim(); const hit = Component.MARKS.find(([re]) => re.test(t)); if (!hit) return; kind = hit[1]; }
       if (el.querySelector('[data-tr],img')) return;
+      if (kind === 'line') { el.setAttribute('data-mk-done', 'line'); el.style.textDecorationLine = 'underline'; el.style.textDecorationColor = '#e5120a'; el.style.textDecorationThickness = '2.5px'; el.style.textUnderlineOffset = '5px'; el.style.textDecorationSkipInk = 'none'; return; }
       const r = el.getBoundingClientRect(); if (!r.width || !r.height) return;
-      const sv = document.createElementNS(ns, 'svg'); sv.setAttribute('data-mk-svg', kind);
+      el.setAttribute('data-mk-done', kind); const sv = document.createElementNS(ns, 'svg'); sv.setAttribute('data-mk-svg', kind);
       sv.setAttribute('viewBox', '0 0 ' + r.width.toFixed(1) + ' ' + r.height.toFixed(1)); sv.setAttribute('preserveAspectRatio', 'none');
       sv.setAttribute('style', 'position:absolute;left:0;top:0;width:100%;height:100%;overflow:visible;pointer-events:none;z-index:1');
       Component.markSvg(kind, r.width, r.height).forEach(d0 => { const fill = d0.startsWith('F:'), d = fill ? d0.slice(2) : d0; const pth = document.createElementNS(ns, 'path'); pth.setAttribute('d', d);
@@ -1130,7 +1125,7 @@ class Component extends DCLogic {
       const G = []; LS.forEach(l => { const t = tierOf(l.size); if (!t) return; const g = G.find(x => x.t === t); if (g) g.n++; else G.push({ t, n: 1 }); });
       G.sort((a, b) => b.t.max - a.t.max);
       const sg = [['저는 흑자 '], [String(lesionRows.length), 1], ['개(']];
-      G.forEach((g, i) => { if (i) sg.push([', ']); sg.push([String(g.t.max), 1], ['cm 이하 ']); if (g.n > 1) sg.push([String(g.n), 1], ['개 ']); sg.push([won(g.t.price * g.n), 1], ['원']); });
+      G.forEach((g, i) => { if (i) sg.push([', ']); sg.push([String(g.t.max), 1], ['cm 이하 ']); if (g.n > 1) sg.push([String(g.n), 1], ['개 ']); sg.push([won(g.t.price * g.n) + '원']); });
       return sg.concat([[')의 치료비가 총 '], [won(lesionTotal), 1], ['원임을 확인했습니다.']]);
     })() : null;
     this._snSegs = snSegs;
