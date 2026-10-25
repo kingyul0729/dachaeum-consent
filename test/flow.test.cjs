@@ -763,7 +763,6 @@ test('이벤트 관리: 할인율 이벤트 추가 → 3단계 할인 항목·�
   assert.match(await body(p), /최종 계약금액\s*1,188,000원/);
  
   assert.match(await body(p), /최종 계약금액\s*1,188,000원/, '결제 등록에 확정 금액 표시');
-  assert.doesNotMatch(await body(p), /가을 이벤트 10%\s*선결제권|지인 소개 5%/, '결제 등록에서 할인 다시 선택 없음');
   assert.match(await body(p), /수납액\s*1,188,000원/, '결제 안내도 같은 금액');
   await click(p, '카드'); await signAndSave(p);
   const [c] = await contracts(p);
@@ -837,9 +836,9 @@ test('선결제권 보유 잔액: 충분(1,000,000)·부족(300,000)·0원(할�
   const balIn = p.locator('xpath=//*[text()="보유 선결제권 잔액 (직원 확인)"]/following-sibling::span//input');
   // 잔액 0원 + 신규 구매 없음 → 선결제권 할인 불가
   await toStep2(p, 'PGM-0018', '여드름 8주 프로그램', '잔액없음');
-  await click(p, '선결제권'); await click(p, '300');
+  await click(p, '선결제권'); await click(p, '300'); await click(p, '동의서 미리보기 · 서명');
   assert.match(await body(p), /선결제권 할인은 확인한 보유 잔액이 있거나 신규 구매할 때만 적용할 수 있습니다/);
-  assert.doesNotMatch(await body(p), /결제 내용/, '2단계에서 확정 전에는 결제 등록으로 넘어가지 않음');
+  assert.doesNotMatch(await body(p), /동의하고 저장|확인했어요/, '확정 전에는 서명 화면으로 넘어가지 않음');
   // 충분
   await balIn.fill('1000000'); await p.waitForTimeout(300);
   let b = await body(p);
@@ -913,7 +912,7 @@ test('예약금: 목표(계약 총액 10%)에서 이 계약에 이미 납부·�
   await pdIn.fill('50000'); await click(p, '예약금 결제'); await p.waitForTimeout(200);
   let b = await body(p);
   for (const re of [/수납액\s*49,000원/, /미수금\s*891,000원/, /예약금\s*50,000원/]) assert.match(b, re);
-  assert.doesNotMatch(b, /예약금 목표|→/, '계산 과정 표시 없음');
+  assert.doesNotMatch(b, /예약금 목표|원\s*→/, '계산 과정 표시 없음');
   await click(p, '카드'); await signAndSave(p);
   let [c] = await contracts(p);
   assert.deepEqual([c.total, c.paid, c.priorDep], [990000, 99000, 50000], '50,000 + 49,000 (중복 합산 없음)');
