@@ -952,7 +952,7 @@ class Component extends DCLogic {
     const methodStr = [payText, preUse > 0 ? preLabel + ' ' + won(preUse) + '원' : ''].filter(Boolean).join(' + ') || (needNum ? '카드' : preLabel);
     // 재등록 간이 동의서: 같은 환자가 1년 이내 같은 약관 버전으로 전체 동의서에 서명한 적이 있으면 약관 요약본으로 대체
     // 약관 버전: 'T-2026-10' = 이용 및 환불 규정 01~05. 이전 버전(T-2026-09)으로 서명한 환자는 간이 동의서 대신 전체 동의서
-    const TERMS_VER = 'T-2026-10';
+    const TERMS_VER = 'T-2026-11';
     const pkP = (P.name || '') + '|' + (P.birth || '');
     const yearAgo = (() => { const x = new Date(todayStr); x.setFullYear(x.getFullYear() - 1); return x.toISOString().slice(0, 10); })();
     const priorFull = (s.contracts || []).filter(c => (c.patient.name || '') + '|' + (c.patient.birth || '') === pkP
@@ -1387,6 +1387,9 @@ class Component extends DCLogic {
       docKind: dep ? '예약금용' : '완납용',
       isDeposit: dep,
       isPrepaid: !!cur && /선결제/.test([cur.baseName || cur.name, cur.cat, cur.sub].join(' ')),
+      notPrepaid: !(!!cur && /선결제/.test([cur.baseName || cur.name, cur.cat, cur.sub].join(' '))),
+      // 흑자 제거 03: 시작 전 취소 위약금 문구 — 완납 / 예약금 등록을 구분 (재서명은 계약 당시 결제 방식)
+      lesionDep: isResign ? (s.contract || {}).pay === 'deposit' : dep, lesionFull: !(isResign ? (s.contract || {}).pay === 'deposit' : dep),
       pickDeposit: () => this.setState({ pay: 'deposit' }), pickFull: () => this.setState({ pay: 'full' }),
       depBd: dep ? '#030213' : 'rgba(0,0,0,0.1)', depBg: dep ? '#e9ebef' : '#ffffff',
       fullBd: dep ? 'rgba(0,0,0,0.1)' : '#030213', fullBg: dep ? '#ffffff' : '#e9ebef',
