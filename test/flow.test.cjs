@@ -79,9 +79,7 @@ test('새 계약: 계약 당시 값·상태·서비스 단가 저장, 동의서 
   await click(p, '카드');
   assert.match(await body(p), /수납액\s*330,000원/);
   await click(p, '동의서 미리보기 · 서명'); await p.waitForTimeout(400);
-  assert.match((await body(p)).replace(/\s+/g, ' '), /1 등록 내용 확인 › 2 이용 및 환불 규정 확인 › 3 서명 › 4 완료 프로그램·금액·구성을 확인하고 「확인했어요」를 눌러 주세요/, '환자 화면 단계 표시줄: 첫 단계 등록 내용 확인');
-  await click(p, '확인했어요');
-  assert.match(await body(p), /04의 회색 글씨 두 곳을 눌러 따라 써 주세요/);
+  assert.match((await body(p)).replace(/\s+/g, ' '), /따라 쓰기 › 2 규정 동의 › 3 서명 › 4 저장 04의 회색 글씨 두 곳을 눌러 따라 써 주세요/, '서명 화면 단계 표시줄: 첫 단계 따라 쓰기 (동의서 한 장 바로 표시)');
   await p.getByText(/이용 및 환불 규정에 대해 충분히/).last().click(); await sign(p);
   assert.match(await body(p), /오른쪽 아래 「동의하고 저장」을 눌러 주세요/, '모든 단계 완료 후 저장 안내');
   await p.getByText('동의하고 저장', { exact: true }).last().click(); await p.waitForTimeout(800);
@@ -1591,15 +1589,13 @@ test('이벤트 이용기간(개월): 가격 관리에서 이벤트별 수정 �
   assert.deepEqual(p.errors, []);
 });
 
-test('환자 화면 4단계: 등록 내용 확인 → 규정(동그라미·따라 쓰기·동의) → 서명 → 완료, 동그라미·따라 쓴 글씨·서명이 저장 문서에 남음', async () => {
+test('환자 서명 화면: 동의서 바로 표시 → 동그라미·따라 쓰기·동의 → 서명 → 완료, 동그라미·따라 쓴 글씨·서명이 저장 문서에 남음', async () => {
   const p = await open();
   await toStep2(p, 'PGM-0018', '여드름 8주 프로그램'); await click(p, '카드');
   await click(p, '동의서 미리보기 · 서명');
-  let b = await body(p);
-  assert.match(b, /등록 내용 확인\s*›?\s*\S*\s*이용 및 환불 규정 확인\s*›?\s*\S*\s*서명\s*›?\s*\S*\s*완료/, '4단계 표시');
-  assert.match(b, /「확인했어요」를 눌러 주세요/);
-  await click(p, '확인했어요');
-  assert.doesNotMatch(await body(p), /확인했어요/, '1단계 완료 후 버튼 사라짐');
+  const b0 = (await body(p)).replace(/\s+/g, ' ');
+  assert.match(b0, /따라 쓰기 › 2 규정 동의 › 3 서명 › 4 저장/, '이전 방식 단계 표시줄');
+  assert.doesNotMatch(b0, /확인했어요|등록 내용 확인/, '「확인했어요」 단계 없음');
   await click(p, '터치하여 서명');
   assert.match(await body(p), /04의 회색 글씨 두 곳을 먼저 따라 써 주세요/, '따라 쓰기 전 서명 차단');
   const bs = p.locator('[data-rules] b');

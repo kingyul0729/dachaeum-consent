@@ -1090,25 +1090,19 @@ class Component extends DCLogic {
       : needSn ? React.createElement('div', { 'data-sn': 1, onClick: this.openSn, style: { cursor: 'pointer', padding: '10px 12px', border: '1.5px dashed #8d98a4', borderRadius: 6, lineHeight: 1.9, textAlign: 'center' } },
           React.createElement('div', null, snText(true)), React.createElement('div', { style: { fontSize: '0.92em', color: '#6b737b' } }, '눌러서 회색 숫자를 따라 써 주세요'))
       : React.createElement('div', { style: { lineHeight: 1.9, textAlign: 'center' } }, snText(false));
-    // 환자 화면 4단계: ① 등록 내용 확인 → ② 이용 및 환불 규정 확인(따라 쓰기·동그라미·동의) → ③ 서명 → ④ 완료(저장 후 완료 화면)
-    const rulesDone = !writeLeft && !!s.ckRefund;
-    const sawInfo = !!s.pOk1 || rulesDone || !!s.sigImg || trImg.some(Boolean) || !!snImg || !!s.ckRefund;
-    const signStepsRaw = [{ label: '등록 내용 확인', done: sawInfo }, { label: '이용 및 환불 규정 확인', done: sawInfo && rulesDone }, { label: '서명', done: sawInfo && rulesDone && !!s.sigImg }, { label: '완료', done: false }];
+    // 서명 화면 단계 표시줄: (따라 쓰기 · 확인 문장 쓰기) → 규정 동의 → 서명 → 저장. 지금 할 단계와 안내 문구
+    const signStepsRaw = [needTrace && { label: '따라 쓰기', done: !trLeft }, needSn && { label: '확인 문장 쓰기', done: !snLeft }, { label: '규정 동의', done: !!s.ckRefund }, { label: '서명', done: !!s.sigImg }, { label: '저장', done: false }].filter(Boolean);
     const signCur = signStepsRaw.findIndex(t => !t.done);
     const signSteps = signStepsRaw.map((t, i) => ({ label: t.label, sep: i ? '›' : '', mark: t.done ? '✓' : String(i + 1),
       bg: t.done ? '#1c1f23' : i === signCur ? '#1d4f8a' : '#e6e9ed', nfg: t.done || i === signCur ? '#ffffff' : '#8a929a',
       fg: t.done || i === signCur ? '#1c1f23' : '#8a929a', fw: i === signCur ? 600 : 400 }));
     const signPct = Math.round(signStepsRaw.filter(t => t.done).length / signStepsRaw.length * 100);
-    const signHint = !sawInfo ? '프로그램·금액·구성을 확인하고 「확인했어요」를 눌러 주세요'
-      : trLeft ? '04의 회색 글씨 두 곳을 눌러 따라 써 주세요' : snLeft ? '흑자 확인 문장을 눌러 회색 숫자를 따라 써 주세요'
-      : !s.ckRefund ? '중요한 말을 누르면 빨간 동그라미가 그려져요 · 아래 동의 문구를 눌러 체크해 주세요'
+    const signHint = trLeft ? '04의 회색 글씨 두 곳을 눌러 따라 써 주세요' : snLeft ? '흑자 확인 문장을 눌러 회색 숫자를 따라 써 주세요'
+      : !s.ckRefund ? '아래 동의 문구를 눌러 체크해 주세요 · 중요한 말을 누르면 빨간 동그라미가 그려져요'
       : !s.sigImg ? '서명 칸을 눌러 서명해 주세요' : '오른쪽 아래 「동의하고 저장」을 눌러 주세요';
-    const okInfo = () => { this.setState({ pOk1: true });
-      setTimeout(() => { const r = document.querySelector('[data-rules]'); if (r && r.scrollIntoView) r.scrollIntoView({ behavior: 'smooth', block: 'start' }); }, 50); };
-    // 완료 화면: 방금 저장한 동의서(따라 쓴 글씨·동그라미·서명 포함)를 작게 보여 줌
     const doneDoc = S === 'signDone' && s.justSaved ? (s.docs || []).find(d => d.id === s.justSaved) : null;
     const doneDocEl = doneDoc && doneDoc.html ? React.createElement('div', { style: { width: 740, transform: 'scale(0.45)', transformOrigin: '0 0', position: 'absolute', top: 0, left: 0 }, dangerouslySetInnerHTML: { __html: this.cleanHtml(doneDoc.html) } }) : null;
-    const trVals = { hasDoneDoc: !!doneDocEl, doneDocEl, showOkInfo: !sawInfo, okInfo, ringTap: this.ringTap, snEl, snPadOpen: !!s.snOpen, snMsg: s.snMsg || '', snGRef: this.attachSnGuide, snRef: this.attachSn,
+    const trVals = { hasDoneDoc: !!doneDocEl, doneDocEl, ringTap: this.ringTap, snEl, snPadOpen: !!s.snOpen, snMsg: s.snMsg || '', snGRef: this.attachSnGuide, snRef: this.attachSn,
       snW: Component.SN_W, snH: snL ? snL.H : 120, snUp: this.snUp, clearSn: this.clearSn, closeSn: this.closeSn, confirmSn: this.confirmSn,
       signSteps, signPct, signHint, needTrace, noTrace: !needTrace, trPadOpen: s.trOpen >= 0, trPadText: Component.TRACE[s.trOpen] || '', trMsg: s.trMsg || '',
       trGRef: this.attachTrGuide, trRef: this.attachTr, trDown: this.trDown, trMove: this.trMove, trUp: this.trUp,
