@@ -21,7 +21,11 @@ async function open(seed, opt = {}) {
   await p.reload(); await p.waitForTimeout(2000);
   return p;
 }
-const click = async (p, t, i = 0) => { await p.getByText(t, { exact: true }).nth(i).click(); await p.waitForTimeout(350); };
+// 직원 등록 화면의 접힌 칸(할인 선택 · 상세 결제 · 구성 보기)을 모두 펼침
+const openFolds = async p => { for (const f of ['할인 선택 ›', '상세 결제 ›', '구성 보기 ›']) { const l = p.getByText(f, { exact: true }); if (await l.count() && await l.first().isVisible().catch(() => false)) { await l.first().click(); await p.waitForTimeout(200); } } };
+const click = async (p, t, i = 0) => { const l = p.getByText(t, { exact: true }).nth(i);
+  if (!await l.isVisible().catch(() => false) && await p.getByText('새 동의서 작성', { exact: true }).count()) await openFolds(p);
+  await l.click(); await p.waitForTimeout(350); };
 const body = p => p.innerText('body');
 const finalRefund = async p => (await body(p)).match(/최종 환불금액\s*([\d,]+)/)[1];
 const contracts = p => p.evaluate(() => JSON.parse(localStorage.getItem('dachaeum.v3.contracts') || '[]'));
@@ -216,7 +220,7 @@ const pickProgram = async (p, id, label, opt = {}) => {
   await ins.nth(0).fill('정상가테스트'); await ins.nth(1).fill('880101'); await ins.nth(2).fill('01011112222');
   await click(p, '전체');
   await p.locator('input[placeholder*="검색"]').fill(id); await p.waitForTimeout(300);
-  await click(p, label);
+  await click(p, label); await openFolds(p);
   if (opt.unit) await p.locator('input[placeholder="1회 정상가"]').fill(opt.unit);   // 2단계에서 계약금액·1회 정상가 확정
   if (opt.stay) return;
   await click(p, '카드');
@@ -708,7 +712,7 @@ const toStep2 = async (p, id, label, who = '결제테스트') => {
   await ins.nth(0).fill(who); await ins.nth(1).fill('880101'); await ins.nth(2).fill('01011112222');
   await click(p, '전체');
   await p.locator('input[placeholder*="검색"]').fill(id); await p.waitForTimeout(300);
-  await click(p, label);
+  await click(p, label); await openFolds(p);
 };
 const toStep3 = async (p, id, label, who = '결제테스트', setup) => { await toStep2(p, id, label, who); if (setup) await setup(); };
 const balInOf = p => p.locator('xpath=//*[text()="보유 선결제권 잔액 (직원 확인)"]/following-sibling::span//input');

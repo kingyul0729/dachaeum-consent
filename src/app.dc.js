@@ -678,6 +678,8 @@ class Component extends DCLogic {
     const s = this.state, S = s.screen;
     const isSign = S === 'sign', isRefundSign = S === 'refundSign', isSignDone = S === 'signDone';
     const won = n => Number(n || 0).toLocaleString('ko-KR');
+    // 선택 상태는 파스텔 보라로만 표시 (직원 등록 화면)
+    const PUR = { bd: '#9b8cf2', bg: '#f1eefe', fg: '#4a3aa8' };
     const todayISO = Component.today();
     const isResign = s.signFrom === 'resign';
     const pk = s.picked;
@@ -946,7 +948,7 @@ class Component extends DCLogic {
       const tgt = famAll.find(q => { const r = reqAdds(q); return r.length === want.length && want.every(x => r.includes(x)); });
       const ad = famAll.flatMap(q => q.adds || []).find(a => a.name === nm) || {};
       return { label: String(nm).replace(/\s*\(.*?\)/g, '') + ' 추가', price: Number(ad.price || 0) ? '+' + won(ad.price) + '원' : '', on, mark: on ? '✓' : '',
-        bd: on ? '#1c1b18' : 'rgba(0,0,0,0.18)', bg: on ? '#1c1b18' : '#ffffff', fg: on ? '#ffffff' : 'transparent',
+        bd: on ? PUR.bd : 'rgba(0,0,0,0.18)', bg: on ? '#7c6ce8' : '#ffffff', fg: on ? '#ffffff' : 'transparent',
         pick: () => tgt ? this.setState({ progId: tgt.id, prog: -1 }) : this.flash('이 조합의 프로그램이 없습니다') }; }) : [];
     const selListNum = cur && !isLesion ? listOfProg(cur) : 0;
     // 할인·선결제권: 2단계에서 하나만 선택 → 최종 계약금액 확정 (3단계에서는 다시 계산하지 않음)
@@ -956,7 +958,7 @@ class Component extends DCLogic {
     const { isEvProg, isYearSB, noPreHair, noRet, discOk, discKey, preTier, preBase, discRate, discBase, totalNum, discLabel, options: discOptions, eventId: discEventId } =
       PR.discount({ cur, held, hairParts: hairPs, hairRate, listNum, optAddSum, all: dbAll, disc: s.disc, preTier: s.preTier, evDef: evDefCur, rateEvents: rateEvs });
     const DK = PR.DISCOUNTS;
-    const chip = on => ({ bd: on ? '#030213' : 'rgba(0,0,0,0.1)', bg: on ? '#030213' : '#ffffff', fg: on ? '#ffffff' : '#0a0a0a' });
+    const chip = on => ({ bd: on ? PUR.bd : 'rgba(0,0,0,0.08)', bg: on ? PUR.bg : '#ffffff', fg: on ? PUR.fg : '#3f444b' });
 
     const flat = progList.map((p, i) => {
       // 제모: 여러 부위를 한 번에 선택 (누르면 추가/해제)
@@ -966,8 +968,8 @@ class Component extends DCLogic {
       return { ...p, on, hair, pick: hair
         ? () => this.setState(st => { const h = st.hairIds || []; return { ...reset, prog: -1, progId: '', hairIds: h.includes(p.id) ? h.filter(x => x !== p.id) : h.concat(p.id) }; })
         : () => this.setState({ ...reset, prog: i, progId: p.id || '', hairIds: [] }),
-        bd: on ? '#1c1b18' : 'rgba(28,27,24,0.1)', bg: on ? '#ece8e1' : '#ffffff',
-        dot: on ? '#1c1b18' : 'rgba(28,27,24,0.18)', inner: on ? '#1c1b18' : 'transparent', showOpts: false, opts: [] }; });
+        bd: on ? PUR.bd : 'rgba(0,0,0,0.06)', bg: on ? PUR.bg : '#ffffff',
+        dot: on ? '#7c6ce8' : 'rgba(0,0,0,0.18)', inner: on ? '#7c6ce8' : 'transparent', showOpts: false, opts: [] }; });
     const oCnt = n => (String(n || '').match(/(\d+)\s*회$/) || [])[1] || '1';
     const oLab = m => m.o || (oCnt(m.baseName || m.name) + '회');
     // 카테고리별 구역(programs.json → sections). 없으면 장비 카드를 데이터 순서대로 나열
@@ -1030,7 +1032,7 @@ class Component extends DCLogic {
         : m === '현금' ? [h('rect', { key: 1, x: 2.5, y: 6, width: 19, height: 12, rx: 2.5, ...P }), h('circle', { key: 2, cx: 12, cy: 12, r: 2.6, ...P }), h('path', { key: 3, d: 'M6 9.5v5M18 9.5v5', ...P })]
         : [h('path', { key: 1, d: 'M3 9.5L12 4l9 5.5M5 10v7M9.7 10v7M14.3 10v7M19 10v7M3 19.5h18', ...P })];
       return h('svg', { width: 24, height: 24, viewBox: '0 0 24 24' }, parts); };
-    const tile = (m, on) => ({ tbd: on ? '#030213' : '#f9fafb', tbg: on ? '#e9ebef' : '#f9fafb', icon: payIcon(m, on) });
+    const tile = (m, on) => ({ tbd: on ? PUR.bd : 'rgba(0,0,0,0.08)', tbg: on ? PUR.bg : '#ffffff', icon: payIcon(m, on) });
     // 선택 표시: 선택 = 채운 원 + 흰 체크, 미선택 = 연한 테두리 + 연한 체크
     const ck = on => ({ ckBg: on ? '#030213' : '#ffffff', ckBd: on ? '#030213' : 'rgba(0,0,0,0.1)', ckFg: on ? '#ffffff' : 'rgba(0,0,0,0.1)' });
     // 결제수단 최대 2개(분할결제). 세 번째를 누르면 두 번째를 교체
@@ -1412,7 +1414,7 @@ class Component extends DCLogic {
     };
 
     // 새 동의서 작성 시작: 이전 작성분(할인·선결제권·기납부 예약금·결제수단·분할금액·구성 선택 등)이 다음 환자에게 남지 않도록 초기화
-    const NEW_RESET = { prog: -1, progId: '', hairIds: [], method: '', mSel: [], split1: '', cashRcpt: '', pay: 'full', addArea: '', addSel: [], addSvc: [], addSvN: {},
+    const NEW_RESET = { fComp: false, fDisc: undefined, fPay: false, prog: -1, progId: '', hairIds: [], method: '', mSel: [], split1: '', cashRcpt: '', pay: 'full', addArea: '', addSel: [], addSvc: [], addSvN: {},
       svcOff: [], svcSwap: {}, oGrp: '', disc: 'none', preTier: '', retPeriod: '', preBal: '', priorDep: '', preNew: false, preRcvAmt: '', preBuyM: '', draftId: '', pendingCtId: '', amounts: {}, units: {}, lesions: null,
       unitFix: {}, tried3: false, evFirst: '', forceFull: false, dupPick: '', dupOff: '', pvOn: false, sig: false, tried1: false, pendingSign: false, ckRefund: false };
     const bars = {
@@ -1585,6 +1587,13 @@ class Component extends DCLogic {
       hasPriorDep: priorDep > 0, priorDepText: '− ' + won(Math.min(priorDep, Math.max(0, totalNum - preBal))) + '원',
       hasLeft: pdOver > 0, leftText: won(pdOver) + '원', hasRest: dep && needNum - depAmt > 0,
       totalText: won(totalNum) + '원',
+      // 필요할 때 펼치는 정보: 구성·포함 서비스 / 할인 선택 / 상세 결제(기납부 예약금)
+      foldComp: !!s.fComp, toggleComp: () => this.setState({ fComp: !s.fComp }), compArrow: s.fComp ? '접기' : '구성 보기',
+      compSummary: isLesion ? '흑자 ' + LS.length + '개' : docItems.filter(i => !i.isAdd && i.kind === '시술').length + '개 시술' + (docItems.some(i => !i.isAdd && i.kind !== '시술') ? ' · 포함 서비스 ' + docItems.filter(i => !i.isAdd && i.kind !== '시술').length + '개' : ''),
+      foldDisc: s.fDisc === undefined ? discKey !== 'none' : !!s.fDisc, toggleDisc: () => this.setState({ fDisc: !(s.fDisc === undefined ? discKey !== 'none' : s.fDisc) }),
+      discArrow: (s.fDisc === undefined ? discKey !== 'none' : s.fDisc) ? '접기' : '할인 선택', discSummary: discKey === 'none' ? '할인 없음' : discLabel,
+      foldPay: !!s.fPay || numOf(s.priorDep) > 0, togglePay: () => this.setState({ fPay: !(s.fPay || numOf(s.priorDep) > 0) }), payArrow: (s.fPay || numOf(s.priorDep) > 0) ? '접기' : '상세 결제',
+      paySummary: numOf(s.priorDep) > 0 ? '기납부 예약금 ' + won(numOf(s.priorDep)) + '원' : '분할 결제 · 기납부 예약금',
       progName: cur ? progTitle(cur) : '',
       docKind: dep ? '예약금용' : '완납용',
       isDeposit: dep,
@@ -1593,8 +1602,8 @@ class Component extends DCLogic {
       // 흑자 제거 03: 시작 전 취소 위약금 문구 — 완납 / 예약금 등록을 구분 (재서명은 계약 당시 결제 방식)
       lesionDep: isResign ? (s.contract || {}).pay === 'deposit' : dep, lesionFull: !(isResign ? (s.contract || {}).pay === 'deposit' : dep),
       pickDeposit: () => this.setState({ pay: 'deposit' }), pickFull: () => this.setState({ pay: 'full' }),
-      depBd: dep ? '#030213' : 'rgba(0,0,0,0.1)', depBg: dep ? '#e9ebef' : '#ffffff',
-      fullBd: dep ? 'rgba(0,0,0,0.1)' : '#030213', fullBg: dep ? '#ffffff' : '#e9ebef',
+      depBd: dep ? PUR.bd : 'rgba(0,0,0,0.08)', depBg: dep ? PUR.bg : '#ffffff',
+      fullBd: dep ? 'rgba(0,0,0,0.08)' : PUR.bd, fullBg: dep ? '#ffffff' : PUR.bg,
       depCk: ck(dep), fullCk: ck(!dep), depFg: dep ? '#0a0a0a' : '#4b5563', fullFg: dep ? '#4b5563' : '#0a0a0a',
       depText: won(depAmt) + '원', fullText: won(needNum) + '원',
       payHero: preNew && !preSignOk ? '선결제권 미수금 ' + won(preUnpaid) + '원' : (dep ? depAmt : needNum) > 0 ? won(dep ? depAmt : needNum) + '원을 결제할게요'

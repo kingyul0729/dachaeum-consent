@@ -134,7 +134,7 @@ body,body *{word-break:keep-all;overflow-wrap:break-word;line-break:strict}
 <sc-if value="{{ isNew }}" hint-placeholder-val="{{ true }}">
 <div style="flex:1;min-height:0;display:flex;flex-direction:column">
   <!-- 한 화면 등록: 왼쪽 프로그램 목록(가격표) · 오른쪽 환자 · 선택 프로그램 · 계약 금액 · 결제 -->
-  <div style="flex:1;min-height:0;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);background:#faf9f7">
+  <div style="flex:1;min-height:0;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);background:#ffffff">
     <div data-scroll="list" style="min-height:0;min-width:0;display:flex;flex-direction:column;gap:14px;padding:18px 16px 24px;box-sizing:border-box;overflow-x:hidden;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;touch-action:pan-y">
       <div style="flex:none;font-size:12.25px;color:#8a857c;letter-spacing:0.02em">다채움피부과의원</div>
       <div style="flex:none;margin-top:-10px;font-size:22px;font-weight:400;letter-spacing:-0.01em;color:#1c1b18;font-family:'Noto Serif KR','AppleMyungjo','Nanum Myeongjo',serif">새 동의서 작성</div>
@@ -336,10 +336,9 @@ body,body *{word-break:keep-all;overflow-wrap:break-word;line-break:strict}
         </div>
       </sc-if>
     </div>
-    <div data-scroll="new" style="min-height:0;min-width:0;display:flex;flex-direction:column;gap:18px;padding:18px 16px 24px;box-sizing:border-box;background:#efece6;overflow-x:hidden;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;touch-action:pan-y">
+    <div data-scroll="new" style="min-height:0;min-width:0;display:flex;flex-direction:column;gap:18px;padding:18px 16px 24px;box-sizing:border-box;background:#f5f5f7;overflow-x:hidden;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;touch-action:pan-y">
       <sc-if value="{{ st1 }}" hint-placeholder-val="{{ true }}">
-        <div style="font-size:15.75px;font-weight:500;letter-spacing:-0.02em">환자 정보</div>
-        <div style="display:flex;flex-direction:column;gap:12px;background:#ffffff;border:1px solid rgba(0,0,0,0.1);border-radius:8.75px;padding:18px 18px 18px 10px">
+        <div style="display:flex;flex-direction:column;gap:12px;background:#ffffff;border-radius:10px;padding:14px 16px 14px 6px">
           <sc-for list="{{ pFields }}" as="f" hint-placeholder-count="3">
             <label style="display:grid;grid-template-columns:84px minmax(0,1fr);align-items:center;column-gap:12px;row-gap:4px;min-width:0">
               <div style="font-size:14px;color:#4b5563;font-weight:500;text-align:right">{{ f.label }} <span style="color:#d4183d">*</span></div>
@@ -500,6 +499,8 @@ body,body *{word-break:keep-all;overflow-wrap:break-word;line-break:strict}
             </sc-for>
           </div>
           </sc-if>
+          <div sc-camel-on-click="{{ toggleComp }}" style="display:flex;align-items:center;gap:10px;min-height:44px;padding:0 16px;cursor:pointer;border-top:1px solid #f0f0f2"><span style="flex:1;min-width:0;font-size:13.5px;color:#4b5563">{{ compSummary }}</span><span style="flex:none;font-size:13px;font-weight:500;color:#6a5bd6">{{ compArrow }} ›</span></div>
+          <sc-if value="{{ foldComp }}" hint-placeholder-val="{{ false }}">
           <sc-if value="{{ hasBaseSel }}" hint-placeholder-val="{{ true }}">
           <div style="padding:12px 16px 4px;font-size:12.25px;font-weight:500;color:#717182">기본 구성</div>
           <sc-for list="{{ baseRows }}" as="it" hint-placeholder-count="3">
@@ -530,6 +531,7 @@ body,body *{word-break:keep-all;overflow-wrap:break-word;line-break:strict}
             </sc-for>
           </div>
         </sc-if>
+          </sc-if>
         <sc-if value="{{ hasOptAdds }}" hint-placeholder-val="{{ false }}">
           <div>
             <div style="padding:12px 16px 4px;font-size:12.25px;font-weight:500;color:#717182">추가 선택</div>
@@ -558,12 +560,12 @@ body,body *{word-break:keep-all;overflow-wrap:break-word;line-break:strict}
             </div>
           </div>
         </sc-if>
-        <div style="flex:none;display:flex;flex-direction:column;gap:10px;margin-top:6px;padding-top:12px;border-top:1px solid rgba(0,0,0,0.1)">
-          <div style="font-size:12.25px;font-weight:500;color:#717182">계약 금액</div>
+        <div style="flex:none;display:flex;flex-direction:column;gap:10px;padding:0 0 12px">
+          <div sc-camel-on-click="{{ toggleDisc }}" style="display:flex;align-items:center;gap:10px;min-height:44px;padding:0 16px;cursor:pointer;border-top:1px solid #f0f0f2"><span style="flex:1;min-width:0;font-size:13.5px;color:#4b5563">{{ discSummary }}</span><span style="flex:none;font-size:13px;font-weight:500;color:#6a5bd6">{{ discArrow }} ›</span></div>
+        <sc-if value="{{ foldDisc }}" hint-placeholder-val="{{ false }}">
         <sc-if value="{{ discShow }}" hint-placeholder-val="{{ false }}">
-          <div style="flex:none;border:1px solid rgba(0,0,0,0.1);border-radius:8.75px;overflow:hidden;background:#ffffff">
-            <div style="padding:11px 16px;border-bottom:1px solid rgba(0,0,0,0.1);font-size:14px;font-weight:500;color:#0a0a0a">할인</div>
-            <div style="display:flex;flex-direction:column;gap:10px;padding:12px 16px">
+          <div style="flex:none;background:#ffffff">
+            <div style="display:flex;flex-direction:column;gap:10px;padding:2px 16px 4px">
               <sc-if value="{{ discLocked }}" hint-placeholder-val="{{ false }}"><div style="font-size:12.25px;color:#d4183d">{{ discLockedText }}</div></sc-if>
               <sc-if value="{{ discOpen }}" hint-placeholder-val="{{ true }}">
                 <div style="display:flex;flex-wrap:wrap;gap:6px">
@@ -608,7 +610,7 @@ body,body *{word-break:keep-all;overflow-wrap:break-word;line-break:strict}
             </div>
           </div>
         </sc-if>
-          <div style="flex:none;border:1px solid rgba(0,0,0,0.1);border-radius:8.75px;background:#ffffff;padding:12px 14px">
+          <div style="flex:none;background:#ffffff;padding:4px 16px">
             <sc-if value="{{ showBalIn }}" hint-placeholder-val="{{ false }}">
             <label style="display:flex;flex-direction:column;gap:6px;min-width:0">
               <span style="font-size:12.25px;font-weight:500;color:#4b5563">보유 선결제권 잔액 (직원 확인)</span>
@@ -619,6 +621,7 @@ body,body *{word-break:keep-all;overflow-wrap:break-word;line-break:strict}
             </label>
             </sc-if>
           </div>
+        </sc-if>
           <sc-if value="{{ needAmount }}" hint-placeholder-val="{{ false }}"><div style="flex:none;border:1px solid rgba(0,0,0,0.1);border-radius:8.75px;overflow:hidden;background:#ffffff">
           <sc-if value="{{ needAmount }}" hint-placeholder-val="{{ false }}">
           <div style="display:flex;flex-direction:column;gap:10px;padding:14px 16px;border-bottom:1px solid rgba(0,0,0,0.1)">
@@ -658,9 +661,9 @@ body,body *{word-break:keep-all;overflow-wrap:break-word;line-break:strict}
           </div>
           </sc-if>
           </div></sc-if>
-          <div style="flex:none;display:flex;align-items:baseline;justify-content:space-between;gap:10px;padding:12px 14px;border-radius:8.75px;background:#e9ebef;border:1px solid rgba(0,0,0,0.1)">
-            <div style="font-size:14px;font-weight:500">최종 계약금액</div>
-            <div style="font-size:17.5px;font-weight:500;font-variant-numeric:tabular-nums">{{ totalText }}</div>
+          <div style="flex:none;display:flex;align-items:baseline;justify-content:space-between;gap:10px;padding:14px 16px;margin:0 12px;border-radius:10px;background:#f1eefe">
+            <div style="font-size:14px;font-weight:500;color:#4a3aa8">최종 계약금액</div>
+            <div style="font-size:19px;font-weight:600;color:#4a3aa8;font-variant-numeric:tabular-nums">{{ totalText }}</div>
           </div>
         <sc-if value="{{ isEvent }}" hint-placeholder-val="{{ false }}">
           <div style="flex:none;display:flex;flex-wrap:wrap;align-items:center;gap:10px;padding:12px 14px;border:1px solid rgba(0,0,0,0.1);background:#f9fafb;border-radius:6.75px">
@@ -682,14 +685,6 @@ body,body *{word-break:keep-all;overflow-wrap:break-word;line-break:strict}
       </div>
       </sc-if>
       <sc-if value="{{ st4 }}" hint-placeholder-val="{{ true }}">
-        <div style="flex:none;border:1px solid rgba(0,0,0,0.1);border-radius:8.75px;overflow:hidden;background:#ffffff">
-          <div style="padding:11px 16px;border-bottom:1px solid rgba(0,0,0,0.1);font-size:14px;font-weight:500;color:#0a0a0a">계약</div>
-          <div style="display:flex;flex-direction:column;gap:6px;padding:12px 16px">
-            <sc-for list="{{ ctrRows }}" as="r" hint-placeholder-count="3">
-              <div style="display:flex;justify-content:space-between;gap:12px;font-size:14px;color:#4b5563"><span style="flex:none">{{ r.k }}</span><span style="text-align:right;color:#0a0a0a;font-weight:{{ r.fw }};font-variant-numeric:tabular-nums">{{ r.v }}</span></div>
-            </sc-for>
-          </div>
-        </div>
         <sc-if value="{{ preNewOn }}" hint-placeholder-val="{{ false }}">
         <div style="flex:none;border:1px solid rgba(0,0,0,0.1);border-radius:8.75px;overflow:hidden;background:#ffffff">
           <div style="padding:11px 16px;border-bottom:1px solid rgba(0,0,0,0.1);font-size:14px;font-weight:500;color:#0a0a0a">{{ preBuyTitle }}</div>
@@ -718,19 +713,6 @@ body,body *{word-break:keep-all;overflow-wrap:break-word;line-break:strict}
         <sc-if value="{{ payCardShow }}" hint-placeholder-val="{{ true }}">
         <div style="flex:none;border:1px solid rgba(0,0,0,0.1);border-radius:8.75px;overflow:hidden;background:#ffffff">
           <div style="padding:11px 16px;border-bottom:1px solid rgba(0,0,0,0.1);font-size:14px;font-weight:500;color:#0a0a0a">결제</div>
-          <sc-if value="{{ notPreNew }}" hint-placeholder-val="{{ true }}">
-          <div style="padding:12px 16px;border-bottom:1px solid rgba(0,0,0,0.1)">
-            <div style="max-width:200px">
-            <label style="display:flex;flex-direction:column;gap:6px;min-width:0">
-              <span style="font-size:12.25px;font-weight:500;color:#4b5563">예약금</span>
-              <span style="display:flex;align-items:center;gap:6px;height:31.5px;box-sizing:border-box;border:1px solid transparent;border-radius:6.75px;padding:0 12px;background:#f3f3f5">
-                <input type="text" sc-camel-input-mode="numeric" placeholder="0" value="{{ priorDepIn }}" sc-camel-on-input="{{ onPriorDep }}" style="flex:1;min-width:0;height:100%;border:0;outline:0;padding:0;background:transparent;font-family:inherit;font-size:14px;text-align:right;color:#0a0a0a;font-variant-numeric:tabular-nums">
-                <span style="font-size:12.25px;color:#717182">원</span>
-              </span>
-            </label>
-            </div>
-          </div>
-          </sc-if>
           <sc-if value="{{ hasNeed }}" hint-placeholder-val="{{ true }}">
           <div style="display:flex;flex-direction:column;gap:8px;padding:14px 16px;border-bottom:1px solid rgba(0,0,0,0.1)">
             <div style="font-size:12.25px;font-weight:500;color:#4b5563">받을 금액</div>
@@ -767,6 +749,22 @@ body,body *{word-break:keep-all;overflow-wrap:break-word;line-break:strict}
           </sc-if>
           <sc-if value="{{ noNeed }}" hint-placeholder-val="{{ false }}"><div style="padding:14px 16px;font-size:14px;color:#717182">오늘 받을 금액이 없습니다</div></sc-if>
           <sc-if value="{{ hasLeft }}" hint-placeholder-val="{{ false }}"><div style="display:flex;justify-content:space-between;padding:10px 16px 14px;font-size:12.25px;color:#4b5563"><span>예약금 중 계약금액 초과분 (처리 확인 필요)</span><span style="font-variant-numeric:tabular-nums;font-weight:500">{{ leftText }}</span></div></sc-if>
+          <div sc-camel-on-click="{{ togglePay }}" style="display:flex;align-items:center;gap:10px;min-height:44px;padding:0 16px;cursor:pointer;border-top:1px solid #f0f0f2"><span style="flex:1;min-width:0;font-size:13.5px;color:#4b5563">{{ paySummary }}</span><span style="flex:none;font-size:13px;font-weight:500;color:#6a5bd6">{{ payArrow }} ›</span></div>
+          <sc-if value="{{ foldPay }}" hint-placeholder-val="{{ false }}">
+          <sc-if value="{{ notPreNew }}" hint-placeholder-val="{{ true }}">
+          <div style="padding:12px 16px;border-bottom:1px solid rgba(0,0,0,0.1)">
+            <div style="max-width:200px">
+            <label style="display:flex;flex-direction:column;gap:6px;min-width:0">
+              <span style="font-size:12.25px;font-weight:500;color:#4b5563">예약금</span>
+              <span style="display:flex;align-items:center;gap:6px;height:31.5px;box-sizing:border-box;border:1px solid transparent;border-radius:6.75px;padding:0 12px;background:#f3f3f5">
+                <input type="text" sc-camel-input-mode="numeric" placeholder="0" value="{{ priorDepIn }}" sc-camel-on-input="{{ onPriorDep }}" style="flex:1;min-width:0;height:100%;border:0;outline:0;padding:0;background:transparent;font-family:inherit;font-size:14px;text-align:right;color:#0a0a0a;font-variant-numeric:tabular-nums">
+                <span style="font-size:12.25px;color:#717182">원</span>
+              </span>
+            </label>
+            </div>
+          </div>
+          </sc-if>
+          </sc-if>
         </div>
         </sc-if>
       </sc-if>
