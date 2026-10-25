@@ -1160,7 +1160,7 @@ test('iPad 세로 전체 흐름 ②: 기존 잔액 + 신규 구매 완납·예�
   assert.equal(await finalRefund(p), expect.toLocaleString('en-US'), '891,000 − 89,100 − 1회 정상가');
   b = await body(p);
   assert.match(b, /선결제권 잔액 복원[\s\S]*?원결제 200,000원[\s\S]*?선결제권 잔액 복원[\s\S]*?원결제 691,000원/, '기존 잔액·신규 구매 사용분을 구분해 표시');
-  assert.match(b, new RegExp(expect.toLocaleString('en-US') + '원이 더 배분되어야 합니다'), '자동 배분 없음');
+  assert.match(b, new RegExp(expect.toLocaleString('en-US') + '원을 더 배분해 주세요'), '자동 배분 없음');
   await allocInputs(p).nth(0).fill('250000'); await p.waitForTimeout(300);
   await click(p, '정산서 생성 · 환자 서명');
   assert.doesNotMatch(await body(p), /터치하여 서명/, '원결제 200,000 초과 차단');

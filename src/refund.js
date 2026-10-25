@@ -65,7 +65,7 @@
     const allocOk = !allocOver && allocSum === refundNum;
     const allocDiff = refundNum - allocSum;
     const allocMsg = allocOver ? '원결제 금액을 넘은 수단이 있습니다'
-      : allocDiff > 0 ? allocDiff.toLocaleString('ko-KR') + '원이 더 배분되어야 합니다'
+      : allocDiff > 0 ? allocDiff.toLocaleString('ko-KR') + '원을 더 배분해 주세요'
       : allocDiff < 0 ? (-allocDiff).toLocaleString('ko-KR') + '원이 초과 배분되었습니다' : '';
     return { amounts, over, allocSum, allocOver, allocOk, allocDiff, allocMsg };
   }
