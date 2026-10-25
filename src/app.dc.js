@@ -795,7 +795,8 @@ class Component extends DCLogic {
     const famBase = (p, src) => { const f = famOf(p, src); const b = f.filter(q => !reqAdds(q).length); return f.length > 1 && b.length === 1 ? b[0] : null; };
     const srcAll = pkProgs || dbHits;
     // 정상가: 시술별 1회 정상가 × 횟수 합계(+ 필수 추가 항목). 이벤트는 등록된 정상가(listTotal). 계산할 수 없으면 표시 안 함
-    const listOfProg = p => { if (p.lesion) return 0; if (Number(p.listTotal || 0)) return Number(p.listTotal);
+    // 회차마다 구성을 고르는 프로그램(공통 총회차 상한)은 합계가 정상가가 아니므로 표시하지 않음
+    const listOfProg = p => { if (p.lesion || (p.items || []).some(i => i.qtyBasis === '공통 총회차 상한')) return 0; if (Number(p.listTotal || 0)) return Number(p.listTotal);
       const its = (p.items || []).filter(i => i.kind !== '서비스권' && !/염증주사|약\s?처방/.test(i.name || '') && i.settleType !== '정산 제외');
       if (!its.length || its.some(i => !Number(i.unitPrice || 0))) return 0;
       return its.reduce((t, i) => t + Number(i.unitPrice) * Number(i.qty || 0), 0) + (p.adds || []).filter(a => !a.optional).reduce((t, a) => t + Number(a.price || 0), 0); };
@@ -1163,7 +1164,7 @@ class Component extends DCLogic {
         .concat(docItems.filter(i => !i.isAdd && i.kind !== '시술').map(i => ({ name: i.name, q: '포함', u: '' })))
         .concat(docItems.filter(i => i.isAdd).map(i => ({ name: i.name, q: i.addPrice ? '+' + won(i.addPrice) + '원' : '추가', u: '' })));
     // 1/3 정상가: 시술별 1회 정상가 × 횟수 합계(추가 항목 포함), 프로그램 금액보다 클 때만 표시
-    const p1ListNum = !isLesion && cur ? listSumNum : 0;
+    const p1ListNum = !isLesion && cur && !capped ? listSumNum : 0;
     const pgVals = { pg1: pg === 1, pgBack: pg > 1, pgPrev: () => pgGo(pg - 1), pgNo: pg + ' / 3',
       pgTitle: [(isEventCur || (isResign && (s.contract || {}).event) ? '이벤트 ' : '') + '프로그램 이용 동의', '이용 및 환불 규정', '서명'][pg - 1],
       pgIntro: pg === 1 ? '다채움피부과의원은 아래 내용으로 프로그램 이용 계약을 진행합니다.\n내용을 확인해 주세요.'
