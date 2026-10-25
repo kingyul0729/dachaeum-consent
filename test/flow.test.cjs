@@ -1587,7 +1587,7 @@ test('이벤트 이용기간(개월): 가격 관리에서 이벤트별 수정 �
   await click(p, '카드');
   await click(p, '동의서 미리보기 · 서명'); await toRules(p);
   const evb = (await body(p)).replace(/\s+/g, ' ').replace(/ (?=[.,에])/g, '');
-  assert.match(evb, /이벤트 프로그램은 첫 시술일로부터 4개월 안에 이용해 주세요\./);
+  assert.match(evb, /이벤트 프로그램은 첫 시술일로부터 4개월 이내에 이용해 주세요\./);
   assert.match(evb, /이벤트 프로그램은 양도할 수 없습니다\./);
   assert.doesNotMatch(evb, /등록일로부터 1년 이내|서로 합의한 경우|선결제권은 1년/, '이벤트 규정만 표시');
   await agree(p); await sign(p);
@@ -1619,16 +1619,16 @@ test('환자 화면 1/3 등록 내용 → 2/3 규정(동그라미·따라 쓰기
   await click(p, '다음');
   assert.match(await body(p), /04의 회색 글씨 두 곳을 먼저 따라 써 주세요/, '따라 쓰기 전 3/3 차단');
   assert.doesNotMatch(await body(p), /서명\s*3 \/ 3/);
-  const bs = p.locator('[data-rules] b');
+  const bs = p.locator('[data-rules] b:not(:has(svg[data-mk-svg]))');   // 미리 밑줄이 없는 굵은 글씨
   await bs.nth(0).click(); await bs.nth(1).click(); await bs.nth(1).click(); await bs.nth(2).click();
-  assert.equal(await p.locator('[data-rules] svg[data-ring]').count(), 2, '누르면 동그라미, 다시 누르면 지움');
+  assert.equal(await p.locator('[data-rules] svg[data-ring]').count(), 2, '누르면 밑줄, 다시 누르면 지움');
   await agree(p); await sign(p);
   await click(p, '동의하고 저장'); await p.waitForTimeout(700);
   assert.match(await body(p), /동의가 완료되었습니다/);
   const [d] = await docs(p);
-  assert.equal((d.html.match(/<svg[^>]*data-ring/g) || []).length, 2, '동그라미가 서명 문서(PDF 원본)에 남음');
+  assert.equal((d.html.match(/<svg[^>]*data-ring/g) || []).length, 2, '터치한 밑줄이 서명 문서(PDF 원본)에 남음');
   assert.equal((d.html.match(/<img[^>]*alt="(결제금액의 10%|1회 정상가)"/g) || []).length, 2, '따라 쓴 글씨');
-  assert.equal(await p.locator('svg[data-ring]').count() >= 2, true, '완료 화면 미리보기에도 동그라미');
+  assert.equal(await p.locator('svg[data-ring]').count() >= 2, true, '완료 화면 미리보기에도 밑줄');
   await doneOk(p);
   assert.deepEqual(p.errors, []);
 });

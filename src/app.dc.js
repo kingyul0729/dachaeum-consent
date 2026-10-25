@@ -258,7 +258,7 @@ class Component extends DCLogic {
     this.setState({ snImg: img, snOpen: false, snMsg: '' });
   };
 
-  // 빨간 손그림 동그라미: 규정 화면에서 중요한 말(굵은 글씨)을 누르면 동그라미, 다시 누르면 지움. 문서에 그대로 들어가 서명 문서(PDF)에 남음
+  // 빨간 손그림 밑줄: 규정 화면에서 중요한 말(굵은 글씨)을 누르면 밑줄, 다시 누르면 지움. 문서에 그대로 들어가 서명 문서(PDF)에 남음
   static ringPath(w, h) {
     const cx = w / 2, cy = h / 2, a0 = Math.random() * Math.PI * 2, n = 46, turn = Math.PI * 2 * 1.12; let d = '';
     for (let i = 0; i <= n; i++) { const t = a0 + turn * i / n, j = 1 + (Math.random() - 0.5) * 0.06 + (i / n) * 0.05;
@@ -269,14 +269,15 @@ class Component extends DCLogic {
     if (this.state.screen !== 'sign') return;
     const el = e.target && e.target.closest ? e.target.closest('b') : null;
     if (!el || !e.currentTarget.contains(el) || el.querySelector('[data-tr],img') || el.closest('[data-tr]')) return;
+    if (Array.from(el.children).some(k => k.getAttribute('data-mk-svg'))) return;   // 이미 밑줄이 그어진 말
     const old = Array.from(el.children).find(k => k.getAttribute('data-ring'));
     if (old) { old.remove(); this.setState(st => ({ ringN: Math.max(0, (st.ringN || 0) - 1) })); return; }
     const r = el.getBoundingClientRect(); if (!r.width || !r.height) return;
-    const px = 10, py = 7, w = r.width + px * 2, h = r.height + py * 2, ns = 'http://www.w3.org/2000/svg';
+    const ns = 'http://www.w3.org/2000/svg', w = r.width, h = r.height;
     const sv = document.createElementNS(ns, 'svg'); sv.setAttribute('data-ring', '1'); sv.setAttribute('viewBox', '0 0 ' + w.toFixed(1) + ' ' + h.toFixed(1)); sv.setAttribute('preserveAspectRatio', 'none');
-    sv.setAttribute('style', 'position:absolute;pointer-events:none;overflow:visible;z-index:1;left:-' + (px / r.width * 100).toFixed(2) + '%;top:-' + (py / r.height * 100).toFixed(2) + '%;width:' + (w / r.width * 100).toFixed(2) + '%;height:' + (h / r.height * 100).toFixed(2) + '%;transform:rotate(' + ((Math.random() - 0.5) * 4).toFixed(1) + 'deg)');
-    const pth = document.createElementNS(ns, 'path'); pth.setAttribute('d', Component.ringPath(w - 4, h - 4)); pth.setAttribute('transform', 'translate(2 2)');
-    pth.setAttribute('style', 'fill:none;stroke:#d62b22;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round;opacity:0.9');
+    sv.setAttribute('style', 'position:absolute;left:0;top:0;width:100%;height:100%;pointer-events:none;overflow:visible;z-index:1');
+    const pth = document.createElementNS(ns, 'path'); pth.setAttribute('d', Component.markSvg('line', w, h)[0]);
+    pth.setAttribute('style', 'fill:none;stroke:#e5120a;stroke-width:2.6;stroke-linecap:round;stroke-linejoin:round;opacity:0.92');
     sv.appendChild(pth); el.style.position = 'relative'; el.appendChild(sv);
     this.setState(st => ({ ringN: (st.ringN || 0) + 1 }));
   };
@@ -302,7 +303,7 @@ class Component extends DCLogic {
     walk(root);
   }
   // 빨간 펜 표시(밑줄·물결·별·동그라미·//): 중요한 말에 미리 그려 둠. 문서 안에 들어가 서명 문서(PDF)에도 그대로 남음
-  static MARKS = [[/^1년 이내$|개월 안에$/, 'circle'], [/^남은 회차는 이용할 수 없으며$|^양도할 수 없습니다$|^총 계약금액의 10%$|^치료비 전액$/, 'line']];
+  static MARKS = [[/^1년 이내$|개월 이내$/, 'line'], [/^남은 회차는 이용할 수 없으며$|^양도할 수 없습니다$|^총 계약금액의 10%$|^치료비 전액$/, 'line']];
   static markSvg(kind, w, h) {
     const j = () => (Math.random() - 0.5) * 1.6, y = h + 3, P = [];
     const line = (x0, x1, yy) => 'M' + x0.toFixed(1) + ' ' + (yy + j()).toFixed(1) + ' Q' + ((x0 + x1) / 2).toFixed(1) + ' ' + (yy + j() * 1.5).toFixed(1) + ' ' + x1.toFixed(1) + ' ' + (yy + j()).toFixed(1);
@@ -1169,9 +1170,9 @@ class Component extends DCLogic {
     // 1/3 정상가: 시술별 1회 정상가 × 횟수 합계(추가 항목 포함), 프로그램 금액보다 클 때만 표시
     const p1ListNum = !isLesion && cur ? listSumNum : 0;
     const pgVals = { pg1: pg === 1, pgBack: pg > 1, pgPrev: () => pgGo(pg - 1), pgNo: pg + ' / 3',
-      pgTitle: ['프로그램 이용 동의', '이용 및 환불 규정', '서명'][pg - 1],
+      pgTitle: [(isEventCur || (isResign && C.event) ? '이벤트 ' : '') + '프로그램 이용 동의', '이용 및 환불 규정', '서명'][pg - 1],
       pgIntro: pg === 1 ? '다채움피부과의원은 아래 내용으로 프로그램 이용 계약을 진행합니다.\n내용을 확인해 주세요.'
-        : pg === 2 ? '계약 전 꼭 확인해야 할 이용 및 환불 규정입니다.\n' + (needTrace ? '점선의 회색 글씨 두 곳을 눌러서 직접 따라 써 주세요. ' : needSn ? '확인 문장을 눌러 회색 숫자를 따라 써 주세요. ' : '') + '중요한 말을 누르면 빨간 동그라미가 그려져요.'
+        : pg === 2 ? '계약 전 꼭 확인해야 할 이용 및 환불 규정입니다.\n' + (needTrace ? '점선의 회색 글씨 두 곳을 눌러서 직접 따라 써 주세요. ' : needSn ? '확인 문장을 눌러 회색 숫자를 따라 써 주세요. ' : '') + '중요한 말을 누르면 빨간 밑줄이 그어져요.'
         : '아래 서명란을 눌러 서명해 주세요.',
       docDisp: pg === 2 ? 'block' : 'none', pg3: pg === 3,
       sig3El: s.sigImg ? React.createElement('img', { src: s.sigImg, alt: '서명', style: { maxWidth: '100%', maxHeight: 200, display: 'block', margin: '0 auto' } }) : null, hasSig3: !!s.sigImg, noSig3: !s.sigImg, p1Rows, p1ListTitle: isLesion ? '등록 흑자' : '시술 구성', p1UnitHead: isLesion ? '금액' : '1회 단가',
