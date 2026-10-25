@@ -1228,6 +1228,7 @@ test('혜택가 할인 규칙(신규 계약부터): 혜택가 상품에 지인 �
    
     if (id) { await click(p, '전체'); await p.locator('input[placeholder*="검색"]').fill(id); await p.waitForTimeout(300); } else await click(p, '스킨부스터');
     for (const t of steps) await click(p, t);
+    await openFolds(p);
     };
   for (const [id, steps, price] of [['PGM-0085B', ['3회'], '330,000'], ['PGM-SB-1D1', ['1회'], '550,000']]) {
     await p.goto(URL); await p.waitForTimeout(1500);
