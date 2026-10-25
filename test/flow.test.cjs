@@ -852,7 +852,8 @@ test('선결제권 보유 잔액: 충분(1,000,000)·부족(300,000)·0원(할�
   // 충분
   await balIn.fill('1000000'); await p.waitForTimeout(300);
   let b = await body(p);
-  for (const re of [/선결제권\s*보유 잔액 1,000,000원/, /\n잔액\s*109,000원/, /수납액\s*0원/]) assert.match(b, re);
+  assert.equal(await balIn.inputValue(), '1,000,000', '확인한 보유 잔액 표시');
+  for (const re of [/\n잔액\s*109,000원/, /수납액\s*0원/]) assert.match(b, re);
   assert.doesNotMatch(b, /미수/);
   await signAndSave(p);
   let c = (await contracts(p))[0];
@@ -873,7 +874,7 @@ test('선결제권 보유 잔액: 충분(1,000,000)·부족(300,000)·0원(할�
   await toStep3(p, 'PGM-0018', '여드름 8주 프로그램', '함께사용', async () => { await click(p, '선결제권'); await click(p, '300'); await balIn.fill('200000'); await click(p, '신규 구매 3,000,000원'); });
   await click(p, '현금', 0); await click(p, '완납 결제', 0);
   b = await body(p);
-  for (const re of [/선결제권\s*보유 잔액 200,000원/, /완납 결제\s*3,000,000원/, /결제수단\s*현금\n/, /\n잔액\s*2,309,000원/, /완납\s*3,000,000원/, /최종 계약금액\s*891,000원/]) assert.match(b, re);
+  for (const re of [/완납 결제\s*3,000,000원/, /결제수단\s*현금\n/, /\n잔액\s*2,309,000원/, /완납\s*3,000,000원/, /최종 계약금액\s*891,000원/]) assert.match(b, re);
   assert.doesNotMatch(b, /미수금/, '전액 받으면 미수금 없음');
   await signAndSave(p);
   c = (await contracts(p)).find(x => x.patient.name === '함께사용');
@@ -1140,7 +1141,8 @@ test('iPad 세로 전체 흐름 ②: 기존 잔액 + 신규 구매 완납·예�
   await click(p, '임시 저장');
   await p.reload(); await p.waitForTimeout(2000);
   await click(p, '이어서 작성');
-  assert.match(await body(p), /선결제권\s*보유 잔액 200,000원[\s\S]*완납 결제\s*3,000,000원/, '확정한 선결제권 정보 유지');
+  await openFolds(p); assert.equal(await balInOf(p).inputValue(), '200,000', '확정한 보유 잔액 유지');
+  assert.match(await body(p), /완납 결제\s*3,000,000원/, '확정한 선결제권 정보 유지');
   await click(p, '완납 결제', 0);
   b = await body(p);
   for (const re of [/\n잔액\s*2,309,000원/, /최종 계약금액\s*891,000원/, /완납\s*3,000,000원/]) assert.match(b, re);
