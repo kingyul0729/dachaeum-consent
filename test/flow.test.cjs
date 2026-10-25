@@ -462,7 +462,7 @@ test('PGM-0041 흑자 1cm 1개: 총 등록금액 330,000원 표시·저장, 병�
   assert.equal(c.priceSnap.programId, 'PGM-0041');
   assert.equal(c.priceSnap.total, 330000);
   const dt = (await docs(p))[0].html.replace(/<[^>]+>/g, '');
-  assert.match(dt, /시술 시작 전에 취소하는 경우, 총 계약금액의 10%를 위약금으로 공제하고 환불합니다\./, '완납: 시작 전 취소만 위약금');
+  assert.match(dt, /시술 시작 전에 취소하는 경우에는 총 계약금액의 10%를 위약금으로 공제한 후 환불합니다\./, '완납: 시작 전 취소만 위약금');
   assert.doesNotMatch(dt, /예약금에서 공제|치료를 중단\(해지\)하는 경우|04 중도 해지|양도/, '흑자 규정에 일반 프로그램 규정 섞이지 않음');
   assert.match(dt, /이용기간이 지나면 남은 회차는 이용할 수 없으며/);
   assert.match((await docs(p))[0].html, /<img[^>]*alt="확인 문장"/, '흑자 확인 문장(따라 쓴 그림)이 서명 문서에 보관');
