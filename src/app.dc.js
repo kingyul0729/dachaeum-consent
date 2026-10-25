@@ -302,9 +302,7 @@ class Component extends DCLogic {
     walk(root);
   }
   // 빨간 펜 표시(밑줄·물결·별·동그라미·//): 중요한 말에 미리 그려 둠. 문서 안에 들어가 서명 문서(PDF)에도 그대로 남음
-  static MARKS = [[/^흑자 1개$|^1년 이내$|개월 안에$/, 'circle'], [/^남은 회차는 이용할 수 없으며$/, 'wave'], [/^양도할 수 없습니다$/, 'slash'],
-    [/^서로 합의한 경우$|^환자가 동의한 경우에만$|^1년 이용기간을 적용하지 않습니다$|^크기에 따라$/, 'line'], [/^총 계약금액의 10%$/, 'star'], [/^치료비 전액$/, 'wavestar'],
-    [/^결제금액의 10%$|^1회 정상가\(할인 전\)$/, 'star'], [/^04 중도 해지 시 환불금액$|^03 중도 중단 시 안내$/, 'bang']];
+  static MARKS = [[/^1년 이내$|개월 안에$/, 'circle'], [/^남은 회차는 이용할 수 없으며$|^양도할 수 없습니다$|^총 계약금액의 10%$|^치료비 전액$/, 'line']];
   static markSvg(kind, w, h) {
     const j = () => (Math.random() - 0.5) * 1.6, y = h + 3, P = [];
     const line = (x0, x1, yy) => 'M' + x0.toFixed(1) + ' ' + (yy + j()).toFixed(1) + ' Q' + ((x0 + x1) / 2).toFixed(1) + ' ' + (yy + j() * 1.5).toFixed(1) + ' ' + x1.toFixed(1) + ' ' + (yy + j()).toFixed(1);
