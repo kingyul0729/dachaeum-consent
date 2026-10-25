@@ -926,7 +926,7 @@ test('예약금: 목표(계약 총액 10%)에서 이 계약에 이미 납부·�
   b = await body(p);
   for (const re of [/최종 계약금액\s*3,465,000원/, /완납\s*3,000,000원/, /미수금\s*465,000원/, /프로그램 사용 \(선결제권\)\s*3,000,000원/, /\n잔액\s*0원/]) assert.match(b, re);
   assert.doesNotMatch(b, /완납용|추가 결제 없이 등록할게요/, '추가 예약금 0원을 완납으로 표시하지 않음 (미수 465,000원 그대로)');
-  await click(p, '미리보기');
+  await click(p, '동의서 보기');
   assert.match(await body(p), /예약금용 · A4 1장/, '상단 미리보기 버튼으로 동의서 열기');
   await click(p, '닫기');
   assert.doesNotMatch(await body(p), /예약금용 · A4 1장/, '고정 미리보기 없음');
@@ -1508,20 +1508,20 @@ test('동의서 상단 결제 정보: 할인 없음(프로그램 금액만·현�
   const top = async () => plain((await body(p)).split('프로그램 이용 동의서')[1].split('1. 프로그램 구성')[0]).replace(/^.*?성명/, '성명');
   // 할인 없음 · 완납 · 현금영수증 발급
   await toStep3(p, 'PGM-0018', '여드름 8주 프로그램', '문서상단1');
-  await click(p, '현금'); await click(p, '발급'); await click(p, '미리보기');
+  await click(p, '현금'); await click(p, '발급'); await click(p, '동의서 보기');
   let t = await top();
   assert.match(t, /결제수단 현금 \/ 현금영수증 프로그램 여드름 8주 프로그램 프로그램 금액 990,000원 $/);
   assert.doesNotMatch(t, /적용할인|결제금액|예약금|미수금|잔액|선결제권/, '할인 없으면 적용할인·결제금액 항목 없음');
   // 재티켓팅 (상담 안내 기간) · 예약금 결제 · 계좌이체 (현금영수증 미발급)
   await p.goto(URL); await p.waitForTimeout(1500);
   await toStep3(p, 'PGM-0018', '여드름 8주 프로그램', '문서상단2', async () => { await click(p, '재티켓팅 10%'); await click(p, '상담 안내 기간'); });
-  await click(p, '예약금 결제'); await click(p, '계좌이체'); await click(p, '미리보기');
+  await click(p, '예약금 결제'); await click(p, '계좌이체'); await click(p, '동의서 보기');
   t = await top();
   assert.match(t, /결제수단 계좌이체 프로그램 여드름 8주 프로그램 프로그램 금액 990,000원 적용할인 재티켓팅 10% \(상담 안내 기간\) 결제금액 891,000원 \(예약금: 89,100원\) 미수금 801,900원 $/);
   // 보유 잔액 89,000 + 선결제권 400 완납 (카드)
   await p.goto(URL); await p.waitForTimeout(1500);
   await toStep3(p, 'PGM-0003', '스페셜 토닝 3', '문서상단3', async () => { await click(p, '선결제권'); await click(p, '400'); await balInOf(p).fill('89000'); await click(p, '신규 구매 4,000,000원'); });
-  await click(p, '완납 결제', 0); await click(p, '카드', 0); await click(p, '미리보기');
+  await click(p, '완납 결제', 0); await click(p, '카드', 0); await click(p, '동의서 보기');
   t = await top();
   assert.match(t, /결제수단 카드 \/ 선결제권 프로그램 스페셜 토닝 3 프로그램 금액 1,540,000원 적용할인 선결제권 400만원 \(15%\) 결제금액 1,309,000원 \(잔액: 2,780,000원\) $/, '결제수단에 금액 없음, 잔액은 결제금액 아래');
   assert.doesNotMatch(t, /89,000/, '보유 잔액 89,000을 따로 적지 않음');
