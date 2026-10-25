@@ -184,7 +184,7 @@ test('새 동의서 작성: 이전 환자의 기납부 예약금·결제수단�
   const start = async name => {
     await click(p, '새 동의서 작성'); const ins = patientInputs(p);
     await ins.nth(0).fill(name); await ins.nth(1).fill('880101'); await ins.nth(2).fill('01011112222');
-    await click(p, '스킨부스터'); await click(p, '정상가'); await click(p, '3회');
+    await click(p, '스킨부스터'); await click(p, '정상가'); await click(p, '3회'); await openFolds(p);
   };
   await start('환자A');
   const dep = p.locator('xpath=//label[starts-with(normalize-space(.),"예약금")]//input');
