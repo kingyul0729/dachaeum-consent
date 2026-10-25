@@ -60,6 +60,8 @@ async function sign(p) {
   await p.mouse.move(bb.x + 150, bb.y + 20, { steps: 6 }); await p.mouse.move(bb.x + 250, bb.y + 60, { steps: 6 }); await p.mouse.up();
   await click(p, '서명 완료');
 }
+// 한 화면 등록: 환자 정보 칸은 오른쪽 열(환자 · 프로그램 · 결제) 맨 위
+const patientInputs = p => p.locator('[data-scroll="new"] label input');
 const allocInputs = p => p.locator('xpath=//*[contains(text(),"원결제")]/ancestor::div[2]//input');
 
 const mk = (id, program, o = {}) => ({ id, docMode: 'full', termsVer: 'T-2026-09',
@@ -71,10 +73,10 @@ const mk = (id, program, o = {}) => ({ id, docMode: 'full', termsVer: 'T-2026-09
 test('새 계약: 계약 당시 값·상태·서비스 단가 저장, 동의서 A4 1장, 계약 id로 문서 연결', async () => {
   const p = await open();
   await click(p, '새 동의서 작성');
-  const ins = p.locator('input');
+  const ins = patientInputs(p);
   await ins.nth(0).fill('신규환자'); await ins.nth(1).fill('880101'); await ins.nth(2).fill('01011112222');
-  await click(p, '다음 단계'); await click(p, '스킨부스터'); await click(p, '정상가'); await click(p, '3회');
-  await click(p, '다음 단계'); await click(p, '카드');
+  await click(p, '스킨부스터'); await click(p, '정상가'); await click(p, '3회');
+  await click(p, '카드');
   assert.match(await body(p), /수납액\s*330,000원/);
   await click(p, '동의서 미리보기 · 서명'); await p.waitForTimeout(400);
   assert.match((await body(p)).replace(/\s+/g, ' '), /1 등록 내용 확인 › 2 이용 및 환불 규정 확인 › 3 서명 › 4 완료 프로그램·금액·구성을 확인하고 「확인했어요」를 눌러 주세요/, '환자 화면 단계 표시줄: 첫 단계 등록 내용 확인');
@@ -170,9 +172,9 @@ test('잔금 결제: 실제 납부액·결제내역 누적, 초과 차단, 완�
 test('새 동의서 작성: 이전 환자의 기납부 예약금·결제수단이 다음 환자에게 남지 않음', async () => {
   const p = await open();
   const start = async name => {
-    await click(p, '새 동의서 작성'); const ins = p.locator('input');
+    await click(p, '새 동의서 작성'); const ins = patientInputs(p);
     await ins.nth(0).fill(name); await ins.nth(1).fill('880101'); await ins.nth(2).fill('01011112222');
-    await click(p, '다음 단계'); await click(p, '스킨부스터'); await click(p, '정상가'); await click(p, '3회'); await click(p, '다음 단계');
+    await click(p, '스킨부스터'); await click(p, '정상가'); await click(p, '3회');
   };
   await start('환자A');
   const dep = p.locator('xpath=//label[starts-with(normalize-space(.),"예약금")]//input');
@@ -204,14 +206,14 @@ test('환불 정산 입력 직후 바로 새로고침해도 작성 중 값 유�
 });
 
 const pickProgram = async (p, id, label, opt = {}) => {
-  await click(p, '새 동의서 작성'); const ins = p.locator('input');
+  await click(p, '새 동의서 작성'); const ins = patientInputs(p);
   await ins.nth(0).fill('정상가테스트'); await ins.nth(1).fill('880101'); await ins.nth(2).fill('01011112222');
-  await click(p, '다음 단계'); await click(p, '전체');
+  await click(p, '전체');
   await p.locator('input[placeholder*="검색"]').fill(id); await p.waitForTimeout(300);
   await click(p, label);
   if (opt.unit) await p.locator('input[placeholder="1회 정상가"]').fill(opt.unit);   // 2단계에서 계약금액·1회 정상가 확정
   if (opt.stay) return;
-  await click(p, '다음 단계'); await click(p, '카드');
+  await click(p, '카드');
 };
 const signAndSave = async p => {
   await click(p, '동의서 미리보기 · 서명'); await p.getByText(/이용 및 환불 규정에 대해 충분히/).last().click(); await sign(p);
@@ -222,11 +224,11 @@ test('PGM-0037 남성 턱밑라인: 환불용 1회 정상가 입력 전 서명 �
   const p = await open();
   await pickProgram(p, 'PGM-0037', '남성 턱밑라인 포함', { stay: true });
   assert.match(await body(p), /환불용 1회 정상가 확인 필요/);
-  await click(p, '다음 단계');
+ 
   assert.match(await body(p), /환불용 1회 정상가를 입력해 주세요/);
   assert.doesNotMatch(await body(p), /결제 내용/, '정상가 입력 전에는 결제 등록으로 넘어가지 않음');
   await p.locator('input[placeholder="1회 정상가"]').fill('132000');          // 테스트용 임의 값
-  await click(p, '다음 단계'); await click(p, '카드');
+  await click(p, '카드');
   await signAndSave(p);
   const [c] = await contracts(p);
   assert.equal(c.total, 660000);
@@ -432,15 +434,15 @@ test('PGM-0041 흑자 1cm 1개: 총 등록금액 330,000원 표시·저장, 병�
     priceSnap: { ver: 'old', programId: 'PGM-0041', total: null, at: '2026-09-01' } });
   const p = await open([old]);
   const before = JSON.stringify((await contracts(p))[0]);
-  await click(p, '새 동의서 작성'); const ins = p.locator('input');
+  await click(p, '새 동의서 작성'); const ins = patientInputs(p);
   await ins.nth(0).fill('흑자테스트'); await ins.nth(1).fill('880101'); await ins.nth(2).fill('01011112222');
-  await click(p, '다음 단계'); await click(p, '전체');
+  await click(p, '전체');
   await p.locator('input[placeholder*="검색"]').fill('PGM-0041'); await p.waitForTimeout(300);
   assert.match(await body(p), /1개 330,000원~/);
   await click(p, '흑자 제거');
   await p.locator('input[placeholder="치료 부위 입력"]').first().fill('왼쪽 볼');
   await p.locator('input[placeholder="크기"]').first().fill('1'); await p.locator('input[placeholder="크기"]').first().blur(); await p.waitForTimeout(300);
-  await click(p, '다음 단계'); await click(p, '카드');
+  await click(p, '카드');
   assert.match(await body(p), /330,000/);
   await signAndSave(p);
   const all = await contracts(p);
@@ -697,13 +699,13 @@ const pmClose = async p => { await p.getByText('닫기', { exact: true }).last()
 const lsJ = (p, k) => p.evaluate(k => JSON.parse(localStorage.getItem(k) || 'null'), k);
 // 2단계: 프로그램 선택 후 할인·선결제권 기준·보유 잔액·신규 구매 여부까지 정해 계약금액 확정 (setup) → 3단계 결제 등록
 const toStep2 = async (p, id, label, who = '결제테스트') => {
-  await click(p, '새 동의서 작성'); const ins = p.locator('input');
+  await click(p, '새 동의서 작성'); const ins = patientInputs(p);
   await ins.nth(0).fill(who); await ins.nth(1).fill('880101'); await ins.nth(2).fill('01011112222');
-  await click(p, '다음 단계'); await click(p, '전체');
+  await click(p, '전체');
   await p.locator('input[placeholder*="검색"]').fill(id); await p.waitForTimeout(300);
   await click(p, label);
 };
-const toStep3 = async (p, id, label, who = '결제테스트', setup) => { await toStep2(p, id, label, who); if (setup) await setup(); await click(p, '다음 단계'); };
+const toStep3 = async (p, id, label, who = '결제테스트', setup) => { await toStep2(p, id, label, who); if (setup) await setup(); };
 const balInOf = p => p.locator('xpath=//*[text()="보유 선결제권 잔액 (직원 확인)"]/following-sibling::span//input');
 
 test('프로그램 이름 변경: 검색·선택·새 계약·새 동의서에 반영, ID·금액 그대로, 기존 계약·서명 문서 유지, 되돌리기', async () => {
@@ -760,7 +762,7 @@ test('이벤트 관리: 할인율 이벤트 추가 → 3단계 할인 항목·�
   assert.match(await body(p), /최종 계약금액\s*1,320,000원/, '선택 전 자동 적용 없음');
   await click(p, '가을 이벤트 10%');
   assert.match(await body(p), /최종 계약금액\s*1,188,000원/);
-  await click(p, '다음 단계');
+ 
   assert.match(await body(p), /최종 계약금액\s*1,188,000원/, '결제 등록에 확정 금액 표시');
   assert.doesNotMatch(await body(p), /가을 이벤트 10%\s*선결제권|지인 소개 5%/, '결제 등록에서 할인 다시 선택 없음');
   assert.match(await body(p), /수납액\s*1,188,000원/, '결제 안내도 같은 금액');
@@ -836,11 +838,11 @@ test('선결제권 보유 잔액: 충분(1,000,000)·부족(300,000)·0원(할�
   const balIn = p.locator('xpath=//*[text()="보유 선결제권 잔액 (직원 확인)"]/following-sibling::span//input');
   // 잔액 0원 + 신규 구매 없음 → 선결제권 할인 불가
   await toStep2(p, 'PGM-0018', '여드름 8주 프로그램', '잔액없음');
-  await click(p, '선결제권'); await click(p, '300'); await click(p, '다음 단계');
+  await click(p, '선결제권'); await click(p, '300');
   assert.match(await body(p), /선결제권 할인은 확인한 보유 잔액이 있거나 신규 구매할 때만 적용할 수 있습니다/);
   assert.doesNotMatch(await body(p), /결제 내용/, '2단계에서 확정 전에는 결제 등록으로 넘어가지 않음');
   // 충분
-  await balIn.fill('1000000'); await p.waitForTimeout(300); await click(p, '다음 단계');
+  await balIn.fill('1000000'); await p.waitForTimeout(300);
   let b = await body(p);
   for (const re of [/선결제권\s*보유 잔액 1,000,000원/, /\n잔액\s*109,000원/, /수납액\s*0원/]) assert.match(b, re);
   assert.doesNotMatch(b, /미수/);
@@ -898,7 +900,7 @@ test('백업·복원: 프로그램 이름·이벤트·1회 정상가·총 등록
   assert.deepEqual(await keysOf(dst), original, '이름·이벤트·정상가·가격 설정과 계약 전체 동일');
   await toStep2(dst, 'PGM-0001', '스페셜 토닝 1 (가을)');
   assert.match(await body(dst), /가을 이벤트 10%/);
-  await click(dst, '가을 이벤트 10%'); await click(dst, '다음 단계'); await click(dst, '카드'); await signAndSave(dst);
+  await click(dst, '가을 이벤트 10%'); await click(dst, '카드'); await signAndSave(dst);
   const c = (await contracts(dst)).find(x => x.id !== 'CT1');
   assert.deepEqual([c.program, c.total, c.items.find(i => /레블라이트/.test(i.name)).price], ['스페셜 토닝 1 (가을)', 1188000, 250000]);
   assert.deepEqual(src.errors.concat(dst.errors), []);
@@ -1211,12 +1213,12 @@ test('혜택가 할인 규칙(신규 계약부터): 혜택가 상품에 지인 �
   const saved = () => p.evaluate(() => [localStorage.getItem('dachaeum.v3.contracts'), localStorage.getItem('dachaeum.v3.docs')]);
   const before = await saved();
   const pick = async (id, steps, stay) => {
-    await click(p, '새 동의서 작성'); const ins = p.locator('input');
+    await click(p, '새 동의서 작성'); const ins = patientInputs(p);
     await ins.nth(0).fill('혜택가테스트'); await ins.nth(1).fill('880101'); await ins.nth(2).fill('01011112222');
-    await click(p, '다음 단계');
+   
     if (id) { await click(p, '전체'); await p.locator('input[placeholder*="검색"]').fill(id); await p.waitForTimeout(300); } else await click(p, '스킨부스터');
     for (const t of steps) await click(p, t);
-    if (!stay) await click(p, '다음 단계'); };
+    if (!stay) };
   for (const [id, steps, price] of [['PGM-0085B', ['3회'], '330,000'], ['PGM-SB-1D1', ['1회'], '550,000']]) {
     await p.goto(URL); await p.waitForTimeout(1500);
     await pick(id, steps, true);   // 할인 선택은 2단계 계약 금액에서
@@ -1236,7 +1238,7 @@ test('혜택가 할인 규칙(신규 계약부터): 혜택가 상품에 지인 �
   assert.match(await body(p), /최종 계약금액\s*440,000원/, '이벤트 자동 적용 없음');
   await click(p, '가을 이벤트 20%');
   assert.match(await body(p), /최종 계약금액\s*352,000원/);
-  await click(p, '다음 단계'); await click(p, '카드'); await signAndSave(p);
+  await click(p, '카드'); await signAndSave(p);
   const c = (await contracts(p)).find(x => x.id !== 'C-OLD-B');
   assert.deepEqual([c.total, c.disc.kind, c.disc.preTier, c.disc.label], [352000, 'ev:EV-R-T', null, '가을 이벤트 20%'], '이벤트 하나만');
   // 가격 관리: 혜택가 프로그램을 할인율 이벤트에 추가하지 못함
@@ -1340,12 +1342,12 @@ const payPaneState = p => p.evaluate(() => {
   if (!pane) return { missing: true, screen: document.body.innerText.slice(0, 200) };
   const vh = window.visualViewport ? visualViewport.height : innerHeight, last = pane.lastElementChild.getBoundingClientRect();
   const root = [...document.querySelectorAll('div')].find(d => d.style.maxWidth === '820px');
-  const hit = document.elementFromPoint(220, Math.min(vh - 40, last.bottom - 5));
+  const hit = document.elementFromPoint(615, Math.min(vh - 40, last.bottom - 5));
   return { clipped: [...pane.querySelectorAll('div')].filter(c => getComputedStyle(c).overflowY === 'hidden' && c.scrollHeight > c.clientHeight + 1 && c.getBoundingClientRect().height > 0).length, atEnd: pane.scrollTop >= pane.scrollHeight - pane.clientHeight - 1,
     lastBottom: Math.round(last.bottom), vh: Math.round(vh), rootH: Math.round(root.getBoundingClientRect().height), docScroll: Math.round(scrollY),
     hitInPane: !!hit && pane.contains(hit), fixedOverlays: [...document.querySelectorAll('div')].filter(d => getComputedStyle(d).position === 'fixed' && d.id !== '__bundler_err' && d.getBoundingClientRect().height > 0).length };
 });
-const scrollPayToEnd = async p => { for (let i = 0; i < 8; i++) await swipeUp(p, 220, 700, 500); return payPaneState(p); };
+const scrollPayToEnd = async p => { for (let i = 0; i < 8; i++) await swipeUp(p, 615, 700, 500); return payPaneState(p); };
 const toPrepaidPay = async (p, who) => {
   await toStep3(p, 'PGM-0033', '얼굴전체', who, async () => { await click(p, '선결제권'); await click(p, '300'); await click(p, '신규 구매 3,000,000원'); });
   await click(p, '카드', 0); await click(p, '완납 결제', 0);
@@ -1533,7 +1535,7 @@ test('간이(재등록) 동의서: 새 규정(T-2026-11)으로 서명한 환자�
     const p = await open([mk('CT1', '프로그램 A', { termsVer: ver, date: '2026-10-01' })]);
     await click(p, '프로그램 A'); await click(p, '이 환자로 새 동의서'); await click(p, '전체');
     await p.locator('input[placeholder*="검색"]').fill('PGM-0018'); await p.waitForTimeout(300);
-    await click(p, '여드름 8주 프로그램'); await click(p, '다음 단계'); await click(p, '카드');
+    await click(p, '여드름 8주 프로그램'); await click(p, '카드');
     await click(p, '동의서 미리보기 · 서명');
     const b = (await body(p)).replace(/\s+/g, ' ');
     const tr = await p.locator('[data-tr]').count();
@@ -1570,7 +1572,7 @@ test('이벤트 이용기간(개월): 가격 관리에서 이벤트별 수정 �
   assert.deepEqual((await lsJ(p, 'dachaeum.eventOverride')).events['EV-NEWBIJOU'], { validMonths: 4 });
   await pmClose(p);
   await toStep2(p, 'PGM-EV-NB1', '뉴비쥬 2cc');
-  await click(p, '다음 단계'); await click(p, '카드');
+  await click(p, '카드');
   await click(p, '동의서 미리보기 · 서명');
   const evb = (await body(p)).replace(/\s+/g, ' ');
   assert.match(evb, /이벤트 프로그램은 첫 시술일로부터 4개월 안에 이용해 주세요\./);
@@ -1593,7 +1595,7 @@ test('이벤트 이용기간(개월): 가격 관리에서 이벤트별 수정 �
 
 test('환자 화면 4단계: 등록 내용 확인 → 규정(동그라미·따라 쓰기·동의) → 서명 → 완료, 동그라미·따라 쓴 글씨·서명이 저장 문서에 남음', async () => {
   const p = await open();
-  await toStep2(p, 'PGM-0018', '여드름 8주 프로그램'); await click(p, '다음 단계'); await click(p, '카드');
+  await toStep2(p, 'PGM-0018', '여드름 8주 프로그램'); await click(p, '카드');
   await click(p, '동의서 미리보기 · 서명');
   let b = await body(p);
   assert.match(b, /등록 내용 확인\s*›?\s*\S*\s*이용 및 환불 규정 확인\s*›?\s*\S*\s*서명\s*›?\s*\S*\s*완료/, '4단계 표시');

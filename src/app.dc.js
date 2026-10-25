@@ -665,7 +665,7 @@ class Component extends DCLogic {
     const dup = (() => {
       // 이름 + 생년월일(6자리, 예: 950312)까지 입력된 뒤에 표시
       const nm = (P.name || '').trim(), bd = String(P.birth || '').replace(/[^0-9]/g, '');
-      if (!nm || bd.length < 6 || s.step !== 1 || s.dupOff === nm + '|' + P.birth) return null;
+      if (!nm || bd.length < 6 || s.dupOff === nm + '|' + P.birth) return null;
       const src = (s.contracts || []).concat(s.contract ? [s.contract] : []);
       const g = {}; src.forEach(c => { const p = c.patient || {}; if ((p.name || '').trim() !== nm || String(p.birth || '').replace(/[^0-9]/g, '') !== bd) return;
         const k = nm + '|' + (p.birth || ''); (g[k] = g[k] || { p, n: 0, last: '' });
@@ -739,13 +739,24 @@ class Component extends DCLogic {
     ] : [];
 
     const progTitle = p => p.name;
-    const srcForCards = pkProgs || dbHits;
+    // 추가 옵션 묶음(예: 스페셜 토닝 3 · 기본 / +흑자 / +CO₂ / +둘 다): 목록에는 기본 1줄만, 선택 후 오른쪽에서 +흑자 · +CO₂를 켜고 끄면 해당 프로그램으로 바뀜
+    const reqAdds = p => (p.adds || []).filter(a => !a.optional).map(a => a.name);
+    const famOf = (p, src) => src.filter(q => q.name === p.name && q.cat === p.cat && !q.event === !p.event && !q.lesion && !p.lesion);
+    const famBase = (p, src) => { const f = famOf(p, src); const b = f.filter(q => !reqAdds(q).length); return f.length > 1 && b.length === 1 ? b[0] : null; };
+    const srcAll = pkProgs || dbHits;
+    // 정상가: 시술별 1회 정상가 × 횟수 합계(+ 필수 추가 항목). 이벤트는 등록된 정상가(listTotal). 계산할 수 없으면 표시 안 함
+    const listOfProg = p => { if (p.lesion) return 0; if (Number(p.listTotal || 0)) return Number(p.listTotal);
+      const its = (p.items || []).filter(i => i.kind !== '서비스권' && !/염증주사|약\s?처방/.test(i.name || '') && i.settleType !== '정산 제외');
+      if (!its.length || its.some(i => !Number(i.unitPrice || 0))) return 0;
+      return its.reduce((t, i) => t + Number(i.unitPrice) * Number(i.qty || 0), 0) + (p.adds || []).filter(a => !a.optional).reduce((t, a) => t + Number(a.price || 0), 0); };
+    const srcForCards = srcAll.filter(p => { const b = famBase(p, srcAll); return !b || b === p; });
     const progList = srcForCards.length
-      ? srcForCards.map(p => ({ id: p.id, sub: p.sub, cat: p.cat, g: p.g, r: p.r, o: p.o, event: p.event || '', name: progTitle(p), baseName: p.baseName || p.name, desc: p.cat + ' · ' + p.id,
+      ? srcForCards.map(p => ({ famIds: famBase(p, srcAll) ? famOf(p, srcAll).map(q => q.id) : null, listPrice: (() => { const L = listOfProg(p); return L > Number(p.total || 0) && Number(p.total || 0) > 0 ? won(L) + '원' : ''; })(), id: p.id, sub: p.sub, cat: p.cat, g: p.g, r: p.r, o: p.o, event: p.event || '', name: progTitle(p), baseName: p.baseName || p.name, desc: p.cat + ' · ' + p.id,
           price: p.lesion ? '1개 ' + won((p.lesionTiers || [{}])[0].price || 0) + '원~' : p.total ? won(p.total) + '원' : '금액 입력',
           // 같은 이름 프로그램 구분: 추가 항목명만 짧게 (개수 표기 대신)
           ...(() => { const ad = (p.adds || []).filter(a => !a.optional).map(a => String(a.name || '').replace(/\s*\(.*?\)/g, '').replace(/\s*\d+\s*회$/, '').trim()).filter(Boolean);
             const dup = srcForCards.filter(q => q.name === p.name).length > 1;
+            if (famBase(p, srcAll)) return { unit: [...new Set(famOf(p, srcAll).flatMap(reqAdds))].map(n => String(n).replace(/\s*\(.*?\)/g, '')).join(' · ') + ' 추가 선택', hasDiff: true };
             const u = ad.length ? '기본 + ' + ad.join(' · ') : dup ? '기본 구성' : '';
             return { unit: u, hasDiff: !!u }; })() }))
       : (db ? [] : progs); // 가격표가 로드된 뒤에는 빈 결과를 샘플로 채우지 않음
@@ -875,6 +886,17 @@ class Component extends DCLogic {
         + curAdds.reduce((t, a) => t + Number(a.price || 0), 0)
       : 0;
     const listNum = cur ? (isLesion ? lesionTotal : ((Number(cur.total || 0) || manualAmt) + optAddSum)) : 0;
+    // 선택한 프로그램의 추가 옵션(+흑자 · +얼굴 전체 CO₂): 켜고 끄면 같은 묶음의 해당 프로그램(ID)으로 바뀌고 금액·구성·동의서에 바로 반영
+    const famAll = cur && !hairCur && !isLesion ? famOf(cur, dbAll) : [];
+    const famOk = famAll.length > 1 && famAll.filter(q => !reqAdds(q).length).length === 1;
+    const famOpts = famOk ? [...new Set(famAll.flatMap(reqAdds))].sort((x, y) => /흑자/.test(y) - /흑자/.test(x)).map(nm => {
+      const mine = reqAdds(cur), on = mine.includes(nm), want = on ? mine.filter(x => x !== nm) : mine.concat(nm);
+      const tgt = famAll.find(q => { const r = reqAdds(q); return r.length === want.length && want.every(x => r.includes(x)); });
+      const ad = famAll.flatMap(q => q.adds || []).find(a => a.name === nm) || {};
+      return { label: String(nm).replace(/\s*\(.*?\)/g, '') + ' 추가', price: Number(ad.price || 0) ? '+' + won(ad.price) + '원' : '', on, mark: on ? '✓' : '',
+        bd: on ? '#1c1b18' : 'rgba(0,0,0,0.18)', bg: on ? '#1c1b18' : '#ffffff', fg: on ? '#ffffff' : 'transparent',
+        pick: () => tgt ? this.setState({ progId: tgt.id, prog: -1 }) : this.flash('이 조합의 프로그램이 없습니다') }; }) : [];
+    const selListNum = cur && !isLesion ? listOfProg(cur) : 0;
     // 할인·선결제권: 2단계에서 하나만 선택 → 최종 계약금액 확정 (3단계에서는 다시 계산하지 않음)
     // 이벤트 설정(가격 관리 → 이벤트)을 할인 선택·금액·결제 안내가 함께 참조
     const evDefCur = cur && cur.event ? ((db && db.events) || []).find(e => e.id === cur.event) || null : null;
@@ -887,13 +909,13 @@ class Component extends DCLogic {
     const flat = progList.map((p, i) => {
       // 제모: 여러 부위를 한 번에 선택 (누르면 추가/해제)
       const hair = p.cat === '제모' && !!p.id;
-      const on = hair ? hairIds.includes(p.id) : (s.progId ? p.id === s.progId : s.prog === i);
+      const on = hair ? hairIds.includes(p.id) : (s.progId ? p.id === s.progId || (p.famIds || []).includes(s.progId) : s.prog === i);
       const reset = { addArea: '', addSel: [], addSvc: [], addSvN: {}, svcOff: [], svcSwap: {}, oGrp: '', disc: 'none', preTier: '', retPeriod: '', preBal: '', preNew: false, preRcvAmt: '', preBuyM: '' };
       return { ...p, on, hair, pick: hair
         ? () => this.setState(st => { const h = st.hairIds || []; return { ...reset, prog: -1, progId: '', hairIds: h.includes(p.id) ? h.filter(x => x !== p.id) : h.concat(p.id) }; })
         : () => this.setState({ ...reset, prog: i, progId: p.id || '', hairIds: [] }),
-        bd: on ? '#030213' : 'rgba(0,0,0,0.1)', bg: on ? '#e9ebef' : '#ffffff',
-        dot: on ? '#030213' : 'rgba(0,0,0,0.1)', inner: on ? '#030213' : 'transparent', showOpts: false, opts: [] }; });
+        bd: on ? '#1c1b18' : 'rgba(28,27,24,0.1)', bg: on ? '#ece8e1' : '#ffffff',
+        dot: on ? '#1c1b18' : 'rgba(28,27,24,0.18)', inner: on ? '#1c1b18' : 'transparent', showOpts: false, opts: [] }; });
     const oCnt = n => (String(n || '').match(/(\d+)\s*회$/) || [])[1] || '1';
     const oLab = m => m.o || (oCnt(m.baseName || m.name) + '회');
     // 카테고리별 구역(programs.json → sections). 없으면 장비 카드를 데이터 순서대로 나열
@@ -1324,36 +1346,26 @@ class Component extends DCLogic {
       unitFix: {}, tried3: false, evFirst: '', forceFull: false, dupPick: '', dupOff: '', pvOn: false, sig: false, tried1: false, pendingSign: false, ckRefund: false };
     const bars = {
       list: { note: '기록은 이 기기에만 저장됩니다. 7일마다 백업하세요.', primary: '새 동의서 작성', secondary: '백업 · 복원', onP: () => this.setState({ screen: 'new', step: 1, ...NEW_RESET, ...((this.props.testFill ?? false) ? { step: 2, patient: { name: '테스트', birth: '900101', phone: '010-1234-5678' } } : { patient: { name: '', birth: '', phone: '' } }) }), onS: () => this.setState({ bkOpen: true, bkMsg: '', bkPlan: null, bkReady: '', bkPw: '', bkPw2: '', bkPwR: '' }) },
-      new: { note: s.step === 3 ? '환자에게 iPad를 전달해 서명을 받습니다.' : '단계를 모두 채우면 환자 확인 화면으로 넘어갑니다.',
-             primary: s.step === 3 ? '동의서 미리보기 · 서명' : '다음 단계', secondary: s.step === 1 ? '취소' : '이전',
+      new: { note: '모두 입력하면 환자 확인 화면으로 넘어갑니다.',
+             primary: '동의서 미리보기 · 서명', secondary: '취소',
              onP: () => {
-               if (s.step === 3) {
-                 if (discKey === 'pre' && !preTier) return this.flash('선결제권 기준을 선택해 주세요');
-                 if (discKey === 'pre' && !preNew && !balIn) return this.flash('선결제권 할인은 확인한 보유 잔액이 있거나 신규 구매할 때만 적용할 수 있습니다');
-                 if (!preSignOk) return this.flash('선결제권 완납 또는 예약금(' + won(preMin) + '원)을 선택해 주세요');
-                 if (preNew && !preBuyM) return this.flash('선결제권 결제수단을 선택해 주세요');
-                 if (nowNum > 0 && !selM.length) return this.flash('결제수단을 선택해 주세요');
-                 if (isSplit && (!a1 || a1 >= nowNum)) return this.flash('분할결제 금액을 입력해 주세요');
-                 if (!totalNum) return this.flash('총 등록금액을 입력해 주세요');
-                 if (isManual && !manualUnit) return this.flash('환불용 1회 정상가를 입력해 주세요');
-                 { const miss = unitFixLines.find(l => !fixVal(l.key)); if (miss) { this.setState({ tried3: true }); return this.flash('‘' + miss.name + '’의 환불용 1회 정상가를 입력해 주세요'); } }
-                 return this.setState({ screen: 'sign', signFrom: 'new', sig: false, sigOpen: false, sigImg: null, trImg: [], trOpen: -1, snImg: null, snOpen: false, pOk1: false, ringN: 0, ckRefund: false, pendingSign: false, pendingProg: cur ? progTitle(cur) : '', pendingTotal: won(totalNum) });
-               }
-               if (s.step === 1 && !p1ok) { this.setState({ tried1: true }); return this.flash('환자 정보를 확인해 주세요'); }
+               // 한 화면 등록: 환자 정보 → 프로그램·구성 → 계약 금액 → 결제 순서로 확인
+               if (!p1ok) { this.setState({ tried1: true }); return this.flash('환자 정보를 확인해 주세요'); }
                // 횟수 묶음(예: 정상가 1회·3회)은 줄을 펼친 뒤 횟수까지 골라야 선택됨
-               if (s.step === 2 && !cur) return this.flash(s.oGrp ? '횟수를 선택해 주세요 (+ 버튼으로 1회 · 3회 등 선택)' : '프로그램을 선택해 주세요');
-               if (s.step === 2 && isLesion && !lesionOk) return this.flash('흑자별 부위와 크기(3cm 이하)를 입력해 주세요');
-               // 계약금액(할인·선결제권 기준·총 등록금액·1회 정상가)은 2단계에서 확정 → 결제 등록으로 넘어가기 전에 확인
-               if (s.step === 2) {
-                 if (discKey === 'pre' && !preTier) return this.flash('선결제권 기준을 선택해 주세요');
-                 if (discKey === 'pre' && !preNew && !balIn) return this.flash('선결제권 할인은 확인한 보유 잔액이 있거나 신규 구매할 때만 적용할 수 있습니다');
-                 if (!totalNum) return this.flash('총 등록금액을 입력해 주세요');
-                 if (isManual && !manualUnit) return this.flash('환불용 1회 정상가를 입력해 주세요');
-                 { const miss = unitFixLines.find(l => !fixVal(l.key)); if (miss) { this.setState({ tried3: true }); return this.flash('‘' + miss.name + '’의 환불용 1회 정상가를 입력해 주세요'); } }
-               }
-               return this.setState({ step: s.step + 1, pvOn: false });
+               if (!cur) return this.flash(s.oGrp ? '횟수를 선택해 주세요 (+ 버튼으로 1회 · 3회 등 선택)' : '프로그램을 선택해 주세요');
+               if (isLesion && !lesionOk) return this.flash('흑자별 부위와 크기(3cm 이하)를 입력해 주세요');
+               if (discKey === 'pre' && !preTier) return this.flash('선결제권 기준을 선택해 주세요');
+               if (discKey === 'pre' && !preNew && !balIn) return this.flash('선결제권 할인은 확인한 보유 잔액이 있거나 신규 구매할 때만 적용할 수 있습니다');
+               if (!totalNum) return this.flash('총 등록금액을 입력해 주세요');
+               if (isManual && !manualUnit) return this.flash('환불용 1회 정상가를 입력해 주세요');
+               { const miss = unitFixLines.find(l => !fixVal(l.key)); if (miss) { this.setState({ tried3: true }); return this.flash('‘' + miss.name + '’의 환불용 1회 정상가를 입력해 주세요'); } }
+               if (!preSignOk) return this.flash('선결제권 완납 또는 예약금(' + won(preMin) + '원)을 선택해 주세요');
+               if (preNew && !preBuyM) return this.flash('선결제권 결제수단을 선택해 주세요');
+               if (nowNum > 0 && !selM.length) return this.flash('결제수단을 선택해 주세요');
+               if (isSplit && (!a1 || a1 >= nowNum)) return this.flash('분할결제 금액을 입력해 주세요');
+               return this.setState({ screen: 'sign', signFrom: 'new', sig: false, sigOpen: false, sigImg: null, trImg: [], trOpen: -1, snImg: null, snOpen: false, pOk1: false, ringN: 0, ckRefund: false, pendingSign: false, pendingProg: cur ? progTitle(cur) : '', pendingTotal: won(totalNum) });
              },
-             onS: () => s.step === 1 ? this.setState({ screen: 'list' }) : this.setState({ step: s.step - 1, pvOn: false }) },
+             onS: () => this.setState({ screen: 'list' }) },
       detail: (() => {
         const st = s.cStatus;
         if (st === '등록완료') return { primary: '환불 정산', onP: () => this.setState({ screen: 'refund', ...this.rfStateOf(C) }) };
@@ -1367,7 +1379,7 @@ class Component extends DCLogic {
 
     const titles = {
       list: ['이용 동의 · 환불 정산', '다채움피부과의원 · 프로그램 관리'],
-      new: ['새 동의서 작성', '4단계 중 ' + s.step + '단계'],
+      new: ['새 동의서 작성', '환자 · 프로그램 · 결제'],
       detail: [C.patient.name + ' · 상세', C.program],
       refund: ['환불 정산', C.patient.name + ' · ' + C.program]
     };
@@ -1383,7 +1395,7 @@ class Component extends DCLogic {
       // 디자인 기준(B) 헤더: 뒤로가기 화살표 + 화면 제목. 새 동의서 작성 중에는 기존 '이전'(1단계는 '취소') 동작, 그 외 화면은 목록으로
       goBack: () => S === 'new' ? bar.onS() : (S === 'refund' && this.saveDraft(), this.setState({ screen: 'list' })),
       backTitle: S === 'new' ? (s.step === 1 ? '취소' : '이전') : '목록',
-      headTitle: S === 'new' ? ['환자 정보', '프로그램 · 구성', '결제 등록', '미리보기 · 서명'][s.step - 1] || '' : S === 'detail' ? ((C.patient || {}).name || '') + ' · ' + (C.program || '') : S === 'refund' ? '환불 정산' : '이용·환불 동의서',
+      headTitle: S === 'new' ? '새 동의서' : S === 'detail' ? ((C.patient || {}).name || '') + ' · ' + (C.program || '') : S === 'refund' ? '환불 정산' : '이용·환불 동의서',
       stepPct: (Math.min(4, Math.max(1, s.step || 1)) * 25) + '%',
       title: t[0],
       rows: rows.slice(listPg.start, listPg.start + listPg.size), noRows: !rows.length, listPg,
@@ -1408,15 +1420,17 @@ class Component extends DCLogic {
       unitInput: (s.units && s.units[manualKey]) ? Number(s.units[manualKey]).toLocaleString('ko-KR') : '',
       onUnit: e => { const v = e.target.value.replace(/[^0-9]/g, '');
         this.setState(st => ({ units: { ...st.units, [manualKey]: v } })); },
-      st1: s.step === 1, st2: s.step === 2, st3: false, st4: s.step === 3,
+      // 한 화면 등록: 환자 정보 · 프로그램 · 계약 금액 · 결제를 한 화면(2단)에서 함께 입력
+      st1: true, st2: true, st3: false, st4: true,
       // 2단계 우측: 선택 구성 확인 (동의서는 버튼으로만 표시)
       // 3단계(결제 등록)는 고정 미리보기 없이 결제 내용만 표시하고, 상단 '미리보기' 버튼으로 필요할 때만 동의서를 엶
       // 한 줄 세로 배치: 동의서 미리보기는 단계마다 '동의서 보기'(미리보기) 버튼을 눌렀을 때만 표시
-      notSt2: s.step !== 2, showPv: !!s.pvOn, showSel: s.step === 2 && !s.pvOn, showPaySum: s.step === 3 && !s.pvOn,
-      pvHeadShow: s.step >= 1 && s.step <= 3, pvSubTitle: '',
-      pvHead: s.pvOn ? '동의서 미리보기' : s.step === 3 ? '결제 내용' : s.step === 2 ? '선택 프로그램' : '', pvBtn: s.pvOn ? (s.step === 2 ? '구성 보기' : '닫기') : s.step === 3 ? '미리보기' : '동의서 보기',
+      notSt2: true, showPv: !!s.pvOn, showSel: !s.pvOn, showPaySum: !!cur,
+      pvHeadShow: true, pvSubTitle: '',
+      pvHead: s.pvOn ? '동의서 미리보기' : '선택 프로그램', pvBtn: s.pvOn ? '구성 보기' : '동의서 보기',
       togglePv: () => this.setState(st => ({ pvOn: !st.pvOn })),
       hasSel: !!cur, noSel: !cur, selPrice: cur ? (listNum ? won(listNum) + '원' : '금액 입력') : '',
+      hasFamOpts: famOpts.length > 0, famOpts, hasSelList: selListNum > listNum && listNum > 0, selListText: won(selListNum) + '원',
       hasBaseSel: docItems.some(i => !i.isAdd && i.kind === '시술'),
       addRows: docItems.filter(i => i.isAdd).map(i => ({ name: i.name, qtyText: i.addQtyText && i.addQtyText !== '-' ? '×' + i.addQtyText : '', feeText: i.addPrice ? '+' + won(i.addPrice) : '' })),
       hasAddSel: docItems.some(i => i.isAdd),
