@@ -1414,7 +1414,7 @@ test('공유 시트·홈 화면에 추가 전후 이벤트(blur·인쇄 미리�
 const trySign = async p => {
   await click(p, '동의서 미리보기 · 서명');
   const ok = /터치하여 서명/.test(await body(p));
-  if (ok) { await click(p, '직원'); if (!/결제 내용/.test(await body(p))) { await p.locator('[title="이전"]').click(); await p.waitForTimeout(400); } }
+  if (ok) await click(p, '직원');   // 한 화면 등록으로 돌아옴
   return ok;
 };
 
@@ -1429,7 +1429,7 @@ test('선결제권 300만 · 예약금 결제 → 10% 300,000 자동 / 미수금
   b = await body(p);
   for (const re of [/예약금\s*300,000원\s*결제수단\s*현금\n/, /미수금\s*2,700,000원/, /\n잔액\s*2,109,000원/, /서명\s*가능/]) assert.match(b, re);
   assert.doesNotMatch(b, /초과분|프로그램 사용|선결제권 현금|선결제권 3,000,000원/, '계약금액·선결제권 금액·결제수단 반복 없음');
-  assert.equal((b.match(/3,000,000원/g) || []).length, 1, '선결제권 금액은 완납 버튼에 한 번만');
+  assert.equal((b.replace(/신규 구매 3,000,000원/g, '').match(/3,000,000원/g) || []).length, 1, '선결제권 금액은 완납 버튼에 한 번만 (할인 선택의 신규 구매 버튼 제외)');
   await click(p, '동의서 미리보기 · 서명'); await signSave(p, '동의하고 저장');
   const [c] = await contracts(p);
   assert.deepEqual([c.total, c.paid, c.priorDep], [891000, 891000, 0], '받은 돈을 프로그램 예약금으로 다시 넣지 않음');
