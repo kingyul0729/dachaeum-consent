@@ -276,7 +276,7 @@ test('기존 계약 정상가 누락: 이용 기록이 있을 때만 확정 차�
   assert.doesNotMatch(await body(p), /594,000/, '0원 차감 금액을 최종 환불금액으로 보여주지 않음');
   assert.match(await body(p), /정상가 확인 후 계산할 수 있어요/);
   await click(p, '정산서 생성 · 환자 서명');
-  assert.doesNotMatch(await body(p), /터치하여 서명/, '확정(서명) 단계로 넘어가지 않음');
+  assert.doesNotMatch(await body(p), /프로그램 이용 동의\s*1 \/ 3/, '확정(서명) 단계로 넘어가지 않음');
   await click(p, '근거 확인 후 보완'); await p.waitForTimeout(400);
   const [c] = await contracts(p);
   assert.equal(c.items[0].price, 0, '원 계약 항목은 바뀌지 않음');
@@ -296,7 +296,7 @@ test('이전 계약(계약 당시 서비스 단가 없음): 현재 가격표 자
   assert.match(await body(p), /정상가 확인 필요 · 환불 확정 불가/);
   assert.match(await body(p), /정상가 확인 후 계산할 수 있어요/);
   await click(p, '정산서 생성 · 환자 서명');
-  assert.doesNotMatch(await body(p), /터치하여 서명/);
+  assert.doesNotMatch(await body(p), /프로그램 이용 동의\s*1 \/ 3/);
 });
 
 test('서명 기록 삭제 차단: 문서 삭제 버튼·환자 삭제 버튼 없음', async () => {
@@ -418,7 +418,7 @@ test('정상가 보완 입력: 취소·빈값·문자·0원·음수·소수·근
     assert.ok(!c.refund && (c.status || '등록완료') === '등록완료', name + ': 환불 확정 안 됨');
     assert.match(await body(p), /정상가 확인 필요 · 환불 확정 불가/, name + ': 계속 차단');
     await click(p, '정산서 생성 · 환자 서명');
-    assert.doesNotMatch(await body(p), /터치하여 서명/, name + ': 서명 단계로 못 넘어감');
+    assert.doesNotMatch(await body(p), /프로그램 이용 동의\s*1 \/ 3/, name + ': 서명 단계로 못 넘어감');
     await p.context().close();
   }
   // 정상 입력 ('110,000원' 형식) → 두 항목 모두 저장, 환불은 여전히 서명해야 확정
@@ -790,7 +790,7 @@ test('선결제권 신규 구매: 완납·예약금 선택 전 서명 불가·�
   assert.doesNotMatch(b, /도움말|선결제권 구매|선결제권 미수|남은 선결제권|이미 받은 예약금|오늘 수납|차감 후|예상|실제 수납액|구매 미수금|추가 결제 필요금액/);
   assert.equal(await p.locator('xpath=//label[starts-with(normalize-space(.),"수납액")]//input').count(), 0, '금액 직접 입력 없음 (예약금 10% 자동)');
   await click(p, '동의서 미리보기 · 서명');
-  assert.doesNotMatch(await body(p), /터치하여 서명/, '선택 전 서명 불가 (선결제권 선택만으로 완납 처리 안 함)');
+  assert.doesNotMatch(await body(p), /프로그램 이용 동의\s*1 \/ 3/, '선택 전 서명 불가 (선결제권 선택만으로 완납 처리 안 함)');
   assert.match(await body(p), /선결제권 완납 또는 예약금\(300,000원\)을 선택해 주세요/);
   await click(p, '임시 저장');
   const drafts = await lsJ(p, 'dachaeum.v3.newDrafts');
@@ -1132,7 +1132,7 @@ test('iPad 세로 전체 흐름 ②: 기존 잔액 + 신규 구매 완납·예�
   assert.match(b, /미수금\s*3,000,000원/);
   assert.match(b, /서명\s*완납 또는 예약금 선택 후 가능/, '보유 잔액이 있어도 선택 전에는 서명 불가');
   await click(p, '동의서 미리보기 · 서명');
-  assert.doesNotMatch(await body(p), /터치하여 서명/, '선택 전 → 서명 불가');
+  assert.doesNotMatch(await body(p), /프로그램 이용 동의\s*1 \/ 3/, '선택 전 → 서명 불가');
   await click(p, '임시 저장');
   await p.reload(); await p.waitForTimeout(2000);
   await click(p, '이어서 작성');
@@ -1380,7 +1380,7 @@ test('iPad Safari 세로 결제 화면: 선결제권 신규 구매 3,000,000원 
   // 동의서 미리보기 → 이전
   await click(p, '예약금 결제', 1);
   await click(p, '동의서 미리보기 · 서명');
-  assert.match(await body(p), /터치하여 서명/, '미리보기 화면으로 이동');
+  assert.match(await body(p), /프로그램 이용 동의\s*1 \/ 3/, '미리보기 화면으로 이동');
   await click(p, '직원');   // 서명 화면 → 직원 화면 복귀
   if (!/받을 금액/.test(await body(p))) { await p.locator('[title="이전"]').click(); await p.waitForTimeout(400); }
   assertScrollable(await scrollPayToEnd(p), '미리보기 다녀온 뒤');
@@ -1419,7 +1419,7 @@ test('공유 시트·홈 화면에 추가 전후 이벤트(blur·인쇄 미리�
 // ---- 선결제권 받는 방식: 완납(전액) / 예약금(선결제권 금액의 10%, 자동) 중 선택해야 서명 (300 → 300,000 · 400 → 400,000 · 500 → 500,000) ----
 const trySign = async p => {
   await click(p, '동의서 미리보기 · 서명');
-  const ok = /터치하여 서명/.test(await body(p));
+  const ok = /프로그램 이용 동의\s*1 \/ 3/.test(await body(p));
   if (ok) await click(p, '직원');   // 한 화면 등록으로 돌아옴
   return ok;
 };
