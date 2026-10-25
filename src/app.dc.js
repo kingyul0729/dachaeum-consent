@@ -293,11 +293,52 @@ class Component extends DCLogic {
   applyPage() {
     const wrap = (this._els || {}).sgH, root = wrap && wrap.firstElementChild; if (!root) return;
     root.querySelectorAll('[data-hid]').forEach(e => { e.style.display = e.getAttribute('data-hid') === '-' ? '' : e.getAttribute('data-hid'); e.removeAttribute('data-hid'); });
-    const pg = this.state.screen === 'sign' ? (this.state.pPage || 1) : 0; if (pg < 2) return;
+    const pg = this.state.screen === 'sign' ? (this.state.pPage || 1) : 0;
+    if (pg) { const sc = document.querySelector('[data-sign-scroll]'); this.decorateMarks(sc); }
+    if (pg < 2) return;
     const keep = Array.from(root.querySelectorAll('[data-pg="' + pg + '"]')), path = new Set();
     keep.forEach(k => { for (let e = k.parentElement; e && e !== root; e = e.parentElement) path.add(e); });
     const walk = el => Array.from(el.children).forEach(c => { if (keep.includes(c)) return; if (path.has(c)) return walk(c); c.setAttribute('data-hid', c.style.display || '-'); c.style.display = 'none'; });
     walk(root);
+  }
+  // 빨간 펜 표시(밑줄·물결·별·동그라미·//): 중요한 말에 미리 그려 둠. 문서 안에 들어가 서명 문서(PDF)에도 그대로 남음
+  static MARKS = [[/^흑자 1개$|^1년 이내$|개월 안에$/, 'circle'], [/^남은 회차는 이용할 수 없으며$/, 'wave'], [/^양도할 수 없습니다$/, 'slash'],
+    [/^서로 합의한 경우$|^환자가 동의한 경우에만$|^1년 이용기간을 적용하지 않습니다$|^크기에 따라$/, 'line'], [/^총 계약금액의 10%$/, 'star'], [/^치료비 전액$/, 'wavestar'],
+    [/^결제금액의 10%$|^1회 정상가\(할인 전\)$/, 'star'], [/^04 중도 해지 시 환불금액$|^03 중도 중단 시 안내$/, 'bang']];
+  static markSvg(kind, w, h) {
+    const j = () => (Math.random() - 0.5) * 1.6, y = h + 3, P = [];
+    const line = (x0, x1, yy) => 'M' + x0.toFixed(1) + ' ' + (yy + j()).toFixed(1) + ' Q' + ((x0 + x1) / 2).toFixed(1) + ' ' + (yy + j() * 1.5).toFixed(1) + ' ' + x1.toFixed(1) + ' ' + (yy + j()).toFixed(1);
+    const wave = (x0, x1, yy) => { let d = 'M' + x0 + ' ' + yy; for (let x = x0; x < x1; x += 7) d += ' Q' + (x + 3.5).toFixed(1) + ' ' + (yy + (((x - x0) / 7) % 2 ? 3.2 : -3.2)).toFixed(1) + ' ' + Math.min(x1, x + 7).toFixed(1) + ' ' + yy; return d; };
+    const star = (cx, cy, r) => { let d = ''; for (let i = 0; i <= 5; i++) { const a = -Math.PI / 2 + i * 4 * Math.PI / 5; d += (i ? 'L' : 'M') + (cx + Math.cos(a) * r).toFixed(1) + ' ' + (cy + Math.sin(a) * r).toFixed(1) + ' '; } return d; };
+    if (kind === 'line' || kind === 'slash' || kind === 'star') P.push(line(-2, w + 2, y));
+    if (kind === 'wave' || kind === 'wavestar') P.push(wave(-1, w + 1, y + 1));
+    if (kind === 'slash') P.push('M' + (w + 6) + ' ' + (y + 3) + ' L' + (w + 11) + ' ' + (y - 7), 'M' + (w + 11) + ' ' + (y + 3) + ' L' + (w + 16) + ' ' + (y - 7));
+    if (kind === 'star' || kind === 'wavestar') P.push(star(w + 11, h * 0.3, 7));
+    const bang = x => ['F:M' + (x - 2.6) + ' ' + (h * 0.0) + ' L' + (x + 2.6) + ' ' + (h * 0.0) + ' L' + (x + 0.9) + ' ' + (h * 0.66) + ' L' + (x - 0.9) + ' ' + (h * 0.66) + ' Z',
+      'F:M' + (x - 2) + ' ' + (h * 0.86) + ' a2 2 0 1 0 4 0 a2 2 0 1 0 -4 0 Z'];
+    if (kind === 'bang') P.push(...bang(w + 9), ...bang(w + 17));
+    if (kind === 'circle') P.push(Component.ringPath(w + 16, h + 10).replace(/(-?\d+\.?\d*) (-?\d+\.?\d*)/g, (m, a, b2) => (Number(a) - 8).toFixed(1) + ' ' + (Number(b2) - 5).toFixed(1)));
+    return P;
+  }
+  decorateMarks(root) {
+    if (!root || typeof document === 'undefined') return;
+    const ns = 'http://www.w3.org/2000/svg';
+    const cand = Array.from(root.querySelectorAll('[data-rules] b, [data-rules] div, [data-mk]'));
+    cand.forEach(el => {
+      if (Array.from(el.children).some(k => k.getAttribute && k.getAttribute('data-mk-svg'))) return;
+      let kind = el.getAttribute('data-mk');
+      if (!kind) { if (el.tagName === 'DIV' && el.children.length) return; const t = (el.textContent || '').replace(/\s+/g, ' ').trim(); const hit = Component.MARKS.find(([re]) => re.test(t)); if (!hit) return; kind = hit[1]; }
+      if (el.querySelector('[data-tr],img')) return;
+      const r = el.getBoundingClientRect(); if (!r.width || !r.height) return;
+      const sv = document.createElementNS(ns, 'svg'); sv.setAttribute('data-mk-svg', kind);
+      sv.setAttribute('viewBox', '0 0 ' + r.width.toFixed(1) + ' ' + r.height.toFixed(1)); sv.setAttribute('preserveAspectRatio', 'none');
+      sv.setAttribute('style', 'position:absolute;left:0;top:0;width:100%;height:100%;overflow:visible;pointer-events:none;z-index:1');
+      Component.markSvg(kind, r.width, r.height).forEach(d0 => { const fill = d0.startsWith('F:'), d = fill ? d0.slice(2) : d0; const pth = document.createElementNS(ns, 'path'); pth.setAttribute('d', d);
+        pth.setAttribute('style', (fill ? 'fill:#e5120a;stroke:#e5120a;stroke-width:1' : 'fill:none;stroke:#e5120a;stroke-width:2.6') + ';stroke-linecap:round;stroke-linejoin:round;opacity:0.92'); sv.appendChild(pth); });
+      if (getComputedStyle(el).position === 'static') el.style.position = 'relative';
+      if (el.tagName === 'DIV') el.style.display = el.style.display || 'inline-block';
+      el.appendChild(sv);
+    });
   }
   // 서명 완료 시점의 문서를 인쇄용(A4 1장 단계)으로 고정해 HTML 최종본으로 보관
   snapshotDoc() {

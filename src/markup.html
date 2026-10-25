@@ -806,7 +806,7 @@ body,body *{word-break:keep-all;overflow-wrap:break-word;line-break:strict}
         <div style="border-top:1.5px solid #1c1f23">
           <div style="display:grid;grid-template-columns:120px minmax(0,1fr);padding:14px 0;border-bottom:1px solid #e6e9ed;font-size:15px"><div style="color:#8a929a">성명</div><div>{{ pName }}</div></div>
           <div style="display:grid;grid-template-columns:120px minmax(0,1fr);padding:14px 0;border-bottom:1px solid #e6e9ed;font-size:15px"><div style="color:#8a929a">프로그램</div><div>{{ progName }}</div></div>
-          <div style="display:grid;grid-template-columns:120px minmax(0,1fr);padding:14px 0;border-bottom:1px solid #e6e9ed;font-size:15px"><div style="color:#8a929a">프로그램 금액</div><div><div style="font-weight:600">{{ docListText }}</div><sc-if value="{{ hasDocDepA }}" hint-placeholder-val="{{ false }}"><div style="margin-top:2px;font-size:13px;color:#6b737b">{{ docDepText }}</div></sc-if><sc-if value="{{ hasDocLeftA }}" hint-placeholder-val="{{ false }}"><div style="margin-top:2px;font-size:13px;color:#6b737b">{{ docLeftText }}</div></sc-if></div></div>
+          <div style="display:grid;grid-template-columns:120px minmax(0,1fr);padding:14px 0;border-bottom:1px solid #e6e9ed;font-size:15px"><div style="color:#8a929a">프로그램 금액</div><div><div data-mk="wavestar" style="font-weight:600;display:inline-block">{{ docListText }}</div><sc-if value="{{ hasDocDepA }}" hint-placeholder-val="{{ false }}"><div style="margin-top:2px;font-size:13px;color:#6b737b">{{ docDepText }}</div></sc-if><sc-if value="{{ hasDocLeftA }}" hint-placeholder-val="{{ false }}"><div style="margin-top:2px;font-size:13px;color:#6b737b">{{ docLeftText }}</div></sc-if></div></div>
         </div>
         <div style="margin-top:22px;font-size:15px;font-weight:600">{{ p1ListTitle }}</div>
         <div style="margin-top:6px">
@@ -816,13 +816,13 @@ body,body *{word-break:keep-all;overflow-wrap:break-word;line-break:strict}
         </div>
         <div sc-camel-on-click="{{ toggleCk1 }}" style="margin-top:22px;padding:14px 0;border-top:1.5px solid #1c1f23;border-bottom:1px solid #e6e9ed;display:flex;align-items:center;gap:12px;cursor:pointer;font-size:15.5px">
           <div style="width:22px;height:22px;flex:none;box-sizing:border-box;border-radius:5px;border:1.5px solid {{ ck1Bd }};background:{{ ck1Bg }};color:#fff;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700">{{ ck1Mark }}</div>
-          <div>등록 내용을 확인했습니다</div>
+          <div data-mk="slash" style="display:inline-block">등록 내용을 확인했습니다</div>
         </div>
       </div>
       </sc-if>
       <sc-if value="{{ pg3 }}" hint-placeholder-val="{{ false }}">
       <div style="padding:22px 48px 0;font-family:'Pretendard Variable',Pretendard,-apple-system,BlinkMacSystemFont,'Apple SD Gothic Neo','Noto Sans KR',sans-serif;color:#1c1f23">
-        <div style="display:flex;gap:28px;font-size:15px;padding-bottom:14px;border-bottom:1px solid #e6e9ed"><div><span style="color:#8a929a">날짜</span>&nbsp;&nbsp;{{ docDateKo }}</div><div><span style="color:#8a929a">환자 성명</span>&nbsp;&nbsp;{{ pName }}</div></div>
+        <div style="display:flex;gap:28px;font-size:15px;padding-bottom:14px;border-bottom:1px solid #e6e9ed"><div><span style="color:#8a929a">날짜</span>&nbsp;&nbsp;{{ docDateKo }}</div><div><span style="color:#8a929a">환자 성명</span>&nbsp;&nbsp;<span data-mk="line">{{ pName }}</span></div></div>
         <div sc-camel-on-click="{{ openSigPad }}" style="margin-top:18px;height:240px;border:1.5px dashed #b9bfc6;border-radius:10px;display:flex;align-items:center;justify-content:center;cursor:pointer;background:#fbfbfa">
           <sc-if value="{{ hasSig3 }}" hint-placeholder-val="{{ false }}">{{ sig3El }}</sc-if>
           <sc-if value="{{ noSig3 }}" hint-placeholder-val="{{ true }}"><div style="font-size:16px;color:#9aa0a7">터치하여 서명</div></sc-if>
