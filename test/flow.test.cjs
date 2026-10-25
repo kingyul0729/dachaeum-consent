@@ -928,7 +928,7 @@ test('예약금: 목표(계약 총액 10%)에서 이 계약에 이미 납부·�
   assert.doesNotMatch(b, /완납용|추가 결제 없이 등록할게요/, '추가 예약금 0원을 완납으로 표시하지 않음 (미수 465,000원 그대로)');
   await click(p, '동의서 보기');
   assert.match(await body(p), /예약금용 · A4 1장/, '상단 미리보기 버튼으로 동의서 열기');
-  await click(p, '닫기');
+  await click(p, '구성 보기');
   assert.doesNotMatch(await body(p), /예약금용 · A4 1장/, '고정 미리보기 없음');
   await click(p, '완납 결제', 1); await p.waitForTimeout(200);
   assert.match(await body(p), /수납액\s*3,465,000원/, '완납 선택 시 남은 프로그램 대금까지 오늘 받은 금액');
