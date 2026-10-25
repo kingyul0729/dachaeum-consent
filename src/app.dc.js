@@ -756,7 +756,7 @@ class Component extends DCLogic {
           // 같은 이름 프로그램 구분: 추가 항목명만 짧게 (개수 표기 대신)
           ...(() => { const ad = (p.adds || []).filter(a => !a.optional).map(a => String(a.name || '').replace(/\s*\(.*?\)/g, '').replace(/\s*\d+\s*회$/, '').trim()).filter(Boolean);
             const dup = srcForCards.filter(q => q.name === p.name).length > 1;
-            if (famBase(p, srcAll)) return { unit: [...new Set(famOf(p, srcAll).flatMap(reqAdds))].map(n => String(n).replace(/\s*\(.*?\)/g, '')).join(' · ') + ' 추가 선택', hasDiff: true };
+            if (famBase(p, srcAll)) return { unit: [...new Set(famOf(p, srcAll).flatMap(reqAdds))].sort((x, y) => /흑자/.test(y) - /흑자/.test(x)).map(n => String(n).replace(/\s*\(.*?\)/g, '')).join(' · ') + ' 추가 선택', hasDiff: true };
             const u = ad.length ? '기본 + ' + ad.join(' · ') : dup ? '기본 구성' : '';
             return { unit: u, hasDiff: !!u }; })() }))
       : (db ? [] : progs); // 가격표가 로드된 뒤에는 빈 결과를 샘플로 채우지 않음
