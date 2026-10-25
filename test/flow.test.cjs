@@ -38,12 +38,22 @@ async function trace(p) {
     await click(p, '따라 쓰기 완료');
   }
 }
+// 흑자 제거 확인 문장: 문장 칸을 눌러 회색 숫자 픽셀을 가로줄로 따라 그음
+async function sentence(p) {
+  if (!await p.locator('[data-sn]').count()) return;
+  await p.locator('[data-sn]').click(); await p.waitForTimeout(400);
+  const nc = await p.locator('canvas').count(), g = p.locator('canvas').nth(nc - 2), pad = p.locator('canvas').nth(nc - 1), pb = await pad.boundingBox();
+  const runs = await g.evaluate(c => { const d = c.getContext('2d').getImageData(0, 0, c.width, c.height).data, W = c.width, R = [];
+    for (let y = 0; y < c.height; y += 4) { let st = -1; for (let x = 0; x <= W; x++) { const i = (y * W + x) * 4, gray = x < W && d[i + 3] > 100 && d[i] > 150 && d[i] < 215; if (gray && st < 0) st = x; if (!gray && st >= 0) { if (x - st > 1) R.push([st, x, y]); st = -1; } } } return R; });
+  for (const [x0, x1, y] of runs) { await p.mouse.move(pb.x + x0, pb.y + y); await p.mouse.down(); await p.mouse.move(pb.x + x1 + 0.5, pb.y + y); await p.mouse.up(); }
+  await click(p, '쓰기 완료');
+}
 // 이용 동의서 저장 후 환자용 완료 화면 → 확인을 눌러 직원 화면(상세)으로
 async function doneOk(p) {
   if (await p.getByText('동의가 완료되었습니다', { exact: true }).count()) { await p.getByText('확인', { exact: true }).last().click(); await p.waitForTimeout(400); }
 }
 async function sign(p) {
-  await trace(p);
+  await trace(p); await sentence(p);
   await click(p, '터치하여 서명');
   const bb = await p.locator('canvas').first().boundingBox();
   await p.mouse.move(bb.x + 30, bb.y + 40); await p.mouse.down();
@@ -67,7 +77,9 @@ test('새 계약: 계약 당시 값·상태·서비스 단가 저장, 동의서 
   await click(p, '다음 단계'); await click(p, '카드');
   assert.match(await body(p), /수납액\s*330,000원/);
   await click(p, '동의서 미리보기 · 서명'); await p.waitForTimeout(400);
-  assert.match((await body(p)).replace(/\s+/g, ' '), /따라 쓰기 › 2 규정 동의 › 3 서명 › 4 저장 04의 회색 글씨 두 곳을 눌러 따라 써 주세요/, '서명 화면 단계 표시줄: 첫 단계 따라 쓰기');
+  assert.match((await body(p)).replace(/\s+/g, ' '), /1 등록 내용 확인 › 2 이용 및 환불 규정 확인 › 3 서명 › 4 완료 프로그램·금액·구성을 확인하고 「확인했어요」를 눌러 주세요/, '환자 화면 단계 표시줄: 첫 단계 등록 내용 확인');
+  await click(p, '확인했어요');
+  assert.match(await body(p), /04의 회색 글씨 두 곳을 눌러 따라 써 주세요/);
   await p.getByText(/이용 및 환불 규정에 대해 충분히/).last().click(); await sign(p);
   assert.match(await body(p), /오른쪽 아래 「동의하고 저장」을 눌러 주세요/, '모든 단계 완료 후 저장 안내');
   await p.getByText('동의하고 저장', { exact: true }).last().click(); await p.waitForTimeout(800);
@@ -442,6 +454,7 @@ test('PGM-0041 흑자 1cm 1개: 총 등록금액 330,000원 표시·저장, 병�
   assert.match(dt, /시술 시작 전에 취소하는 경우, 총 계약금액의 10%를 위약금으로 공제하고 환불합니다\./, '완납: 시작 전 취소만 위약금');
   assert.doesNotMatch(dt, /예약금에서 공제|치료를 중단\(해지\)하는 경우|04 중도 해지|양도/, '흑자 규정에 일반 프로그램 규정 섞이지 않음');
   assert.match(dt, /이용기간이 지나면 남은 회차는 이용할 수 없으며/);
+  assert.match((await docs(p))[0].html, /<img[^>]*alt="확인 문장"/, '흑자 확인 문장(따라 쓴 그림)이 서명 문서에 보관');
   assert.equal(JSON.stringify(all.find(x => x.id === 'c-old-bs')), before, '기존 계약 값 불변');
   assert.deepEqual(p.errors, []);
 });
@@ -813,7 +826,7 @@ test('선결제권 신규 구매: 완납·예약금 선택 전 서명 불가·�
   assert.deepEqual([done.refund.refundNum, done.refund.penNum, done.refund.paidEff], [801900, 89100, 891000]);
   assert.deepEqual(done.refund.pays.map(x => [x.method, x.prepaid, x.paid, x.refund]), [['선결제권 잔액 복원', true, 891000, 801900]]);
   const rt = (await docs(p)).find(x => x.kind !== '이용동의서').html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ');
-  for (const re of [/납부금액 891,000원 \(선결제권 사용 891,000원\)/, /납부금액 \(선결제권 사용 포함\) 891,000 원/, /위약금 \(총 계약금액 891,000 원 × 10%\) 89,100 원/, /= 최종 환불금액 801,900 원/,
+  for (const re of [/납부금액 891,000원 \(선결제권 사용 891,000원\)/, /납부금액 \(선결제권 사용 포함\) 891,000 원/, /위약금 \(총 계약금액 891,000 ?원 × 10%\) 89,100 원/, /= 최종 환불금액 801,900 원/,
     /선결제권 \(잔액 복원\) 891,000원 801,900원/, /합계 \(= 최종 환불금액\) 801,900원/]) assert.match(rt, re, '저장 문서(PDF 원본)도 같은 금액');
   assert.deepEqual(p.errors, []);
 });
@@ -1575,5 +1588,31 @@ test('이벤트 이용기간(개월): 가격 관리에서 이벤트별 수정 �
   assert.match(b, /이용기간이 만료되어 환불 대상이 아니에요/);
   assert.match(b, /이용기간 만료 후 해지/);
   assert.equal(await finalRefund(p), '0');
+  assert.deepEqual(p.errors, []);
+});
+
+test('환자 화면 4단계: 등록 내용 확인 → 규정(동그라미·따라 쓰기·동의) → 서명 → 완료, 동그라미·따라 쓴 글씨·서명이 저장 문서에 남음', async () => {
+  const p = await open();
+  await toStep2(p, 'PGM-0018', '여드름 8주 프로그램'); await click(p, '다음 단계'); await click(p, '카드');
+  await click(p, '동의서 미리보기 · 서명');
+  let b = await body(p);
+  assert.match(b, /등록 내용 확인\s*›?\s*\S*\s*이용 및 환불 규정 확인\s*›?\s*\S*\s*서명\s*›?\s*\S*\s*완료/, '4단계 표시');
+  assert.match(b, /「확인했어요」를 눌러 주세요/);
+  await click(p, '확인했어요');
+  assert.doesNotMatch(await body(p), /확인했어요/, '1단계 완료 후 버튼 사라짐');
+  await click(p, '터치하여 서명');
+  assert.match(await body(p), /04의 회색 글씨 두 곳을 먼저 따라 써 주세요/, '따라 쓰기 전 서명 차단');
+  const bs = p.locator('[data-rules] b');
+  await bs.nth(0).click(); await bs.nth(1).click(); await bs.nth(1).click(); await bs.nth(2).click();
+  assert.equal(await p.locator('[data-rules] svg[data-ring]').count(), 2, '누르면 동그라미, 다시 누르면 지움');
+  await p.getByText(/이용 및 환불 규정에 대해 충분히/).last().click(); await sign(p);
+  await click(p, '동의하고 저장'); await p.waitForTimeout(700);
+  b = await body(p);
+  assert.match(b, /동의가 완료되었습니다/);
+  const [d] = await docs(p);
+  assert.equal((d.html.match(/<svg[^>]*data-ring/g) || []).length, 2, '동그라미가 서명 문서(PDF 원본)에 남음');
+  assert.equal((d.html.match(/<img[^>]*alt="(결제금액의 10%|1회 정상가)"/g) || []).length, 2, '따라 쓴 글씨');
+  assert.equal(await p.locator('svg[data-ring]').count() >= 2, true, '완료 화면 미리보기에도 동그라미');
+  await doneOk(p);
   assert.deepEqual(p.errors, []);
 });

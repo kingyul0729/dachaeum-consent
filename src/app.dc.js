@@ -195,6 +195,92 @@ class Component extends DCLogic {
     this.setState({ trImg, trOpen: -1, trMsg: '' });
   };
 
+  // 흑자 제거 확인 문장 따라 쓰기: 등록한 흑자 개수·크기(○cm 이하)·금액·총액이 회색으로 들어간 문장을 한 번에 이어서 씀 → 문장 그림을 서명 문서(PDF)에 보관
+  // segs: [[글자, 회색 칸 여부], ...]
+  static SN_W = 768;
+  snLayout(segs) {
+    const key = JSON.stringify(segs); if (this._snL && this._snL.key === key) return this._snL;
+    const fs = 30, lh = Math.round(fs * 2.2), pad = 22, W = Component.SN_W, maxW = W - pad * 2;
+    const x = document.createElement('canvas').getContext('2d'); x.font = '400 ' + fs + 'px ' + Component.TR_FF;
+    const lines = [[]]; let cx = 0;
+    segs.forEach(([t0, g]) => (g ? [t0] : t0.split(/(?<= )/)).forEach(t => { const w = x.measureText(t).width;
+      if (cx + w > maxW && lines[lines.length - 1].length) { lines.push([]); cx = 0; } lines[lines.length - 1].push({ t, g: !!g, w }); cx += w; }));
+    this._snL = { key, fs, lh, pad, W, H: pad * 2 + lines.length * lh, lines }; return this._snL;
+  }
+  openSn = () => { this._snOk = false; this.setState({ snOpen: true, snMsg: '' }); };
+  closeSn = () => this.setState({ snOpen: false, snMsg: '' });
+  attachSnGuide = (el) => {
+    if (!el) { this._sng = null; return; }
+    const L = this._snSegs ? this.snLayout(this._snSegs) : null; if (!L) return;
+    if (el === this._sng && this._sngKey === L.key) return;
+    this._sng = el; this._sngKey = L.key;
+    this.drawSnGuide(el, L);
+    if (document.fonts && document.fonts.load) document.fonts.load('400 30px ' + Component.TR_FF, '0').then(() => { if (this._sng === el) this.drawSnGuide(el, L, true); }).catch(() => {});
+  };
+  drawSnGuide(el, L, keepHit) {
+    const { fs, lh, pad, W, H } = L, x = el.getContext('2d'), font = c => { c.font = '400 ' + fs + 'px ' + Component.TR_FF; c.textBaseline = 'middle'; c.textAlign = 'left'; };
+    font(x); x.clearRect(0, 0, W, H);
+    const guides = [];
+    L.lines.forEach((ln, li) => { let gx = (W - ln.reduce((a, o) => a + o.w, 0)) / 2; const gy = pad + li * lh + lh / 2;
+      ln.forEach(o => {
+        if (o.g) { x.fillStyle = '#bcc2c8'; x.fillText(o.t, gx, gy); x.strokeStyle = '#8d98a4'; x.setLineDash([4, 4]); x.lineWidth = 1; x.beginPath(); x.moveTo(gx - 4, gy + fs * 0.62); x.lineTo(gx + o.w + 4, gy + fs * 0.62); x.stroke(); x.setLineDash([]);
+          guides.push({ t: o.t, x: gx, y: gy, w: o.w }); }
+        else { x.fillStyle = '#1c1f23'; x.fillText(o.t, gx, gy); }
+        gx += o.w; }); });
+    const mk = () => { const k = document.createElement('canvas'); k.width = W; k.height = H; return k; };
+    this._snGuides = guides.map(g => [g.x, g.y - fs * 0.6, g.x + g.w, g.y + fs * 0.6]);
+    this._trBox = { fs }; if (!keepHit || !this._trHit) this._trHit = mk();
+  }
+  attachSn = (el) => { this._snc = el; };
+  snUp = () => { if (!this._trDraw) return; this._trDraw = false; this.snCheck(); };
+  // 판별: 회색 칸마다 가로 폭의 50% 이상을 쓰고, 쓴 선의 60% 이상이 회색 칸 근처에 있어야 완료
+  snCheck() {
+    const c = this._snc, B = this._snGuides; if (!c || !B) return false;
+    const W = c.width, H = c.height, fs = (this._trBox || {}).fs || 30, ink = c.getContext('2d').getImageData(0, 0, W, H).data;
+    const inB = (x, y, b, m) => x >= b[0] - m && x <= b[2] + m && y >= b[1] - m && y <= b[3] + m;
+    const cols = B.map(() => ({})); let a = 0, o = 0;
+    for (let y = 0; y < H; y += 2) for (let x = 0; x < W; x += 2) { if (!ink[(y * W + x) * 4 + 3]) continue; a++; let near = false;
+      B.forEach((b, i) => { if (inB(x, y, b, fs * 0.25)) { cols[i][x >> 2] = 1; near = true; } else if (inB(x, y, b, fs * 0.7)) near = true; }); if (!near) o++; }
+    const left = B.filter((b, i) => Object.keys(cols[i]).length < Math.max(1, Math.floor((b[2] - b[0]) / 4 * 0.5))).length;
+    const out = a ? o / a : 0, ok = left === 0 && out <= 0.4;
+    this._snOk = ok;
+    this.setState({ snMsg: !a ? '' : out > 0.4 ? '회색 숫자 위에 써 주세요' : left ? '아직 ' + left + '곳을 더 써 주세요' : '' });
+    return ok;
+  }
+  clearSn = () => { [this._snc, this._trHit].forEach(k => k && k.getContext('2d').clearRect(0, 0, k.width, k.height)); this._snOk = false; this.setState({ snMsg: '' }); };
+  confirmSn = () => {
+    const c = this._snc, g = this._sng;
+    if (!c || !g || !this.snCheck()) return this.flash(this.state.snMsg || '회색 숫자를 따라 써 주세요');
+    let img = null;
+    try { const k = document.createElement('canvas'); k.width = c.width; k.height = c.height; const x = k.getContext('2d');
+      x.drawImage(g, 0, 0); x.drawImage(c, 0, 0); img = k.toDataURL('image/png'); } catch (e) {}
+    if (!img) return this.flash('확인 문장을 저장하지 못했습니다. 다시 써 주세요');
+    this.setState({ snImg: img, snOpen: false, snMsg: '' });
+  };
+
+  // 빨간 손그림 동그라미: 규정 화면에서 중요한 말(굵은 글씨)을 누르면 동그라미, 다시 누르면 지움. 문서에 그대로 들어가 서명 문서(PDF)에 남음
+  static ringPath(w, h) {
+    const cx = w / 2, cy = h / 2, a0 = Math.random() * Math.PI * 2, n = 46, turn = Math.PI * 2 * 1.12; let d = '';
+    for (let i = 0; i <= n; i++) { const t = a0 + turn * i / n, j = 1 + (Math.random() - 0.5) * 0.06 + (i / n) * 0.05;
+      d += (i ? 'L' : 'M') + (cx + Math.cos(t) * cx * j).toFixed(1) + ' ' + (cy + Math.sin(t) * cy * j).toFixed(1) + ' '; }
+    return d;
+  }
+  ringTap = (e) => {
+    if (this.state.screen !== 'sign') return;
+    const el = e.target && e.target.closest ? e.target.closest('b') : null;
+    if (!el || !e.currentTarget.contains(el) || el.querySelector('[data-tr],img') || el.closest('[data-tr]')) return;
+    const old = Array.from(el.children).find(k => k.getAttribute('data-ring'));
+    if (old) { old.remove(); this.setState(st => ({ ringN: Math.max(0, (st.ringN || 0) - 1) })); return; }
+    const r = el.getBoundingClientRect(); if (!r.width || !r.height) return;
+    const px = 10, py = 7, w = r.width + px * 2, h = r.height + py * 2, ns = 'http://www.w3.org/2000/svg';
+    const sv = document.createElementNS(ns, 'svg'); sv.setAttribute('data-ring', '1'); sv.setAttribute('viewBox', '0 0 ' + w.toFixed(1) + ' ' + h.toFixed(1)); sv.setAttribute('preserveAspectRatio', 'none');
+    sv.setAttribute('style', 'position:absolute;pointer-events:none;overflow:visible;z-index:1;left:-' + (px / r.width * 100).toFixed(2) + '%;top:-' + (py / r.height * 100).toFixed(2) + '%;width:' + (w / r.width * 100).toFixed(2) + '%;height:' + (h / r.height * 100).toFixed(2) + '%;transform:rotate(' + ((Math.random() - 0.5) * 4).toFixed(1) + 'deg)');
+    const pth = document.createElementNS(ns, 'path'); pth.setAttribute('d', Component.ringPath(w - 4, h - 4)); pth.setAttribute('transform', 'translate(2 2)');
+    pth.setAttribute('style', 'fill:none;stroke:#d62b22;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round;opacity:0.9');
+    sv.appendChild(pth); el.style.position = 'relative'; el.appendChild(sv);
+    this.setState(st => ({ ringN: (st.ringN || 0) + 1 }));
+  };
+
   // 상태 태그: 직원 후속 처리가 필요한 상태만 테두리·진한 글자로 강조, 나머지는 연한 Non-border
   chip(s) {
     if (s === '등록완료') return ['rgba(52,91,128,0.08)', '#2a4b6b', 'transparent'];
@@ -896,7 +982,7 @@ class Component extends DCLogic {
       canResign: !d.superseded && d.kind === '이용동의서' && s.cStatus === '등록완료',
       // 서명된 문서(동의서·환불 정산서)는 일반 삭제 대상이 아님 → 삭제 버튼 숨김
       canDel: !d.signedAt, open: () => this.setState({ pdfId: d.id }), del: () => d.signedAt ? this.flash('서명된 문서는 삭제할 수 없습니다') : this.setState({ delAsk: d.id }),
-      resign: () => sameAsContract() ? this.setState({ screen: 'sign', signFrom: 'resign', sig: false, sigOpen: false, sigImg: null, trImg: [], trOpen: -1, ckRefund: false }) : this.flash(RESIGN_MSG) }));
+      resign: () => sameAsContract() ? this.setState({ screen: 'sign', signFrom: 'resign', sig: false, sigOpen: false, sigImg: null, trImg: [], trOpen: -1, snImg: null, snOpen: false, pOk1: false, ringN: 0, ckRefund: false }) : this.flash(RESIGN_MSG) }));
     const pdfDoc = s.pdfId ? (s.docs || []).find(d => d.id === s.pdfId) : null;
 
     const dep = s.pay === 'deposit';
@@ -962,16 +1048,47 @@ class Component extends DCLogic {
     // 중요 문구 따라 쓰기: 전체 동의서(간이·병변 동의서 제외)에서만, 두 곳 모두 써야 서명·저장 가능
     const needTrace = s.screen === 'sign' && !isBrief && !isLesion, trImg = s.trImg || [], TR_MSG = '04의 회색 글씨 두 곳을 먼저 따라 써 주세요';
     const trLeft = needTrace && Component.TRACE.some((t, i) => !trImg[i]);
-    // 서명 화면 단계 표시줄: (따라 쓰기) → 규정 동의 → 서명 → 저장. 지금 할 단계와 안내 문구
-    const signStepsRaw = [needTrace && { label: '따라 쓰기', done: !trLeft }, { label: '규정 동의', done: !!s.ckRefund }, { label: '서명', done: !!s.sigImg }, { label: '저장', done: false }].filter(Boolean);
+    // 흑자 제거: 확인 문장(개수·○cm 이하·금액·총액)을 한 번에 따라 써야 서명 가능
+    const snSegs = isLesion ? (() => {
+      const G = []; LS.forEach(l => { const t = tierOf(l.size); if (!t) return; const g = G.find(x => x.t === t); if (g) g.n++; else G.push({ t, n: 1 }); });
+      G.sort((a, b) => b.t.max - a.t.max);
+      const sg = [['저는 흑자 '], [String(lesionRows.length), 1], ['개(']];
+      G.forEach((g, i) => { if (i) sg.push([', ']); sg.push([String(g.t.max), 1], ['cm 이하 ']); if (g.n > 1) sg.push([String(g.n), 1], ['개 ']); sg.push([won(g.t.price * g.n), 1], ['원']); });
+      return sg.concat([[')의 치료비가 총 '], [won(lesionTotal), 1], ['원임을 확인했습니다.']]);
+    })() : null;
+    this._snSegs = snSegs;
+    const needSn = s.screen === 'sign' && isLesion, snImg = s.snImg || null, snLeft = needSn && !snImg, SN_MSG = '흑자 확인 문장을 먼저 따라 써 주세요';
+    const writeLeft = trLeft || snLeft, WRITE_MSG = trLeft ? TR_MSG : SN_MSG;
+    const snL = snSegs && typeof document !== 'undefined' ? this.snLayout(snSegs) : null;
+    const snText = (gray) => (snSegs || []).map(([t, g], i) => g
+      ? React.createElement(gray ? 'span' : 'b', { key: i, style: gray ? { color: '#a9b0b7', borderBottom: '1.5px dashed #8d98a4', padding: '0 2px', fontFamily: Component.TR_FF } : { fontWeight: 700, color: '#111418' } }, t)
+      : React.createElement('span', { key: i }, t));
+    const snEl = !snSegs ? null : snImg
+      ? React.createElement('img', { src: snImg, alt: '확인 문장', style: { display: 'block', width: '100%', maxWidth: 440, margin: '0 auto' } })
+      : needSn ? React.createElement('div', { 'data-sn': 1, onClick: this.openSn, style: { cursor: 'pointer', padding: '10px 12px', border: '1.5px dashed #8d98a4', borderRadius: 6, lineHeight: 1.9, textAlign: 'center' } },
+          React.createElement('div', null, snText(true)), React.createElement('div', { style: { fontSize: '0.92em', color: '#6b737b' } }, '눌러서 회색 숫자를 따라 써 주세요'))
+      : React.createElement('div', { style: { lineHeight: 1.9, textAlign: 'center' } }, snText(false));
+    // 환자 화면 4단계: ① 등록 내용 확인 → ② 이용 및 환불 규정 확인(따라 쓰기·동그라미·동의) → ③ 서명 → ④ 완료(저장 후 완료 화면)
+    const rulesDone = !writeLeft && !!s.ckRefund;
+    const sawInfo = !!s.pOk1 || rulesDone || !!s.sigImg || trImg.some(Boolean) || !!snImg || !!s.ckRefund;
+    const signStepsRaw = [{ label: '등록 내용 확인', done: sawInfo }, { label: '이용 및 환불 규정 확인', done: sawInfo && rulesDone }, { label: '서명', done: sawInfo && rulesDone && !!s.sigImg }, { label: '완료', done: false }];
     const signCur = signStepsRaw.findIndex(t => !t.done);
     const signSteps = signStepsRaw.map((t, i) => ({ label: t.label, sep: i ? '›' : '', mark: t.done ? '✓' : String(i + 1),
       bg: t.done ? '#1c1f23' : i === signCur ? '#1d4f8a' : '#e6e9ed', nfg: t.done || i === signCur ? '#ffffff' : '#8a929a',
       fg: t.done || i === signCur ? '#1c1f23' : '#8a929a', fw: i === signCur ? 600 : 400 }));
     const signPct = Math.round(signStepsRaw.filter(t => t.done).length / signStepsRaw.length * 100);
-    const signHint = needTrace && trLeft ? '04의 회색 글씨 두 곳을 눌러 따라 써 주세요' : !s.ckRefund ? '아래 동의 문구를 눌러 체크해 주세요'
+    const signHint = !sawInfo ? '프로그램·금액·구성을 확인하고 「확인했어요」를 눌러 주세요'
+      : trLeft ? '04의 회색 글씨 두 곳을 눌러 따라 써 주세요' : snLeft ? '흑자 확인 문장을 눌러 회색 숫자를 따라 써 주세요'
+      : !s.ckRefund ? '중요한 말을 누르면 빨간 동그라미가 그려져요 · 아래 동의 문구를 눌러 체크해 주세요'
       : !s.sigImg ? '서명 칸을 눌러 서명해 주세요' : '오른쪽 아래 「동의하고 저장」을 눌러 주세요';
-    const trVals = { signSteps, signPct, signHint, needTrace, noTrace: !needTrace, trPadOpen: s.trOpen >= 0, trPadText: Component.TRACE[s.trOpen] || '', trMsg: s.trMsg || '',
+    const okInfo = () => { this.setState({ pOk1: true });
+      setTimeout(() => { const r = document.querySelector('[data-rules]'); if (r && r.scrollIntoView) r.scrollIntoView({ behavior: 'smooth', block: 'start' }); }, 50); };
+    // 완료 화면: 방금 저장한 동의서(따라 쓴 글씨·동그라미·서명 포함)를 작게 보여 줌
+    const doneDoc = S === 'signDone' && s.justSaved ? (s.docs || []).find(d => d.id === s.justSaved) : null;
+    const doneDocEl = doneDoc && doneDoc.html ? React.createElement('div', { style: { width: 740, transform: 'scale(0.45)', transformOrigin: '0 0', position: 'absolute', top: 0, left: 0 }, dangerouslySetInnerHTML: { __html: this.cleanHtml(doneDoc.html) } }) : null;
+    const trVals = { hasDoneDoc: !!doneDocEl, doneDocEl, showOkInfo: !sawInfo, okInfo, ringTap: this.ringTap, snEl, snPadOpen: !!s.snOpen, snMsg: s.snMsg || '', snGRef: this.attachSnGuide, snRef: this.attachSn,
+      snW: Component.SN_W, snH: snL ? snL.H : 120, snUp: this.snUp, clearSn: this.clearSn, closeSn: this.closeSn, confirmSn: this.confirmSn,
+      signSteps, signPct, signHint, needTrace, noTrace: !needTrace, trPadOpen: s.trOpen >= 0, trPadText: Component.TRACE[s.trOpen] || '', trMsg: s.trMsg || '',
       trGRef: this.attachTrGuide, trRef: this.attachTr, trDown: this.trDown, trMove: this.trMove, trUp: this.trUp,
       clearTrace: this.clearTrace, closeTrace: this.closeTrace, confirmTrace: this.confirmTrace };
     Component.TRACE.forEach((t, i) => {
@@ -1220,7 +1337,7 @@ class Component extends DCLogic {
                  if (!totalNum) return this.flash('총 등록금액을 입력해 주세요');
                  if (isManual && !manualUnit) return this.flash('환불용 1회 정상가를 입력해 주세요');
                  { const miss = unitFixLines.find(l => !fixVal(l.key)); if (miss) { this.setState({ tried3: true }); return this.flash('‘' + miss.name + '’의 환불용 1회 정상가를 입력해 주세요'); } }
-                 return this.setState({ screen: 'sign', signFrom: 'new', sig: false, sigOpen: false, sigImg: null, trImg: [], trOpen: -1, ckRefund: false, pendingSign: false, pendingProg: cur ? progTitle(cur) : '', pendingTotal: won(totalNum) });
+                 return this.setState({ screen: 'sign', signFrom: 'new', sig: false, sigOpen: false, sigImg: null, trImg: [], trOpen: -1, snImg: null, snOpen: false, pOk1: false, ringN: 0, ckRefund: false, pendingSign: false, pendingProg: cur ? progTitle(cur) : '', pendingTotal: won(totalNum) });
                }
                if (s.step === 1 && !p1ok) { this.setState({ tried1: true }); return this.flash('환자 정보를 확인해 주세요'); }
                // 횟수 묶음(예: 정상가 1회·3회)은 줄을 펼친 뒤 횟수까지 골라야 선택됨
@@ -1431,7 +1548,7 @@ class Component extends DCLogic {
       dPrepaid: /선결제/.test(C.program), hasNotice: !!NOTICE[s.cStatus], dNotice: NOTICE[s.cStatus] || '',
       sigRef: this.attachSig, sigDown: this.down, sigMove: this.move, sigUp: this.up, clearSig: this.clear,
       noSig: !s.sig,
-      sigOpen: s.sigOpen, openSigPad: () => trLeft ? this.flash(TR_MSG) : this.openSigPad(),
+      sigOpen: s.sigOpen, openSigPad: () => writeLeft ? this.flash(WRITE_MSG) : this.openSigPad(),
       ...trVals, closeSigPad: this.closeSigPad, confirmSigPad: this.confirmSigPad,
       hasSigImg: !!s.sigImg, noSigImg: !s.sigImg,
       sigEl: s.sigImg ? React.createElement('img', { src: s.sigImg,
@@ -1442,7 +1559,7 @@ class Component extends DCLogic {
       ...rf,
       saveSig: () => { if (this._saving) return;
         if (!s.ckRefund) return this.flash('환불 규정 확인에 체크해 주세요');
-        if (trLeft) return this.flash(TR_MSG);
+        if (writeLeft) return this.flash(WRITE_MSG);
         if (!s.sigImg) return this.flash('서명이 필요합니다');
         if (s.signFrom === 'resign' && !sameAsContract()) return this.flash(RESIGN_MSG);
         this._saving = true;
