@@ -1165,7 +1165,7 @@ class Component extends DCLogic {
     // 1/3 정상가: 시술별 1회 정상가 × 횟수 합계(추가 항목 포함), 프로그램 금액보다 클 때만 표시
     const p1ListNum = !isLesion && cur ? listSumNum : 0;
     const pgVals = { pg1: pg === 1, pgBack: pg > 1, pgPrev: () => pgGo(pg - 1), pgNo: pg + ' / 3',
-      pgTitle: [(isEventCur || (isResign && C.event) ? '이벤트 ' : '') + '프로그램 이용 동의', '이용 및 환불 규정', '서명'][pg - 1],
+      pgTitle: [(isEventCur || (isResign && (s.contract || {}).event) ? '이벤트 ' : '') + '프로그램 이용 동의', '이용 및 환불 규정', '서명'][pg - 1],
       pgIntro: pg === 1 ? '다채움피부과의원은 아래 내용으로 프로그램 이용 계약을 진행합니다.\n내용을 확인해 주세요.'
         : pg === 2 ? '계약 전 꼭 확인해야 할 이용 및 환불 규정입니다.\n' + (needTrace ? '점선의 회색 글씨 두 곳을 눌러서 직접 따라 써 주세요. ' : needSn ? '확인 문장을 눌러 회색 숫자를 따라 써 주세요. ' : '') + '중요한 말을 누르면 빨간 밑줄이 그어져요.'
         : '아래 서명란을 눌러 서명해 주세요.',
