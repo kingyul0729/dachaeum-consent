@@ -224,11 +224,10 @@ test('PGM-0037 남성 턱밑라인: 환불용 1회 정상가 입력 전 서명 �
   const p = await open();
   await pickProgram(p, 'PGM-0037', '남성 턱밑라인 포함', { stay: true });
   assert.match(await body(p), /환불용 1회 정상가 확인 필요/);
- 
+  await click(p, '카드'); await click(p, '동의서 미리보기 · 서명');
   assert.match(await body(p), /환불용 1회 정상가를 입력해 주세요/);
-  assert.doesNotMatch(await body(p), /결제 내용/, '정상가 입력 전에는 결제 등록으로 넘어가지 않음');
+  assert.doesNotMatch(await body(p), /동의하고 저장|확인했어요/, '정상가 입력 전에는 서명 화면으로 넘어가지 않음');
   await p.locator('input[placeholder="1회 정상가"]').fill('132000');          // 테스트용 임의 값
-  await click(p, '카드');
   await signAndSave(p);
   const [c] = await contracts(p);
   assert.equal(c.total, 660000);
