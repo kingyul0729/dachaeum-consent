@@ -1159,17 +1159,21 @@ class Component extends DCLogic {
     const pgMsg = pg === 2 && writeLeft ? (trLeft ? '04의 회색 글씨 두 곳을 먼저 따라 써 주세요' : '확인 문장의 회색 숫자를 먼저 따라 써 주세요') : '';
     const nextOk = pg === 1 ? !!s.ck1 : pg === 2 ? rulesOk : false;
     const pgGo = n => { this.setState({ pPage: n }); setTimeout(() => { const sc = document.querySelector('[data-sign-scroll]'); if (sc) sc.scrollTop = 0; }, 30); };
-    const p1Rows = isLesion ? lesionRows.map(r => ({ name: '흑자 ' + r.no + ' · ' + r.siteText + ' ' + r.sizeText, v: r.tier + ' · ' + r.priceText }))
-      : docItems.filter(i => !i.isAdd && i.kind === '시술').map(i => ({ name: i.name, v: /^\d/.test(i.qtyText || '') ? i.qtyText : (i.qtyText || '') }))
-        .concat(docItems.filter(i => !i.isAdd && i.kind !== '시술').map(i => ({ name: i.name, v: '포함' })))
-        .concat(docItems.filter(i => i.isAdd).map(i => ({ name: i.name, v: i.addPrice ? '+' + won(i.addPrice) + '원' : '추가' })));
+    const unitOf = t => /^[\d,]+$/.test(t || '') ? t + '원' : '';
+    const p1Rows = isLesion ? lesionRows.map(r => ({ name: '흑자 ' + r.no + ' · ' + r.siteText + ' ' + r.sizeText, q: r.tier, u: r.priceText }))
+      : docItems.filter(i => !i.isAdd && i.kind === '시술').map(i => ({ name: i.name, q: i.qtyText || '', u: unitOf(i.priceText) }))
+        .concat(docItems.filter(i => !i.isAdd && i.kind !== '시술').map(i => ({ name: i.name, q: '포함', u: '' })))
+        .concat(docItems.filter(i => i.isAdd).map(i => ({ name: i.name, q: i.addPrice ? '+' + won(i.addPrice) + '원' : '추가', u: '' })));
+    // 1/3 정상가: 시술별 1회 정상가 × 횟수 합계(추가 항목 포함), 프로그램 금액보다 클 때만 표시
+    const p1ListNum = !isLesion && cur ? listSumNum : 0;
     const pgVals = { pg1: pg === 1, pgBack: pg > 1, pgPrev: () => pgGo(pg - 1), pgNo: pg + ' / 3',
       pgTitle: ['프로그램 이용 동의', '이용 및 환불 규정', '서명'][pg - 1],
       pgIntro: pg === 1 ? '다채움피부과의원은 아래 내용으로 프로그램 이용 계약을 진행합니다.\n내용을 확인해 주세요.'
         : pg === 2 ? '계약 전 꼭 확인해야 할 이용 및 환불 규정입니다.\n' + (needTrace ? '점선의 회색 글씨 두 곳을 눌러서 직접 따라 써 주세요. ' : needSn ? '확인 문장을 눌러 회색 숫자를 따라 써 주세요. ' : '') + '중요한 말을 누르면 빨간 동그라미가 그려져요.'
         : '아래 서명란을 눌러 서명해 주세요.',
       docDisp: pg === 2 ? 'block' : 'none', pg3: pg === 3,
-      sig3El: s.sigImg ? React.createElement('img', { src: s.sigImg, alt: '서명', style: { maxWidth: '100%', maxHeight: 200, display: 'block', margin: '0 auto' } }) : null, hasSig3: !!s.sigImg, noSig3: !s.sigImg, p1Rows, p1ListTitle: isLesion ? '등록 흑자' : '시술 구성',
+      sig3El: s.sigImg ? React.createElement('img', { src: s.sigImg, alt: '서명', style: { maxWidth: '100%', maxHeight: 200, display: 'block', margin: '0 auto' } }) : null, hasSig3: !!s.sigImg, noSig3: !s.sigImg, p1Rows, p1ListTitle: isLesion ? '등록 흑자' : '시술 구성', p1UnitHead: isLesion ? '금액' : '1회 단가',
+      hasP1List: p1ListNum > totalNum && totalNum > 0, p1ListText: won(p1ListNum) + '원',
       toggleCk1: () => this.setState(st => ({ ck1: !st.ck1 })), ck1Bd: s.ck1 ? '#1c1f23' : '#9aa0a7', ck1Bg: s.ck1 ? '#1c1f23' : '#ffffff', ck1Mark: s.ck1 ? '✓' : '',
       hasPgMsg: !!pgMsg, pgMsg, showNext: pg < 3, nextBg: nextOk ? '#1c1f23' : '#d5d9de', nextFg: nextOk ? '#ffffff' : '#8a929a',
       pgNext: () => pg === 1 ? (s.ck1 ? pgGo(2) : this.flash('등록 내용을 확인하고 체크해 주세요'))

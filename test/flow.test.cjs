@@ -1603,7 +1603,7 @@ test('환자 화면 1/3 등록 내용 → 2/3 규정(동그라미·따라 쓰기
   await toStep2(p, 'PGM-0018', '여드름 8주 프로그램'); await click(p, '카드');
   await click(p, '동의서 미리보기 · 서명');
   const b0 = (await body(p)).replace(/\s+/g, ' ');
-  assert.match(b0, /프로그램 이용 동의 1 \/ 3/, '1/3 등록 내용 확인'); await p.waitForTimeout(0); assert.match(b0, /성명 결제테스트 프로그램 여드름 8주 프로그램 프로그램 금액 990,000원/, '직원 입력 내용 그대로');
+  assert.match(b0, /프로그램 이용 동의 1 \/ 3/, '1/3 등록 내용 확인'); await p.waitForTimeout(0); assert.match(b0, /성명 결제테스트 프로그램 여드름 8주 프로그램 (정상가 [\d,]+원 \(시술별 1회 정상가 합계\) )?프로그램 금액 990,000원/, '직원 입력 내용 그대로');
   assert.doesNotMatch(b0, /01 이용기간/, '1/3에는 규정 없음');
   await click(p, '다음');
   assert.match(await body(p), /등록 내용을 확인하고 체크해 주세요/, '체크 전 다음 차단');
