@@ -16,6 +16,8 @@ class Component extends DCLogic {
   };
 
   // 오늘 날짜: 기기 현지 시간 기준 (toISOString은 UTC라 한국 오전 9시 이전에는 전날로 기록됨)
+  // 이벤트 이용기간 기본값(개월): 가격 관리에서 이벤트별로 바꾸지 않았을 때
+  static EV_MONTHS = 3;
   static today() { const d = new Date(); return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 10); }
   // 계약 상태: 등록완료 / 환불완료 두 가지. 환불 정산서 서명이 저장된 계약만 환불완료 (이전 버전의 중간 상태 값도 이 기준으로 정리)
   statusOf(c) { return c && (c.refunded || c.refund || c.status === '환불완료' || c.status === '환불처리대기') ? '환불완료' : '등록완료'; }
@@ -930,10 +932,10 @@ class Component extends DCLogic {
 
     const todayStr = Component.today();
     const addYear = d => { const x = new Date(d); x.setFullYear(x.getFullYear() + 1); x.setDate(x.getDate() - 1); return x.toISOString().slice(0, 10); };
-    // 이벤트: 첫 시술일 기준 N개월(스킨부스터 3, 그 외 2) 유효
+    // 이벤트: 첫 시술일 기준 N개월 유효. 이벤트별 이용기간(가격 관리 → 이벤트, 개월), 설정이 없으면 3개월
     const evDef = cur && cur.event ? ((db && db.events) || []).find(e => e.id === cur.event) : null;
     const isEventCur = !!(cur && cur.event);
-    const evMonths = evDef && evDef.validMonths ? evDef.validMonths : (cur && cur.cat === '스킨부스터' ? 3 : 2);
+    const evMonths = evDef && Number(evDef.validMonths) > 0 ? Number(evDef.validMonths) : Component.EV_MONTHS;
     const evFirst = s.evFirst || todayStr;
     const addMonths = (d, m) => { const x = new Date(d); x.setMonth(x.getMonth() + m); x.setDate(x.getDate() - 1); return x.toISOString().slice(0, 10); };
     const evExpiry = addMonths(evFirst, evMonths);
@@ -988,7 +990,7 @@ class Component extends DCLogic {
       prepaid: balIn > 0 || preNew ? { tier: discKey === 'pre' ? preTier || null : null, balBefore: balIn, balUse,
         purchase: preNew ? preBuy : 0, received: preNew ? preRcvAmt : 0, unpaid: preNew ? preUnpaid : 0, payType: preNew ? (preIsDep ? '예약금' : preIsFull ? '완납' : null) : null, purchaseMethod: preNew ? preBuyM : null, newUse,
         use: preUse, balAfter: preLeft } : null,
-      event: cur.event || null, firstDate: isEventCur ? evFirst : null,
+      event: cur.event || null, firstDate: isEventCur ? evFirst : null, evMonths: isEventCur ? evMonths : null,
       patient: { ...P },
       program: progTitle(cur), cat: cur.cat, date: todayStr, expiry: isEventCur ? evExpiry : addYear(todayStr),
       // 서명 시점 가격 고정: 이후 가격표가 바뀌어도 이 계약의 환불 정산은 아래 값 기준
@@ -1034,7 +1036,7 @@ class Component extends DCLogic {
     const extraPaid = RF.num(s.rfExtra);
     const rfAlloc = s.rfAlloc || {};
     const V = s.rfVisits || C.visits || [];
-    const RS = RF.settle(C, { used: s.rfUsed || C.used, visits: V, extraPaid, rfLes: s.rfLes, alloc: rfAlloc }, db);
+    const RS = RF.settle(C, { used: s.rfUsed || C.used, visits: V, extraPaid, rfLes: s.rfLes, alloc: rfAlloc, asOf: todayStr }, db);
     const { U, lesAmt, trtAmt, svcAmt, usedAmt, penNum, paidEff, refundNum, allocSum, allocOk, allocMsg } = RS, rfPays = RS.pays;
     const usedCnt = U.reduce((a, b) => a + (b || 0), 0);
     const updLes = (k, f) => this.setState(st => { const L = { ...(st.rfLes || {}) }; L[k] = f((L[k] || []).slice()); return { rfLes: L }; });
@@ -1156,6 +1158,10 @@ class Component extends DCLogic {
       // 납부 상태: 저장된 납부금액 기준 (잔금 결제 기록이 있으면 일부 납부로 표시)
       rfPayState: payStateOf(C), rfPayStateView: [preDueOf(C) && Number(C.paid || 0) >= Number(C.total || 0) ? '' : payStateOf(C), preDueOf(C)].filter(Boolean).join(' · '),
       rfTotal: won(C.total), rfPaid: won(paidEff), rfPen: won(penNum),
+      // 흑자 제거: 시작 후 중단은 위약금 없음 · 이용기간 만료 후 해지는 환불 없음 (refund.js)
+      rfPenLabel: RS.lesionStarted ? '위약금 (시술 시작 후 중단 · 공제 없음)' : '위약금 (총 계약금액 × 10%)',
+      rfPenDocLabel: RS.lesionStarted ? '− 위약금 (시술 시작 후 중단 · 공제 없음)' : '− 위약금 (총 계약금액 ' + won(C.total) + '원 × 10%)',
+      rfExpired: !!RS.expired, rfExpiredText: RF.MSG_EXPIRED + ' (만료일 ' + (C.expiry || '') + ')',
       rfPayRows: rfPays.map((p, i) => { const a = RS.amounts[i], over = RS.over[i];
         return { method: p.prepaid ? '선결제권 잔액 복원' : p.method, paid: won(p.amount) + '원', val: rfAlloc[i] || '', left: won(Math.max(0, Number(p.amount || 0) - a)) + '원',
           bd: over ? '#d4183d' : 'transparent', err: over, errText: '원결제 금액을 넘을 수 없습니다',
@@ -1181,8 +1187,8 @@ class Component extends DCLogic {
       hasPriceFixes: !!(C.priceFixes && C.priceFixes.length),
       priceFixText: (C.priceFixes || []).map(f => f.label + ' ' + won(f.price) + '원 (근거: ' + f.basis + ', ' + String(f.at || '').slice(0, 10) + ')').join(' · '),
       // 정상가 확인 필요 항목이 있으면 금액을 확정 값처럼 보이지 않게 함 (0원 차감 금액을 최종 환불금액으로 표시하지 않음)
-      rfRefund: won(refundNum), rfRefundLine: RS.missing.length ? '확인 필요' : won(refundNum) + '원',
-      rfHero: RS.missing.length ? '정상가 확인 후 계산할 수 있어요' : refundNum > 0 ? won(refundNum) + '원을 환불할게요' : '환불할 금액이 없어요', rfStage: usedAmt > 0 ? '시술 시작 후 해지' : '시술 시작 전 해지',
+      rfRefund: won(refundNum), rfRefundLine: RS.missing.length ? '확인 필요' : won(refundNum) + '원' + (RS.expired ? ' (' + RF.MSG_EXPIRED + ')' : ''),
+      rfHero: RS.missing.length ? '정상가 확인 후 계산할 수 있어요' : refundNum > 0 ? won(refundNum) + '원을 환불할게요' : RS.expired ? '이용기간이 만료되어 환불 대상이 아니에요' : '환불할 금액이 없어요', rfStage: RS.expired ? '이용기간 만료 후 해지' : usedAmt > 0 ? '시술 시작 후 해지' : '시술 시작 전 해지',
       rfReason, reasons, rItems, rDocRows, rVisits,
       hasVisitSvc: true, hasAcneSel: visitSrc.length > 0, visitOpts, visitPick: vPick,
       onVisitPick: e => this.setState({ rfPick: e.target.value }),
@@ -1452,8 +1458,8 @@ class Component extends DCLogic {
         if (RS.error) return this.flash(RS.error);
         if (!s.sigImg) return this.flash('서명이 필요합니다');
         this._saving = true;
-        const refund = { priceFixes: C.priceFixes || [], signedAt: todayStr, stage: usedAmt > 0 ? '시술 시작 후 해지' : '시술 시작 전 해지', ...rfDraft(),
-          usedCounts: U, lesAmt, trtAmt, svcAmt, usedAmt, penNum, paidEff, refundNum,
+        const refund = { priceFixes: C.priceFixes || [], signedAt: todayStr, stage: RS.expired ? '이용기간 만료 후 해지' : usedAmt > 0 ? '시술 시작 후 해지' : '시술 시작 전 해지', ...rfDraft(),
+          usedCounts: U, lesAmt, trtAmt, svcAmt, usedAmt, penNum, paidEff, refundNum, expired: !!RS.expired, lesionStarted: !!RS.lesionStarted,
           pays: rfPays.map((p, i) => ({ method: p.prepaid ? '선결제권 잔액 복원' : p.method, prepaid: !!p.prepaid, priorDep: !!p.priorDep, paid: Number(p.amount || 0), refund: RS.amounts[i] })) };
         const nc = { ...C, status: '환불완료', refunded: true, refundedAt: todayStr, refund, refundDraft: null };
         const contracts = (s.contracts || []).map(x => x.id && x.id === nc.id ? nc : x);
@@ -1598,7 +1604,7 @@ class Component extends DCLogic {
               open: () => this.setState({ contract: c, cStatus: this.statusOf(c), cSel: true, ...this.rfStateOf(c) }) }; }) };
       })(),
       isEvent: isResign ? !!C.event : isEventCur, notEvent: !(isResign ? !!C.event : isEventCur),
-      evFirst, evFirstText: isResign ? (C.firstDate || '') : evFirst, evExpiryText: isResign ? C.expiry : evExpiry,
+      evFirst, evFirstText: isResign ? (C.firstDate || '') : evFirst, evExpiryText: isResign ? C.expiry : evExpiry, evMonthsText: (!isResign ? evMonths : C.evMonths || (C.firstDate && C.expiry ? (() => { const x = new Date(C.firstDate), y = new Date(C.expiry); y.setDate(y.getDate() + 1); return (y.getFullYear() - x.getFullYear()) * 12 + y.getMonth() - x.getMonth(); })() : '')) + '개월',
       onEvFirst: e => this.setState({ evFirst: e.target.value }),
       docDate: isResign ? C.date : todayISO, docDateKo: koDate(todayISO),
       expiryText: isEventCur && !isResign ? evExpiry : (cur && /선결제/.test([cur.baseName || cur.name, cur.cat, cur.sub].join(' '))) ? '기간 제한 없음 (선결제권)' : addYear(todayISO),
@@ -1837,6 +1843,7 @@ class Component extends DCLogic {
           const active = v('active') !== false, progs = v('programs') || [];
           const pct = Object.prototype.hasOwnProperty.call(ed, 'ratePct') ? ed.ratePct : (e.rate ? String(Math.round(Number(e.rate) * 100)) : '');
           const on = CT.eventOn(e, today);
+          const months = Object.prototype.hasOwnProperty.call(ed, 'monthsVal') ? ed.monthsVal : String(Number(e.validMonths) > 0 ? Number(e.validMonths) : Component.EV_MONTHS);
           const save = () => {
             const name = String(v('name') || '').replace(/\s+/g, ' ').trim(), start = v('start') || '', end = v('end') || '';
             if (!name) return msg('이벤트명을 입력해 주세요', true);
@@ -1846,7 +1853,11 @@ class Component extends DCLogic {
             if (kind === 'rate') {
               if (!/^\d{1,2}$/.test(String(pct)) || Number(pct) < 1 || Number(pct) > 90) return msg('할인율은 1~90 사이 정수(%)로 입력해 주세요', true);
               patch.rate = Number(pct) / 100; patch.programs = progs; }
-            const dflt = { active: true, start: '', end: '' };
+            // 정액 적용가 이벤트: 이용기간(첫 시술일부터 N개월) · 이벤트마다 따로 · 새 계약부터 동의서·만료일에 반영
+            if (kind === 'package') {
+              if (!/^\d{1,2}$/.test(String(months)) || Number(months) < 1 || Number(months) > 24) return msg('이용기간은 1~24 사이 개월 수로 입력해 주세요', true);
+              patch.validMonths = Number(months); }
+            const dflt = { active: true, start: '', end: '', validMonths: Component.EV_MONTHS };
             const ch = {}; Object.keys(patch).forEach(k => { const was = e[k] === undefined ? dflt[k] : e[k]; if (JSON.stringify(patch[k]) !== JSON.stringify(was)) ch[k] = patch[k]; });
             if (!Object.keys(ch).length) return msg('바뀐 내용이 없습니다', true);
             if (!confirm('이벤트 「' + name + '」 설정을 저장합니다.\n새 계약부터 적용되고, 이미 저장된 계약·서명 문서는 바뀌지 않습니다.\n환불용 1회 정상가는 바뀌지 않습니다.')) return;
@@ -1867,6 +1878,7 @@ class Component extends DCLogic {
             activeOpts: [[true, '사용'], [false, '중지']].map(([k, l]) => ({ label: l, bd: active === k ? '#030213' : 'rgba(0,0,0,0.1)', bg: active === k ? '#030213' : '#ffffff', fg: active === k ? '#ffffff' : '#0a0a0a', pick: () => set('active', k) })),
             isPackage: kind === 'package', isRate: kind === 'rate', isService: kind === 'service',
             pctVal: pct, onPct: ev => set('ratePct', ev.target.value.replace(/[^0-9]/g, '')),
+            monthsVal: months, onMonths: ev => set('monthsVal', ev.target.value.replace(/[^0-9]/g, '')),
             progRows: kind === 'package' ? (cur.programs || []).filter(p => p.event === e.id).map(p => ({ ...row(p), listText: p.listTotal ? '정상가 ' + won(p.listTotal) + '원' : '' })) : [],
             rateProgs: progs.map(id => { const p = progById(id); return { id, name: p ? p.name : '(없는 프로그램)', price: p && Number(p.total || 0) ? won(p.total) + '원' : '',
               del: () => set('programs', progs.filter(x => x !== id)) }; }),

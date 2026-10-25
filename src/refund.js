@@ -29,15 +29,23 @@
 
   // 환불: 실제 결제금액 − 위약금(총 계약금액 × 10%) − 이용금액, 0원 미만은 0원. 단가는 계약 스냅샷(C.items[].price)
   const amtOf = (it, u) => it.lesionUnit ? (u > 0 ? amt(it.price) : 0) : u * amt(it.price);
-  function refund(C, used, visits, extraPaid, lesAmt) {
+  // 흑자 제거(병변 단위) 계약: 시술 시작 전 취소만 위약금 10% (완납·예약금 동일). 시작 후 중단은 이용금액만 정산, 위약금 없음
+  const isLesionContract = C => !!C && (C.items || []).length > 0 && C.items.every(it => it.lesionUnit);
+  // 이용기간: 만료일(C.expiry)이 지난 뒤 해지하면 환불 없음. 선결제권은 이용기간을 적용하지 않음
+  const noExpiry = C => /선결제/.test([C.program, C.cat].join(' '));
+  const isExpired = (C, asOf) => !!(asOf && C && C.expiry && !noExpiry(C) && asOf > C.expiry);
+  const MSG_EXPIRED = '이용기간 만료로 환불 대상 아님';
+  function refund(C, used, visits, extraPaid, lesAmt, asOf) {
     const U = used || [], V = visits || [], L = lesAmt || [];
     const a = (it, k) => L[k] != null ? L[k] : amtOf(it, U[k] || 0);
     const trtAmt = C.items.reduce((t, it, k) => t + (it.kind === '서비스' ? 0 : a(it, k)), 0);
     const svcAmt = C.items.reduce((t, it, k) => t + (it.kind === '서비스' ? a(it, k) : 0), 0) + V.reduce((t, v) => t + amt(v.price), 0);
     const usedAmt = trtAmt + svcAmt;
-    const penNum = Math.round(amt(C.total) * PENALTY_RATE);
+    const lesionStarted = isLesionContract(C) && (U.some(x => x > 0) || usedAmt > 0);
+    const penNum = lesionStarted ? 0 : Math.round(amt(C.total) * PENALTY_RATE);
     const paidEff = amt(C.paid) + (extraPaid || 0);
-    return { trtAmt, svcAmt, usedAmt, penNum, paidEff, refundNum: Math.max(0, paidEff - penNum - usedAmt) };
+    const expired = isExpired(C, asOf);
+    return { trtAmt, svcAmt, usedAmt, penNum, paidEff, lesionStarted, expired, refundNum: expired ? 0 : Math.max(0, paidEff - penNum - usedAmt) };
   }
 
   // 결제수단별 환불: 원결제 수단(선결제권 잔액 사용분 포함). 직원이 수단별 금액을 직접 입력
@@ -90,11 +98,11 @@
   const validate = ({ lesBad, allocOk, allocOver, missing }) => (missing && missing.length) ? MSG.price : lesBad ? MSG.lesion : allocOver ? MSG.over : !allocOk ? MSG.alloc : '';
 
   // 한 번에 계산: 동의서 v3 환불 화면은 이 결과만 사용
-  function settle(C0, { used, visits, extraPaid, rfLes, alloc } = {}, db) {
+  function settle(C0, { used, visits, extraPaid, rfLes, alloc, asOf } = {}, db) {
     const { lesAmt, lesBad } = lesions(C0, rfLes, db);
     const U = usedCounts(C0, used, rfLes);
     const { C2: C, V, missing } = resolvePrices(C0, U, visits);
-    const R = refund(C, U, V, extraPaid || 0, lesAmt);
+    const R = refund(C, U, V, extraPaid || 0, lesAmt, asOf);
     const pays = refundPays(C);
     const A = checkAlloc(pays, alloc, R.refundNum);
     return { ...R, U, lesAmt, lesBad, pays, ...A, items: C.items, visits: V, missing,
@@ -102,5 +110,5 @@
   }
 
   g.DachaeumRefund = { PENALTY_RATE, BS_ADD_ID, num, amt, fixOf, itemKey, svcKey, resolvePrices, isBlackspotAdd, isActual, tiersOf, tierPrice, lesionValue, lesionRowBad, lesions, usedCounts,
-    amtOf, refund, refundPays, allocDefault, checkAlloc, validate, MSG, settle };
+    amtOf, isLesionContract, noExpiry, isExpired, MSG_EXPIRED, refund, refundPays, allocDefault, checkAlloc, validate, MSG, settle };
 })(typeof window !== 'undefined' ? window : globalThis);

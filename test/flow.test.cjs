@@ -1537,3 +1537,34 @@ test('간이(재등록) 동의서: 새 규정(T-2026-10)으로 서명한 환자�
   assert.doesNotMatch(full, /서명한 프로그램 이용 동의서의 이용 및 환불 규정 전문과 동일한 조건/);
   assert.doesNotMatch(full, /재등록 요약/);
 });
+
+test('이벤트 이용기간(개월): 가격 관리에서 이벤트별 수정 → 새 계약 만료일·동의서 문구 반영, 기존 계약 불변 / 만료 후 해지는 환불 없음', async () => {
+  const old = mk('C-EXP', '만료된 프로그램', { expiry: '2026-01-31' });
+  const p = await open([old]);
+  await pmOpen(p); await click(p, '이벤트');
+  const mIn = p.locator('xpath=//label[starts-with(normalize-space(.),"이용기간")]/input');
+  assert.equal(await mIn.count(), 1, '정액 적용가 이벤트에만 이용기간 칸');
+  assert.equal(await mIn.inputValue(), '3', '기존 설정(3개월) 표시');
+  await mIn.fill('40'); await click(p, '이벤트 저장', 1);
+  assert.match(await body(p), /1~24 사이 개월/); assert.equal(await lsJ(p, 'dachaeum.eventOverride'), null, '잘못된 값은 저장 안 함');
+  await mIn.fill('4'); await click(p, '이벤트 저장', 1);
+  assert.deepEqual((await lsJ(p, 'dachaeum.eventOverride')).events['EV-NEWBIJOU'], { validMonths: 4 });
+  await pmClose(p);
+  await toStep2(p, 'PGM-EV-NB1', '뉴비쥬 2cc');
+  await click(p, '다음 단계'); await click(p, '카드');
+  await click(p, '동의서 미리보기 · 서명');
+  assert.match(await body(p), /첫 시술일로부터 4개월 안에/);
+  await p.getByText(/이용 및 환불 규정을 충분히/).last().click(); await sign(p);
+  await click(p, '동의하고 저장'); await p.waitForTimeout(700); await doneOk(p);
+  const c = (await contracts(p)).find(x => x.id !== 'C-EXP');
+  const x = new Date(c.firstDate); x.setMonth(x.getMonth() + 4); x.setDate(x.getDate() - 1);
+  assert.equal(c.evMonths, 4); assert.equal(c.expiry, x.toISOString().slice(0, 10));
+  assert.equal((await contracts(p)).find(x => x.id === 'C-EXP').expiry, '2026-01-31', '기존 계약 불변');
+  await p.goto(URL); await p.waitForTimeout(1500);
+  await click(p, '만료된 프로그램'); await click(p, '환불 정산');
+  const b = await body(p);
+  assert.match(b, /이용기간이 만료되어 환불 대상이 아니에요/);
+  assert.match(b, /이용기간 만료 후 해지/);
+  assert.equal(await finalRefund(p), '0');
+  assert.deepEqual(p.errors, []);
+});

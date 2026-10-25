@@ -331,3 +331,35 @@ test('정상가 프로그램: 할인율 이벤트는 직원 선택 시에만, �
   const pk = run('ref', evProg, Number(evProg.total));
   assert.deepEqual([pk.allowed, pk.discKey, pk.totalNum], [['none'], 'none', Number(evProg.total)], '정액 이벤트 프로그램: 다른 할인 불가');
 });
+
+test('흑자 제거: 시작 전 취소는 위약금 10% (완납·예약금 동일), 시작 후 중단은 위약금 없음', () => {
+  const items = [
+    { kind: '시술', lesionUnit: true, qty: 5, price: 330000, name: '흑자 1' },
+    { kind: '시술', lesionUnit: true, qty: 5, price: 440000, name: '흑자 2' }];
+  const full = { total: 770000, paid: 770000, items };
+  const pre = RF.settle(full, { used: [0, 0] });
+  assert.equal(pre.penNum, 77000); assert.equal(pre.lesionStarted, false); assert.equal(pre.refundNum, 693000);
+  const dep = RF.settle({ ...full, paid: 100000 }, { used: [0, 0] });
+  assert.equal(dep.penNum, 77000); assert.equal(dep.refundNum, 23000, '예약금에서 총 계약금액의 10% 공제 후 나머지');
+  const started = RF.settle(full, { used: [1, 0] });
+  assert.equal(started.lesionStarted, true); assert.equal(started.penNum, 0);
+  assert.equal(started.refundNum, 770000 - 330000);
+});
+
+test('흑자 위약금 예외는 흑자 제거 계약에만: 일반 프로그램(스페셜 토닝 흑자 추가 포함)은 시작 후에도 10%', () => {
+  assert.equal(RF.settle(contract(), { used: [1, 0, 0] }).penNum, 360000);
+  const mixed = { total: 1650000, paid: 1650000, items: [{ kind: '시술', name: '토닝', qty: 10, price: 165000 }, { kind: '추가', name: '흑자 제거', actual: true, tiers: [{ label: '1cm 이하', short: '1cm', price: 330000 }] }] };
+  const r = RF.settle(mixed, { used: [1, 0], rfLes: { 1: ['1cm 이하'] } });
+  assert.equal(r.penNum, 165000); assert.equal(r.lesionStarted, false);
+});
+
+test('이용기간 만료 후 해지: 환불 없음 (만료일 당일까지는 정상 계산), 선결제권은 기간 미적용', () => {
+  const C = contract({ expiry: '2027-08-31', program: '리쥬란 스킨부스터 8회', cat: '스킨부스터' });
+  assert.equal(RF.settle(C, { used: [0, 0, 0], asOf: '2027-08-31' }).refundNum, 3240000);
+  const late = RF.settle(C, { used: [0, 0, 0], asOf: '2027-09-01' });
+  assert.equal(late.expired, true); assert.equal(late.refundNum, 0);
+  assert.equal(RF.settle(C, { used: [0, 0, 0] }).expired, false, '기준일이 없으면 만료 판정 안 함');
+  const pre = RF.settle({ ...C, program: '선결제권 300만원' }, { used: [0, 0, 0], asOf: '2030-01-01' });
+  assert.equal(pre.expired, false); assert.equal(pre.refundNum, 3240000);
+  assert.equal(RF.MSG_EXPIRED, '이용기간 만료로 환불 대상 아님');
+});
