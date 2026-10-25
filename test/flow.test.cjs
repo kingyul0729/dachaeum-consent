@@ -52,8 +52,16 @@ async function sentence(p) {
 async function doneOk(p) {
   if (await p.getByText('동의가 완료되었습니다', { exact: true }).count()) { await p.getByText('확인', { exact: true }).last().click(); await p.waitForTimeout(400); }
 }
+// 환자 화면 1/3 등록 내용 확인 → 2/3 규정으로 넘김 (이미 2/3 이후면 그대로)
+async function toRules(p) {
+  if (await p.getByText('등록 내용을 확인했습니다', { exact: true }).isVisible().catch(() => false)) {
+    await click(p, '등록 내용을 확인했습니다'); await click(p, '다음'); }
+}
+// 2/3 규정 동의 체크
+async function agree(p) { await toRules(p); await p.getByText(/이용 및 환불 규정에 대해 충분히/).last().click(); await p.waitForTimeout(200); }
 async function sign(p) {
-  await trace(p); await sentence(p);
+  await toRules(p); await trace(p); await sentence(p);
+  if (await p.getByText('2 / 3', { exact: true }).isVisible().catch(() => false)) await click(p, '다음');
   await click(p, '터치하여 서명');
   const bb = await p.locator('canvas').first().boundingBox();
   await p.mouse.move(bb.x + 30, bb.y + 40); await p.mouse.down();
@@ -79,9 +87,9 @@ test('새 계약: 계약 당시 값·상태·서비스 단가 저장, 동의서 
   await click(p, '카드');
   assert.match(await body(p), /수납액\s*330,000원/);
   await click(p, '동의서 미리보기 · 서명'); await p.waitForTimeout(400);
-  assert.match((await body(p)).replace(/\s+/g, ' '), /따라 쓰기 › 2 규정 동의 › 3 서명 › 4 저장 04의 회색 글씨 두 곳을 눌러 따라 써 주세요/, '서명 화면 단계 표시줄: 첫 단계 따라 쓰기 (동의서 한 장 바로 표시)');
-  await p.getByText(/이용 및 환불 규정에 대해 충분히/).last().click(); await sign(p);
-  assert.match(await body(p), /오른쪽 아래 「동의하고 저장」을 눌러 주세요/, '모든 단계 완료 후 저장 안내');
+  assert.match((await body(p)).replace(/\s+/g, ' '), /프로그램 이용 동의 1 \/ 3 .*등록 내용을 확인했습니다 다음/, '환자 화면 1/3: 등록 내용 확인');
+  await agree(p); await sign(p);
+  assert.match(await body(p), /서명\s*3 \/ 3/, '3/3 서명 페이지');
   await p.getByText('동의하고 저장', { exact: true }).last().click(); await p.waitForTimeout(800);
   assert.match(await body(p), /동의가 완료되었습니다/, '저장 후 환자용 완료 화면');
   await doneOk(p);
@@ -96,7 +104,7 @@ test('새 계약: 계약 당시 값·상태·서비스 단가 저장, 동의서 
   assert.match(d[0].html.replace(/<[^>]+>/g, ''), /이용 및 환불 규정에 대해 충분히 설명받고 이해하였으며, 이에 동의합니다/);
   // 재서명: 화면 구성이 계약과 같으면 허용 → 이전 버전 보존 + 새 버전
   await p.getByText(/재서명/).first().click(); await p.waitForTimeout(400);
-  await p.getByText(/이용 및 환불 규정에 대해 충분히/).last().click(); await sign(p);
+  await agree(p); await sign(p);
   await click(p, '동의하고 저장'); await p.waitForTimeout(600); await doneOk(p);
   assert.deepEqual((await docs(p)).map(x => [x.version, !!x.superseded]), [[1, true], [2, false]]);
   // 새로고침 후에는 화면 구성이 없으므로 재서명 차단
@@ -214,7 +222,7 @@ const pickProgram = async (p, id, label, opt = {}) => {
   await click(p, '카드');
 };
 const signAndSave = async p => {
-  await click(p, '동의서 미리보기 · 서명'); await p.getByText(/이용 및 환불 규정에 대해 충분히/).last().click(); await sign(p);
+  await click(p, '동의서 미리보기 · 서명'); await agree(p); await sign(p);
   await click(p, '동의하고 저장'); await p.waitForTimeout(700); await doneOk(p);
 };
 
@@ -952,7 +960,7 @@ test('동의서 저장 실패: 계약·문서 저장 실패 시 임시 저장본
   await click(p, '동의서 미리보기 · 서명'); await click(p, '임시 저장');
   await p.goto(URL); await p.waitForTimeout(1500);
   await click(p, '이어서 작성'); await click(p, '완납 결제', 0);
-  await click(p, '동의서 미리보기 · 서명'); await p.getByText(/이용 및 환불 규정에 대해 충분히/).last().click(); await sign(p);
+  await click(p, '동의서 미리보기 · 서명'); await agree(p); await sign(p);
   const draftsBefore = await lsJ(p, 'dachaeum.v3.newDrafts');
   assert.equal(draftsBefore.length, 1);
   const sigShown = () => p.locator('img[src^="data:image/png"]').count();
@@ -1075,7 +1083,7 @@ async function pdfCheck(p, n, name) {
   assert.doesNotMatch(await body(p), /PDF 저장·공유·인쇄|PDF 만드는 중/, name + ': PDF 화면 닫힘');
   return buf.length;
 }
-const signSave = async (p, label) => { await p.getByText(/이용 및 환불 규정에 대해 충분히/).last().click(); await sign(p); await click(p, label); await p.waitForTimeout(800); await doneOk(p); };
+const signSave = async (p, label) => { await agree(p); await sign(p); await click(p, label); await p.waitForTimeout(800); await doneOk(p); };
 
 test('iPad 세로 전체 흐름 ①: 기납부 예약금 + 예약금 결제 → 서명·저장·PDF → 시술 1회 이용 → 환불 정산(0원 하한) → 정산서 서명·PDF', async () => {
   const p = await openPad();
@@ -1532,7 +1540,7 @@ test('간이(재등록) 동의서: 새 규정(T-2026-11)으로 서명한 환자�
     await click(p, '프로그램 A'); await click(p, '이 환자로 새 동의서'); await click(p, '전체');
     await p.locator('input[placeholder*="검색"]').fill('PGM-0018'); await p.waitForTimeout(300);
     await click(p, '여드름 8주 프로그램'); await click(p, '카드');
-    await click(p, '동의서 미리보기 · 서명');
+    await click(p, '동의서 미리보기 · 서명'); await toRules(p);
     const b = (await body(p)).replace(/\s+/g, ' ');
     const tr = await p.locator('[data-tr]').count();
     await p.context().close();
@@ -1569,12 +1577,12 @@ test('이벤트 이용기간(개월): 가격 관리에서 이벤트별 수정 �
   await pmClose(p);
   await toStep2(p, 'PGM-EV-NB1', '뉴비쥬 2cc');
   await click(p, '카드');
-  await click(p, '동의서 미리보기 · 서명');
+  await click(p, '동의서 미리보기 · 서명'); await toRules(p);
   const evb = (await body(p)).replace(/\s+/g, ' ');
   assert.match(evb, /이벤트 프로그램은 첫 시술일로부터 4개월 안에 이용해 주세요\./);
   assert.match(evb, /이벤트 프로그램은 양도할 수 없습니다\./);
   assert.doesNotMatch(evb, /등록일로부터 1년 이내|서로 합의한 경우|선결제권은 1년/, '이벤트 규정만 표시');
-  await p.getByText(/이용 및 환불 규정에 대해 충분히/).last().click(); await sign(p);
+  await agree(p); await sign(p);
   await click(p, '동의하고 저장'); await p.waitForTimeout(700); await doneOk(p);
   const c = (await contracts(p)).find(x => x.id !== 'C-EXP');
   const x = new Date(c.firstDate); x.setMonth(x.getMonth() + 4); x.setDate(x.getDate() - 1);
@@ -1589,22 +1597,26 @@ test('이벤트 이용기간(개월): 가격 관리에서 이벤트별 수정 �
   assert.deepEqual(p.errors, []);
 });
 
-test('환자 서명 화면: 동의서 바로 표시 → 동그라미·따라 쓰기·동의 → 서명 → 완료, 동그라미·따라 쓴 글씨·서명이 저장 문서에 남음', async () => {
+test('환자 화면 1/3 등록 내용 → 2/3 규정(동그라미·따라 쓰기·동의) → 3/3 서명 → 완료, 동그라미·따라 쓴 글씨·서명이 저장 문서에 남음', async () => {
   const p = await open();
   await toStep2(p, 'PGM-0018', '여드름 8주 프로그램'); await click(p, '카드');
   await click(p, '동의서 미리보기 · 서명');
   const b0 = (await body(p)).replace(/\s+/g, ' ');
-  assert.match(b0, /따라 쓰기 › 2 규정 동의 › 3 서명 › 4 저장/, '이전 방식 단계 표시줄');
-  assert.doesNotMatch(b0, /확인했어요|등록 내용 확인/, '「확인했어요」 단계 없음');
-  await click(p, '터치하여 서명');
-  assert.match(await body(p), /04의 회색 글씨 두 곳을 먼저 따라 써 주세요/, '따라 쓰기 전 서명 차단');
+  assert.match(b0, /프로그램 이용 동의 1 \/ 3/, '1/3 등록 내용 확인'); await p.waitForTimeout(0); assert.match(b0, /성명 결제테스트 프로그램 여드름 8주 프로그램 프로그램 금액 990,000원/, '직원 입력 내용 그대로');
+  assert.doesNotMatch(b0, /01 이용기간/, '1/3에는 규정 없음');
+  await click(p, '다음');
+  assert.match(await body(p), /등록 내용을 확인하고 체크해 주세요/, '체크 전 다음 차단');
+  await click(p, '등록 내용을 확인했습니다'); await click(p, '다음');
+  assert.match(await body(p), /이용 및 환불 규정\s*2 \/ 3/);
+  await click(p, '다음');
+  assert.match(await body(p), /04의 회색 글씨 두 곳을 먼저 따라 써 주세요/, '따라 쓰기 전 3/3 차단');
+  assert.doesNotMatch(await body(p), /서명\s*3 \/ 3/);
   const bs = p.locator('[data-rules] b');
   await bs.nth(0).click(); await bs.nth(1).click(); await bs.nth(1).click(); await bs.nth(2).click();
   assert.equal(await p.locator('[data-rules] svg[data-ring]').count(), 2, '누르면 동그라미, 다시 누르면 지움');
-  await p.getByText(/이용 및 환불 규정에 대해 충분히/).last().click(); await sign(p);
+  await agree(p); await sign(p);
   await click(p, '동의하고 저장'); await p.waitForTimeout(700);
-  b = await body(p);
-  assert.match(b, /동의가 완료되었습니다/);
+  assert.match(await body(p), /동의가 완료되었습니다/);
   const [d] = await docs(p);
   assert.equal((d.html.match(/<svg[^>]*data-ring/g) || []).length, 2, '동그라미가 서명 문서(PDF 원본)에 남음');
   assert.equal((d.html.match(/<img[^>]*alt="(결제금액의 10%|1회 정상가)"/g) || []).length, 2, '따라 쓴 글씨');

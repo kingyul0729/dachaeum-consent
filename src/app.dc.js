@@ -288,10 +288,22 @@ class Component extends DCLogic {
     return ['#eef1f4', '#4a5158', 'transparent'];
   }
   _setT(el, t) { const s = el.style; s.setProperty('--tx', t.tx + 'px'); s.setProperty('--lh', String(t.lh)); s.setProperty('--sg', t.sg + 'px'); s.setProperty('--bg', t.bg + 'px'); s.setProperty('--tt', t.tt + 'px'); s.setProperty('--tb', t.tb + 'px'); s.setProperty('--tbl', t.tbl + 'px'); s.setProperty('--cp', t.cp); }
+  // 환자 화면 페이지 넘김(2/3 규정 · 3/3 서명): 서명용 A4 문서에서 그 페이지 부분(data-pg)만 보이고 나머지는 잠시 숨김
+  // 따라 쓰기·동그라미·서명은 A4 문서 자체에 들어가므로 저장 문서(PDF)는 숨김을 풀어 한 장 전체로 보관
+  applyPage() {
+    const wrap = (this._els || {}).sgH, root = wrap && wrap.firstElementChild; if (!root) return;
+    root.querySelectorAll('[data-hid]').forEach(e => { e.style.display = e.getAttribute('data-hid') === '-' ? '' : e.getAttribute('data-hid'); e.removeAttribute('data-hid'); });
+    const pg = this.state.screen === 'sign' ? (this.state.pPage || 1) : 0; if (pg < 2) return;
+    const keep = Array.from(root.querySelectorAll('[data-pg="' + pg + '"]')), path = new Set();
+    keep.forEach(k => { for (let e = k.parentElement; e && e !== root; e = e.parentElement) path.add(e); });
+    const walk = el => Array.from(el.children).forEach(c => { if (keep.includes(c)) return; if (path.has(c)) return walk(c); c.setAttribute('data-hid', c.style.display || '-'); c.style.display = 'none'; });
+    walk(root);
+  }
   // 서명 완료 시점의 문서를 인쇄용(A4 1장 단계)으로 고정해 HTML 최종본으로 보관
   snapshotDoc() {
     const wrap = (this._els || {}).sgH; const src = wrap && wrap.firstElementChild; if (!src || typeof document === 'undefined') return '';
     const c = src.cloneNode(true);
+    c.querySelectorAll('[data-hid]').forEach(e => { e.style.display = e.getAttribute('data-hid') === '-' ? '' : e.getAttribute('data-hid'); e.removeAttribute('data-hid'); });
     c.style.zoom = ''; c.style.fontFamily = "'Pretendard Variable',Pretendard,-apple-system,BlinkMacSystemFont,'Apple SD Gothic Neo','Noto Sans KR',sans-serif"; c.style.color = '#1c1f23'; c.style.width = '740px'; c.style.maxWidth = '740px'; c.style.minHeight = '0px';
     const box = document.createElement('div'); box.style.cssText = 'position:fixed;left:-10000px;top:0;width:740px;visibility:hidden';
     box.appendChild(c); document.body.appendChild(box);
@@ -437,6 +449,7 @@ class Component extends DCLogic {
     // PDF는 문서를 열 때 한 번만 만듦 (이전 상태값과 비교하지 않고 열린 문서 id로 판단 → 화면이 다시 그려져도 반복 생성하지 않음)
     const pid = this.state.pdfId || null;
     if (pid !== this._pdfOpenFor) { this._pdfOpenFor = pid; const d = pid && (this.state.docs || []).find(x => x.id === pid); if (d) setTimeout(() => this.buildPdf(d), 50); }
+    this.applyPage();
     cancelAnimationFrame(this._fitRaf);
     this._fitRaf = requestAnimationFrame(() => Object.values(this._els || {}).forEach(el => this._fit(el)));
   }
@@ -1004,7 +1017,7 @@ class Component extends DCLogic {
       canResign: !d.superseded && d.kind === '이용동의서' && s.cStatus === '등록완료',
       // 서명된 문서(동의서·환불 정산서)는 일반 삭제 대상이 아님 → 삭제 버튼 숨김
       canDel: !d.signedAt, open: () => this.setState({ pdfId: d.id }), del: () => d.signedAt ? this.flash('서명된 문서는 삭제할 수 없습니다') : this.setState({ delAsk: d.id }),
-      resign: () => sameAsContract() ? this.setState({ screen: 'sign', signFrom: 'resign', sig: false, sigOpen: false, sigImg: null, trImg: [], trOpen: -1, snImg: null, snOpen: false, pOk1: false, ringN: 0, ckRefund: false }) : this.flash(RESIGN_MSG) }));
+      resign: () => sameAsContract() ? this.setState({ screen: 'sign', signFrom: 'resign', sig: false, sigOpen: false, sigImg: null, trImg: [], trOpen: -1, snImg: null, snOpen: false, pPage: 1, ck1: false, pOk1: false, ringN: 0, ckRefund: false }) : this.flash(RESIGN_MSG) }));
     const pdfDoc = s.pdfId ? (s.docs || []).find(d => d.id === s.pdfId) : null;
 
     const dep = s.pay === 'deposit';
@@ -1102,7 +1115,28 @@ class Component extends DCLogic {
       : !s.sigImg ? '서명 칸을 눌러 서명해 주세요' : '오른쪽 아래 「동의하고 저장」을 눌러 주세요';
     const doneDoc = S === 'signDone' && s.justSaved ? (s.docs || []).find(d => d.id === s.justSaved) : null;
     const doneDocEl = doneDoc && doneDoc.html ? React.createElement('div', { style: { width: 740, transform: 'scale(0.45)', transformOrigin: '0 0', position: 'absolute', top: 0, left: 0 }, dangerouslySetInnerHTML: { __html: this.cleanHtml(doneDoc.html) } }) : null;
-    const trVals = { hasDoneDoc: !!doneDocEl, doneDocEl, ringTap: this.ringTap, snEl, snPadOpen: !!s.snOpen, snMsg: s.snMsg || '', snGRef: this.attachSnGuide, snRef: this.attachSn,
+    // 환자 화면 1/3 등록 내용 확인 → 2/3 이용 및 환불 규정 → 3/3 서명 (페이지마다 확인 후 「다음」)
+    const pg = s.pPage || 1, rulesOk = !writeLeft && !!s.ckRefund;
+    const pgMsg = pg === 2 && writeLeft ? (trLeft ? '04의 회색 글씨 두 곳을 먼저 따라 써 주세요' : '확인 문장의 회색 숫자를 먼저 따라 써 주세요') : '';
+    const nextOk = pg === 1 ? !!s.ck1 : pg === 2 ? rulesOk : false;
+    const pgGo = n => { this.setState({ pPage: n }); setTimeout(() => { const sc = document.querySelector('[data-sign-scroll]'); if (sc) sc.scrollTop = 0; }, 30); };
+    const p1Rows = isLesion ? lesionRows.map(r => ({ name: '흑자 ' + r.no + ' · ' + r.siteText + ' ' + r.sizeText, v: r.tier + ' · ' + r.priceText }))
+      : docItems.filter(i => !i.isAdd && i.kind === '시술').map(i => ({ name: i.name, v: /^\d/.test(i.qtyText || '') ? i.qtyText : (i.qtyText || '') }))
+        .concat(docItems.filter(i => !i.isAdd && i.kind !== '시술').map(i => ({ name: i.name, v: '포함' })))
+        .concat(docItems.filter(i => i.isAdd).map(i => ({ name: i.name, v: i.addPrice ? '+' + won(i.addPrice) + '원' : '추가' })));
+    const pgVals = { pg1: pg === 1, pgBack: pg > 1, pgPrev: () => pgGo(pg - 1), pgNo: pg + ' / 3',
+      pgTitle: ['프로그램 이용 동의', '이용 및 환불 규정', '서명'][pg - 1],
+      pgIntro: pg === 1 ? '다채움피부과의원은 아래 내용으로 프로그램 이용 계약을 진행합니다.\n내용을 확인해 주세요.'
+        : pg === 2 ? '계약 전 꼭 확인해야 할 이용 및 환불 규정입니다.\n' + (needTrace ? '점선의 회색 글씨 두 곳을 눌러서 직접 따라 써 주세요. ' : needSn ? '확인 문장을 눌러 회색 숫자를 따라 써 주세요. ' : '') + '중요한 말을 누르면 빨간 동그라미가 그려져요.'
+        : '아래 서명란을 눌러 서명해 주세요.',
+      docDisp: pg === 2 ? 'block' : 'none', pg3: pg === 3,
+      sig3El: s.sigImg ? React.createElement('img', { src: s.sigImg, alt: '서명', style: { maxWidth: '100%', maxHeight: 200, display: 'block', margin: '0 auto' } }) : null, hasSig3: !!s.sigImg, noSig3: !s.sigImg, p1Rows, p1ListTitle: isLesion ? '등록 흑자' : '시술 구성',
+      toggleCk1: () => this.setState(st => ({ ck1: !st.ck1 })), ck1Bd: s.ck1 ? '#1c1f23' : '#9aa0a7', ck1Bg: s.ck1 ? '#1c1f23' : '#ffffff', ck1Mark: s.ck1 ? '✓' : '',
+      hasPgMsg: !!pgMsg, pgMsg, showNext: pg < 3, nextBg: nextOk ? '#1c1f23' : '#d5d9de', nextFg: nextOk ? '#ffffff' : '#8a929a',
+      pgNext: () => pg === 1 ? (s.ck1 ? pgGo(2) : this.flash('등록 내용을 확인하고 체크해 주세요'))
+        : writeLeft ? this.flash(WRITE_MSG) : !s.ckRefund ? this.flash('이용 및 환불 규정 동의에 체크해 주세요') : pgGo(3),
+      showSave: !!s.sigImg && pg === 3 };
+    const trVals = { ...pgVals, hasDoneDoc: !!doneDocEl, doneDocEl, ringTap: this.ringTap, snEl, snPadOpen: !!s.snOpen, snMsg: s.snMsg || '', snGRef: this.attachSnGuide, snRef: this.attachSn,
       snW: Component.SN_W, snH: snL ? snL.H : 120, snUp: this.snUp, clearSn: this.clearSn, closeSn: this.closeSn, confirmSn: this.confirmSn,
       signSteps, signPct, signHint, needTrace, noTrace: !needTrace, trPadOpen: s.trOpen >= 0, trPadText: Component.TRACE[s.trOpen] || '', trMsg: s.trMsg || '',
       trGRef: this.attachTrGuide, trRef: this.attachTr, trDown: this.trDown, trMove: this.trMove, trUp: this.trUp,
@@ -1357,7 +1391,7 @@ class Component extends DCLogic {
                if (preNew && !preBuyM) return this.flash('선결제권 결제수단을 선택해 주세요');
                if (nowNum > 0 && !selM.length) return this.flash('결제수단을 선택해 주세요');
                if (isSplit && (!a1 || a1 >= nowNum)) return this.flash('분할결제 금액을 입력해 주세요');
-               return this.setState({ screen: 'sign', signFrom: 'new', sig: false, sigOpen: false, sigImg: null, trImg: [], trOpen: -1, snImg: null, snOpen: false, pOk1: false, ringN: 0, ckRefund: false, pendingSign: false, pendingProg: cur ? progTitle(cur) : '', pendingTotal: won(totalNum) });
+               return this.setState({ screen: 'sign', signFrom: 'new', sig: false, sigOpen: false, sigImg: null, trImg: [], trOpen: -1, snImg: null, snOpen: false, pPage: 1, ck1: false, pOk1: false, ringN: 0, ckRefund: false, pendingSign: false, pendingProg: cur ? progTitle(cur) : '', pendingTotal: won(totalNum) });
              },
              onS: () => this.setState({ screen: 'list' }) },
       detail: (() => {
