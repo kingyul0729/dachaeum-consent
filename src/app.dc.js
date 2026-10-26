@@ -258,23 +258,6 @@ class Component extends DCLogic {
     this.setState({ snImg: img, snOpen: false, snMsg: '' });
   };
 
-  // 빨간 손그림 밑줄: 규정 화면에서 중요한 말(굵은 글씨)을 누르면 밑줄, 다시 누르면 지움. 문서에 그대로 들어가 서명 문서(PDF)에 남음
-  static ringPath(w, h) {
-    const cx = w / 2, cy = h / 2, a0 = Math.random() * Math.PI * 2, n = 46, turn = Math.PI * 2 * 1.12; let d = '';
-    for (let i = 0; i <= n; i++) { const t = a0 + turn * i / n, j = 1 + (Math.random() - 0.5) * 0.06 + (i / n) * 0.05;
-      d += (i ? 'L' : 'M') + (cx + Math.cos(t) * cx * j).toFixed(1) + ' ' + (cy + Math.sin(t) * cy * j).toFixed(1) + ' '; }
-    return d;
-  }
-  ringTap = (e) => {
-    if (this.state.screen !== 'sign') return;
-    const el = e.target && e.target.closest ? e.target.closest('b') : null;
-    if (!el || !e.currentTarget.contains(el) || el.querySelector('[data-tr],img') || el.closest('[data-tr]')) return;
-    if (el.getAttribute('data-mk-done')) return;   // 이미 밑줄이 그어진 말
-    if (el.getAttribute('data-ring')) { el.removeAttribute('data-ring'); el.style.textDecorationLine = ''; el.style.textDecorationColor = ''; el.style.textDecorationThickness = ''; el.style.textUnderlineOffset = '';
-      this.setState(st => ({ ringN: Math.max(0, (st.ringN || 0) - 1) })); return; }
-    el.setAttribute('data-ring', '1'); el.style.textDecorationLine = 'underline'; el.style.textDecorationColor = '#e5120a'; el.style.textDecorationThickness = '2.5px'; el.style.textUnderlineOffset = '5px'; el.style.textDecorationSkipInk = 'none';
-    this.setState(st => ({ ringN: (st.ringN || 0) + 1 }));
-  };
 
   // 상태 태그: 직원 후속 처리가 필요한 상태만 테두리·진한 글자로 강조, 나머지는 연한 Non-border
   chip(s) {
@@ -289,50 +272,11 @@ class Component extends DCLogic {
     const wrap = (this._els || {}).sgH, root = wrap && wrap.firstElementChild; if (!root) return;
     root.querySelectorAll('[data-hid]').forEach(e => { e.style.display = e.getAttribute('data-hid') === '-' ? '' : e.getAttribute('data-hid'); e.removeAttribute('data-hid'); });
     const pg = this.state.screen === 'sign' ? (this.state.pPage || 1) : 0;
-    if (pg) { const sc = document.querySelector('[data-sign-scroll]'); this.decorateMarks(sc); }
     if (pg < 2) return;
     const keep = Array.from(root.querySelectorAll('[data-pg="' + pg + '"]')), path = new Set();
     keep.forEach(k => { for (let e = k.parentElement; e && e !== root; e = e.parentElement) path.add(e); });
     const walk = el => Array.from(el.children).forEach(c => { if (keep.includes(c)) return; if (path.has(c)) return walk(c); c.setAttribute('data-hid', c.style.display || '-'); c.style.display = 'none'; });
     walk(root);
-  }
-  // 빨간 펜 표시(밑줄·물결·별·동그라미·//): 중요한 말에 미리 그려 둠. 문서 안에 들어가 서명 문서(PDF)에도 그대로 남음
-  static MARKS = [[/^1년 이내$|개월 이내$/, 'line'], [/^남은 회차는 이용할 수 없으며$|^양도할 수 없습니다$|^총 계약금액의 10%$|^치료비 전액$/, 'line']];
-  static markSvg(kind, w, h) {
-    const j = () => (Math.random() - 0.5) * 1.6, y = h + 3, P = [];
-    const line = (x0, x1, yy) => 'M' + x0.toFixed(1) + ' ' + (yy + j()).toFixed(1) + ' Q' + ((x0 + x1) / 2).toFixed(1) + ' ' + (yy + j() * 1.5).toFixed(1) + ' ' + x1.toFixed(1) + ' ' + (yy + j()).toFixed(1);
-    const wave = (x0, x1, yy) => { let d = 'M' + x0 + ' ' + yy; for (let x = x0; x < x1; x += 7) d += ' Q' + (x + 3.5).toFixed(1) + ' ' + (yy + (((x - x0) / 7) % 2 ? 3.2 : -3.2)).toFixed(1) + ' ' + Math.min(x1, x + 7).toFixed(1) + ' ' + yy; return d; };
-    const star = (cx, cy, r) => { let d = ''; for (let i = 0; i <= 5; i++) { const a = -Math.PI / 2 + i * 4 * Math.PI / 5; d += (i ? 'L' : 'M') + (cx + Math.cos(a) * r).toFixed(1) + ' ' + (cy + Math.sin(a) * r).toFixed(1) + ' '; } return d; };
-    if (kind === 'line' || kind === 'slash' || kind === 'star') P.push(line(-2, w + 2, y));
-    if (kind === 'wave' || kind === 'wavestar') P.push(wave(-1, w + 1, y + 1));
-    if (kind === 'slash') P.push('M' + (w + 6) + ' ' + (y + 3) + ' L' + (w + 11) + ' ' + (y - 7), 'M' + (w + 11) + ' ' + (y + 3) + ' L' + (w + 16) + ' ' + (y - 7));
-    if (kind === 'star' || kind === 'wavestar') P.push(star(w + 11, h * 0.3, 7));
-    const bang = x => ['F:M' + (x - 2.6) + ' ' + (h * 0.0) + ' L' + (x + 2.6) + ' ' + (h * 0.0) + ' L' + (x + 0.9) + ' ' + (h * 0.66) + ' L' + (x - 0.9) + ' ' + (h * 0.66) + ' Z',
-      'F:M' + (x - 2) + ' ' + (h * 0.86) + ' a2 2 0 1 0 4 0 a2 2 0 1 0 -4 0 Z'];
-    if (kind === 'bang') P.push(...bang(w + 9), ...bang(w + 17));
-    if (kind === 'circle') P.push(Component.ringPath(w + 16, h + 10).replace(/(-?\d+\.?\d*) (-?\d+\.?\d*)/g, (m, a, b2) => (Number(a) - 8).toFixed(1) + ' ' + (Number(b2) - 5).toFixed(1)));
-    return P;
-  }
-  decorateMarks(root) {
-    if (!root || typeof document === 'undefined') return;
-    const ns = 'http://www.w3.org/2000/svg';
-    const cand = Array.from(root.querySelectorAll('[data-rules] b, [data-rules] div, [data-mk]'));
-    cand.forEach(el => {
-      if (el.getAttribute('data-mk-done')) return;
-      let kind = el.getAttribute('data-mk');
-      if (!kind) { if (el.tagName === 'DIV' && el.children.length) return; const t = (el.textContent || '').replace(/\s+/g, ' ').trim(); const hit = Component.MARKS.find(([re]) => re.test(t)); if (!hit) return; kind = hit[1]; }
-      if (el.querySelector('[data-tr],img')) return;
-      if (kind === 'line') { el.setAttribute('data-mk-done', 'line'); el.style.textDecorationLine = 'underline'; el.style.textDecorationColor = '#e5120a'; el.style.textDecorationThickness = '2.5px'; el.style.textUnderlineOffset = '5px'; el.style.textDecorationSkipInk = 'none'; return; }
-      const r = el.getBoundingClientRect(); if (!r.width || !r.height) return;
-      el.setAttribute('data-mk-done', kind); const sv = document.createElementNS(ns, 'svg'); sv.setAttribute('data-mk-svg', kind);
-      sv.setAttribute('viewBox', '0 0 ' + r.width.toFixed(1) + ' ' + r.height.toFixed(1)); sv.setAttribute('preserveAspectRatio', 'none');
-      sv.setAttribute('style', 'position:absolute;left:0;top:0;width:100%;height:100%;overflow:visible;pointer-events:none;z-index:1');
-      Component.markSvg(kind, r.width, r.height).forEach(d0 => { const fill = d0.startsWith('F:'), d = fill ? d0.slice(2) : d0; const pth = document.createElementNS(ns, 'path'); pth.setAttribute('d', d);
-        pth.setAttribute('style', (fill ? 'fill:#e5120a;stroke:#e5120a;stroke-width:1' : 'fill:none;stroke:#e5120a;stroke-width:2.6') + ';stroke-linecap:round;stroke-linejoin:round;opacity:0.92'); sv.appendChild(pth); });
-      if (getComputedStyle(el).position === 'static') el.style.position = 'relative';
-      if (el.tagName === 'DIV') el.style.display = el.style.display || 'inline-block';
-      el.appendChild(sv);
-    });
   }
   // 서명 완료 시점의 문서를 인쇄용(A4 1장 단계)으로 고정해 HTML 최종본으로 보관
   snapshotDoc() {
@@ -1170,7 +1114,7 @@ class Component extends DCLogic {
     const pgVals = { pg1: pg === 1, pgBack: pg > 1, pgPrev: () => pgGo(pg - 1), pgNo: pg + ' / 3',
       pgTitle: [(isEventCur || (isResign && (s.contract || {}).event) ? '이벤트 ' : '') + '프로그램 이용 동의', '이용 및 환불 규정', '서명'][pg - 1],
       pgIntro: pg === 1 ? '다채움피부과의원은 아래 내용으로 프로그램 이용 계약을 진행합니다.\n내용을 확인해 주세요.'
-        : pg === 2 ? '계약 전 꼭 확인해야 할 이용 및 환불 규정입니다.\n' + (needTrace ? '점선의 회색 글씨 두 곳을 눌러서 직접 따라 써 주세요. ' : needSn ? '확인 문장을 눌러 회색 숫자를 따라 써 주세요. ' : '') + '중요한 말을 누르면 빨간 밑줄이 그어져요.'
+        : pg === 2 ? '계약 전 꼭 확인해야 할 이용 및 환불 규정입니다.' + (needTrace ? '\n점선의 회색 글씨 두 곳을 눌러서 직접 따라 써 주세요.' : needSn ? '\n확인 문장을 눌러 회색 숫자를 따라 써 주세요.' : '')
         : '아래 서명란을 눌러 서명해 주세요.',
       docDisp: pg === 2 ? 'block' : 'none', pg3: pg === 3,
       sig3El: s.sigImg ? React.createElement('img', { src: s.sigImg, alt: '서명', style: { maxWidth: '100%', maxHeight: 200, display: 'block', margin: '0 auto' } }) : null, hasSig3: !!s.sigImg, noSig3: !s.sigImg, p1Rows, p1ListTitle: isLesion ? '등록 흑자' : '시술 구성', p1UnitHead: isLesion ? '금액' : '1회 단가', p1QtyHead: isLesion ? '크기' : '횟수',
@@ -1180,7 +1124,7 @@ class Component extends DCLogic {
       pgNext: () => pg === 1 ? (s.ck1 ? pgGo(2) : this.flash('등록 내용을 확인하고 체크해 주세요'))
         : writeLeft ? this.flash(WRITE_MSG) : !s.ckRefund ? this.flash('이용 및 환불 규정 동의에 체크해 주세요') : pgGo(3),
       showSave: !!s.sigImg && pg === 3 };
-    const trVals = { ...pgVals, hasDoneDoc: !!doneDocEl, doneDocEl, ringTap: this.ringTap, snEl, snPadOpen: !!s.snOpen, snMsg: s.snMsg || '', snGRef: this.attachSnGuide, snRef: this.attachSn,
+    const trVals = { ...pgVals, hasDoneDoc: !!doneDocEl, doneDocEl, snEl, snPadOpen: !!s.snOpen, snMsg: s.snMsg || '', snGRef: this.attachSnGuide, snRef: this.attachSn,
       snW: Component.SN_W, snH: snL ? snL.H : 120, snUp: this.snUp, clearSn: this.clearSn, closeSn: this.closeSn, confirmSn: this.confirmSn,
       signSteps, signPct, signHint, needTrace, noTrace: !needTrace, trPadOpen: s.trOpen >= 0, trPadText: Component.TRACE[s.trOpen] || '', trMsg: s.trMsg || '',
       trGRef: this.attachTrGuide, trRef: this.attachTr, trDown: this.trDown, trMove: this.trMove, trUp: this.trUp,

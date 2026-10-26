@@ -1619,16 +1619,14 @@ test('환자 화면 1/3 등록 내용 → 2/3 규정(동그라미·따라 쓰기
   await click(p, '다음');
   assert.match(await body(p), /04의 회색 글씨 두 곳을 먼저 따라 써 주세요/, '따라 쓰기 전 3/3 차단');
   assert.doesNotMatch(await body(p), /서명\s*3 \/ 3/);
-  const bs = p.locator('[data-rules] b:not([data-mk-done])');   // 미리 밑줄이 없는 굵은 글씨
-  await bs.nth(0).click(); await bs.nth(1).click(); await bs.nth(1).click(); await bs.nth(2).click();
-  assert.equal(await p.locator('[data-rules] [data-ring]').count(), 2, '누르면 밑줄, 다시 누르면 지움');
+  await p.locator('[data-rules] b').first().click();
+  assert.equal(await p.locator('[data-ring], [data-mk-done]').count(), 0, '빨간 밑줄 없음(누르기 포함)');
   await agree(p); await sign(p);
   await click(p, '동의하고 저장'); await p.waitForTimeout(700);
   assert.match(await body(p), /동의가 완료되었습니다/);
   const [d] = await docs(p);
-  assert.equal((d.html.match(/<b[^>]*data-ring/g) || []).length, 2, '터치한 밑줄이 서명 문서(PDF 원본)에 남음');
+  assert.doesNotMatch(d.html, /data-ring|data-mk-done|#e5120a/, '서명 문서에도 빨간 밑줄 없음');
   assert.equal((d.html.match(/<img[^>]*alt="(결제금액의 10%|1회 정상가)"/g) || []).length, 2, '따라 쓴 글씨');
-  assert.equal(await p.locator('[data-ring]').count() >= 2, true, '완료 화면 미리보기에도 밑줄');
   await doneOk(p);
   assert.deepEqual(p.errors, []);
 });
