@@ -754,7 +754,7 @@ test('이벤트 관리: 할인율 이벤트 추가 → 3단계 할인 항목·�
   const p = await open();
   await pmOpen(p); await click(p, '이벤트');
   const evNames = await p.locator('xpath=//label[starts-with(normalize-space(.),"이벤트명")]/input').evaluateAll(els => els.map(e => e.value));
-  assert.deepEqual(evNames, ['비마약성 무통주사제 [어나프라주] 1회 제공', '[뉴비쥬] 앵콜 이벤트'], '기존 이벤트 설정을 읽어서 표시');
+  assert.deepEqual(evNames, ['비마약성 무통주사제 [어나프라주] 1회 제공', '[뉴비쥬] 앵콜 이벤트', '[11월] 리프팅 & 스킨부스터 패키지', '[11월] 내 맘대로 피부관리'], '기존 이벤트 설정을 읽어서 표시');
   assert.doesNotMatch(await body(p), /함께 선택 가능한 할인/, '이벤트 중복 할인 설정 없음');
   await p.locator('input[placeholder="이벤트명"]').fill('가을 이벤트');
   await p.locator('input[placeholder="할인율"]').fill('10');
@@ -763,7 +763,7 @@ test('이벤트 관리: 할인율 이벤트 추가 → 3단계 할인 항목·�
   assert.equal(eo.added.length, 1); const id = eo.added[0].id;
   assert.deepEqual([eo.added[0].name, eo.added[0].rate, eo.added[0].kind], ['가을 이벤트', 0.1, 'rate']);
   await p.locator('input[placeholder="프로그램 ID (예: PGM-0001)"]').fill('PGM-0001'); await click(p, '프로그램 추가');
-  await click(p, '이벤트 저장', 2);
+  await click(p, '이벤트 저장', 4);
   eo = await lsJ(p, 'dachaeum.eventOverride');
   assert.deepEqual(eo.events[id], { programs: ['PGM-0001'] });
   await pmClose(p);
@@ -780,7 +780,7 @@ test('이벤트 관리: 할인율 이벤트 추가 → 3단계 할인 항목·�
   assert.deepEqual([c.total, c.disc.kind, c.disc.eventId, c.disc.label], [1188000, 'ev:' + id, id, '가을 이벤트 10%']);
   assert.deepEqual(c.items.map(i => i.price), [330000, 198000, 198000], '이벤트 할인은 환불용 1회 정상가를 바꾸지 않음');
   await p.goto(URL); await p.waitForTimeout(1500);
-  await pmOpen(p); await click(p, '이벤트'); await click(p, '중지', 2); await click(p, '이벤트 저장', 2); await pmClose(p);
+  await pmOpen(p); await click(p, '이벤트'); await click(p, '중지', 4); await click(p, '이벤트 저장', 4); await pmClose(p);
   await toStep2(p, 'PGM-0001', '스페셜 토닝 1');
   assert.doesNotMatch(await body(p), /가을 이벤트 10%/);
   assert.deepEqual(p.errors, []);
@@ -1576,8 +1576,8 @@ test('이벤트 이용기간(개월): 가격 관리에서 이벤트별 수정 �
   const old = mk('C-EXP', '만료된 프로그램', { expiry: '2026-01-31' });
   const p = await open([old]);
   await pmOpen(p); await click(p, '이벤트');
-  const mIn = p.locator('xpath=//label[starts-with(normalize-space(.),"이용기간")]/input');
-  assert.equal(await mIn.count(), 1, '정액 적용가 이벤트에만 이용기간 칸');
+  const mAll = p.locator('xpath=//label[starts-with(normalize-space(.),"이용기간")]/input'), mIn = mAll.first();
+  assert.equal(await mAll.count(), 3, '정액 적용가 이벤트(뉴비쥬·11월 2개)에만 이용기간 칸');
   assert.equal(await mIn.inputValue(), '3', '기존 설정(3개월) 표시');
   await mIn.fill('40'); await click(p, '이벤트 저장', 1);
   assert.match(await body(p), /1~24 사이 개월/); assert.equal(await lsJ(p, 'dachaeum.eventOverride'), null, '잘못된 값은 저장 안 함');
