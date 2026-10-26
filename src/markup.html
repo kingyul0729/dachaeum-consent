@@ -1230,10 +1230,10 @@ body,body *{word-break:keep-all;overflow-wrap:break-word;line-break:strict}
 
 <!-- ================= 환불 정산 계산 ================= -->
 <sc-if value="{{ isRefund }}" hint-placeholder-val="{{ true }}">
-<div style="flex:1;min-height:0;overflow-x:hidden;overflow-y:auto;-webkit-overflow-scrolling:touch;touch-action:pan-y;padding:14px;display:flex;flex-direction:column;gap:21px">
+<div style="flex:1;min-height:0;overflow-x:hidden;overflow-y:auto;-webkit-overflow-scrolling:touch;touch-action:pan-y;padding:16px;display:flex;flex-direction:column;gap:16px;background:#f5f5f7">
 
   <sc-if value="{{ rfMissing }}" hint-placeholder-val="{{ false }}">
-    <div style="flex:none;display:flex;align-items:center;gap:12px;padding:14px 18px;border:1px solid rgba(0,0,0,0.1);border-radius:8.75px;background:#f9fafb">
+    <div style="flex:none;display:flex;align-items:center;gap:12px;padding:14px 18px;border-radius:12px;background:#f9fafb">
       <div style="flex:1;min-width:0">
         <div style="font-size:14px;font-weight:500;color:#4b5563">정상가 확인 필요 · 환불 확정 불가</div>
         <div style="font-size:12.25px;color:#4b5563;margin-top:3px;line-height:1.5">{{ rfMissingText }} — 계약 당시의 1회 정상가가 저장되어 있지 않습니다. 당시 동의서·가격표 등의 근거를 확인한 뒤 보완해 주세요. 0원으로는 계산하지 않습니다.</div>
@@ -1242,15 +1242,15 @@ body,body *{word-break:keep-all;overflow-wrap:break-word;line-break:strict}
     </div>
   </sc-if>
   <sc-if value="{{ hasPriceFixes }}" hint-placeholder-val="{{ false }}">
-    <div style="flex:none;padding:10px 16px;border:1px solid rgba(0,0,0,0.1);border-radius:8.75px;background:#f9fafb;font-size:12.25px;color:#4b5563;line-height:1.5">정상가 보완 기록 · {{ priceFixText }}</div>
+    <div style="flex:none;padding:10px 16px;border-radius:12px;background:#f9fafb;font-size:12.25px;color:#4b5563;line-height:1.5">정상가 보완 기록 · {{ priceFixText }}</div>
   </sc-if>
 
-  <div style="border:1px solid rgba(0,0,0,0.1);border-radius:8.75px;overflow:hidden;background:#ffffff;flex:none">
-    <div style="padding:14px 18px;background:#f9fafb;border-bottom:1px solid rgba(0,0,0,0.1);display:flex;justify-content:space-between;align-items:baseline">
+  <div style="border-radius:12px;overflow:hidden;background:#ffffff;flex:none">
+    <div style="padding:14px 18px;background:#ffffff;border-bottom:1px solid #f0f0f2;display:flex;justify-content:space-between;align-items:baseline">
       <div style="font-size:12.25px;font-weight:500;color:#4b5563">이용 내역 입력</div>
       
     </div>
-    <div style="display:grid;grid-template-columns:52px minmax(0,1fr) 64px 136px 84px 92px;column-gap:8px;padding:0 18px;border-bottom:1px solid rgba(0,0,0,0.1)">
+    <div style="display:grid;grid-template-columns:52px minmax(0,1fr) 64px 136px 84px 92px;column-gap:8px;padding:0 18px;border-bottom:1px solid #f0f0f2">
       <div style="font-size:12.25px;font-weight:500;color:#717182;padding:10px 0">구분</div>
       <div style="font-size:12.25px;font-weight:500;color:#717182;padding:10px 0">항목</div>
       <div style="font-size:12.25px;font-weight:500;color:#717182;padding:10px 0;text-align:right">등록</div>
@@ -1259,7 +1259,7 @@ body,body *{word-break:keep-all;overflow-wrap:break-word;line-break:strict}
       <div style="font-size:12.25px;font-weight:500;color:#717182;padding:10px 0;text-align:right">차감금액</div>
     </div>
     <sc-for list="{{ rItems }}" as="r" hint-placeholder-count="4">
-      <div style="display:grid;grid-template-columns:52px minmax(0,1fr) 64px 136px 84px 92px;column-gap:8px;padding:0 18px;border-bottom:1px solid rgba(0,0,0,0.1);align-items:center">
+      <div style="display:grid;grid-template-columns:52px minmax(0,1fr) 64px 136px 84px 92px;column-gap:8px;padding:0 18px;border-bottom:1px solid #f0f0f2;align-items:center">
         <div style="padding:10px 0;font-size:12.25px;color:#4b5563">{{ r.kind }}</div>
         <div style="padding:10px 0;font-size:14px;text-wrap:pretty;display:flex;flex-direction:column;gap:6px">
           <div>{{ r.name }}</div>
@@ -1304,21 +1304,21 @@ body,body *{word-break:keep-all;overflow-wrap:break-word;line-break:strict}
       </div>
     </sc-for>
     <sc-if value="{{ hasCap }}" hint-placeholder-val="{{ false }}">
-      <div style="padding:10px 18px;font-size:12.25px;color:#4b5563;border-bottom:1px solid rgba(0,0,0,0.1)">{{ rfCapNote }}</div>
+      <div style="padding:10px 18px;font-size:12.25px;color:#4b5563;border-bottom:1px solid #f0f0f2">{{ rfCapNote }}</div>
     </sc-if>
     <sc-if value="{{ hasVisitSvc }}" hint-placeholder-val="{{ false }}">
-      <div style="padding:14px 18px;border-bottom:1px solid rgba(0,0,0,0.1);display:flex;flex-direction:column;gap:10px">
+      <div style="padding:14px 18px;border-bottom:1px solid #f0f0f2;display:flex;flex-direction:column;gap:10px">
         <div style="display:flex;justify-content:space-between;align-items:baseline;gap:10px"><div style="font-size:12.25px;font-weight:500;color:#4b5563">서비스 이용 기록</div></div>
         <sc-if value="{{ hasAcneSel }}" hint-placeholder-val="{{ false }}">
-        <div style="border:1px solid rgba(0,0,0,0.1);border-radius:6.75px;overflow:hidden">
-          <div style="display:grid;grid-template-columns:96px minmax(0,1fr) 92px 44px;background:#f9fafb;border-bottom:1px solid rgba(0,0,0,0.1);font-size:12.25px;font-weight:500;color:#717182">
-            <div style="padding:9px 12px">항목</div><div style="padding:9px 12px;border-left:1px solid rgba(0,0,0,0.1)">범위</div><div style="padding:9px 10px;border-left:1px solid rgba(0,0,0,0.1);text-align:center">추가 건수</div><div style="border-left:1px solid rgba(0,0,0,0.1)"></div>
+        <div style="border-radius:10px;overflow:hidden;background:#fafafb">
+          <div style="display:grid;grid-template-columns:96px minmax(0,1fr) 92px 44px;background:transparent;border-bottom:1px solid #ececef;font-size:12.25px;font-weight:500;color:#717182">
+            <div style="padding:9px 12px">항목</div><div style="padding:9px 12px">범위</div><div style="padding:9px 10px;text-align:center">추가 건수</div><div style=""></div>
           </div>
           <sc-for list="{{ svcGroups }}" as="g" hint-placeholder-count="3">
             <div style="display:grid;grid-template-columns:96px minmax(0,1fr) 92px 44px;align-items:stretch;border-top:{{ g.sep }};font-size:12.25px">
               <div style="padding:0 12px;display:flex;align-items:center;font-weight:500;color:#0a0a0a;white-space:nowrap">{{ g.title }}</div>
               
-              <div style="border-left:1px solid rgba(0,0,0,0.1);padding:6px 12px;display:flex;align-items:center;flex-wrap:wrap;gap:2px 12px;min-width:0">
+              <div style="padding:6px 12px;display:flex;align-items:center;flex-wrap:wrap;gap:2px 12px;min-width:0">
                 <sc-for list="{{ g.opts }}" as="o" hint-placeholder-count="2">
                   <div sc-camel-on-click="{{ o.pick }}" style="display:flex;align-items:center;gap:6px;min-height:32px;cursor:pointer;white-space:nowrap">
                     <div style="width:16px;height:16px;border-radius:50%;box-sizing:border-box;border:1.5px solid {{ o.bd }};display:flex;align-items:center;justify-content:center;flex:none"><div style="width:8px;height:8px;border-radius:50%;background:{{ o.dot }}"></div></div>
@@ -1326,22 +1326,22 @@ body,body *{word-break:keep-all;overflow-wrap:break-word;line-break:strict}
                   </div>
                 </sc-for>
               </div>
-              <div style="border-left:1px solid rgba(0,0,0,0.1);display:flex;align-items:center;justify-content:center">
+              <div style="display:flex;align-items:center;justify-content:center">
                 <div sc-camel-on-click="{{ g.dec }}" style="width:26px;height:31.5px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:#717182">−</div>
                 <div style="min-width:20px;text-align:center;font-variant-numeric:tabular-nums">{{ g.qty }}</div>
                 <div sc-camel-on-click="{{ g.inc }}" style="width:26px;height:31.5px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:#717182">+</div>
               </div>
-              <div sc-camel-on-click="{{ g.add }}" title="기록 추가" style="border-left:1px solid rgba(0,0,0,0.1);display:flex;align-items:center;justify-content:center;cursor:pointer;color:#030213" style-hover="background:#e9ebef"><svg width="18" height="18" sc-camel-view-box="0 0 24 24" fill="none" stroke="currentColor" sc-camel-stroke-width="1.5" sc-camel-stroke-linecap="round"><path d="M12 5v14M5 12h14"></path></svg></div>
+              <div sc-camel-on-click="{{ g.add }}" title="기록 추가" style="display:flex;align-items:center;justify-content:center;cursor:pointer;color:#030213" style-hover="background:#e9ebef"><svg width="18" height="18" sc-camel-view-box="0 0 24 24" fill="none" stroke="currentColor" sc-camel-stroke-width="1.5" sc-camel-stroke-linecap="round"><path d="M12 5v14M5 12h14"></path></svg></div>
             </div>
             <sc-if value="{{ g.hasRecs }}" hint-placeholder-val="{{ false }}">
               <div style="display:grid;grid-template-columns:96px minmax(0,1fr) 92px 44px;background:#f9fafb;border-top:1px dashed rgba(0,0,0,0.1);font-size:12.25px">
                 <div style="padding:8px 12px;color:#717182;display:flex;align-items:center">기록</div>
-                <div style="border-left:1px solid rgba(0,0,0,0.1);padding:6px 10px;display:flex;align-items:center;flex-wrap:wrap;gap:6px">
+                <div style="padding:6px 10px;display:flex;align-items:center;flex-wrap:wrap;gap:6px">
                   <sc-for list="{{ g.recs }}" as="r" hint-placeholder-count="0">
                     <div style="display:flex;align-items:center;height:26px;padding:0 2px 0 9px;border-radius:8.75px;background:#ffffff;border:1px solid rgba(0,0,0,0.1);color:#4b5563;white-space:nowrap">{{ r.label }}<div sc-camel-on-click="{{ r.del }}" style="width:22px;height:26px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:#9ca3af"><svg width="10" height="10" sc-camel-view-box="0 0 24 24" fill="none" stroke="currentColor" sc-camel-stroke-width="2" sc-camel-stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"></path></svg></div></div>
                   </sc-for>
                 </div>
-                <div style="border-left:1px solid rgba(0,0,0,0.1);grid-column:span 2;display:flex;align-items:center;justify-content:flex-end;padding:0 12px;font-weight:500;color:#0a0a0a;font-variant-numeric:tabular-nums">{{ g.recSum }}</div>
+                <div style="grid-column:span 2;display:flex;align-items:center;justify-content:flex-end;padding:0 12px;font-weight:500;color:#0a0a0a;font-variant-numeric:tabular-nums">{{ g.recSum }}</div>
               </div>
             </sc-if>
           </sc-for>
@@ -1382,7 +1382,7 @@ body,body *{word-break:keep-all;overflow-wrap:break-word;line-break:strict}
   </div>
 
   <div style="display:flex;flex-direction:column;gap:14px;flex:none;align-items:stretch">
-    <div style="flex:none;border:1px solid rgba(0,0,0,0.1);border-radius:8.75px;background:#ffffff;padding:14px;display:flex;flex-direction:column;gap:12px">
+    <div style="flex:none;border-radius:12px;background:#ffffff;padding:14px;display:flex;flex-direction:column;gap:12px">
       <div style="font-size:12.25px;font-weight:500;color:#4b5563">환불 사유</div>
       <div style="display:flex;flex-wrap:wrap;gap:8px">
         <sc-for list="{{ reasons }}" as="rs" hint-placeholder-count="4">
@@ -1390,12 +1390,12 @@ body,body *{word-break:keep-all;overflow-wrap:break-word;line-break:strict}
         </sc-for>
       </div>
     </div>
-    <div style="flex:none;border:1px solid rgba(0,0,0,0.1);border-radius:8.75px;padding:14px;background:#ffffff">
+    <div style="flex:none;border-radius:12px;padding:14px;background:#ffffff">
       <div style="display:flex;justify-content:space-between;align-items:center;gap:8px">
         <div style="font-size:14px;font-weight:500;color:#717182">최종 환불금액</div>
         <div style="padding:3px 10px;border-radius:6.75px;background:#e9ebef;font-size:12.25px;font-weight:500;color:#030213;white-space:nowrap">{{ rfStage }}</div>
       </div>
-      <div style="margin-top:4px;font-size:21px;font-weight:500;letter-spacing:-0.03em;color:#0a0a0a;font-variant-numeric:tabular-nums;line-height:1.3">{{ rfHero }}</div>
+      <div style="margin-top:4px;font-size:21px;font-weight:600;letter-spacing:-0.03em;color:#4a3aa8;font-variant-numeric:tabular-nums;line-height:1.3">{{ rfHero }}</div>
       <div style="margin-top:14px;display:flex;flex-direction:column;gap:11px;font-size:14px">
         <div style="display:flex;justify-content:space-between"><span style="color:#4b5563">납부금액</span><span style="font-variant-numeric:tabular-nums">{{ rfPaid }}원</span></div>
         <sc-if value="{{ hasRfCash }}" hint-placeholder-val="{{ false }}"><div style="display:flex;justify-content:space-between;font-size:12.25px;margin-top:-6px"><span style="color:#717182">└ 수납 (카드·현금·계좌·예약금)</span><span style="font-variant-numeric:tabular-nums;color:#4b5563">{{ rfCashText }}</span></div></sc-if>
@@ -1403,13 +1403,13 @@ body,body *{word-break:keep-all;overflow-wrap:break-word;line-break:strict}
         <div style="display:flex;justify-content:space-between"><span style="color:#4b5563">{{ rfPenLabel }}</span><span style="font-variant-numeric:tabular-nums;color:#d4183d">− {{ rfPen }}원</span></div>
         <div style="display:flex;justify-content:space-between"><span style="color:#4b5563">이용금액 (정상가)</span><span style="font-variant-numeric:tabular-nums;color:#d4183d">− {{ rfUsedAmt }}원</span></div>
         <div style="height:1px;background:rgba(0,0,0,0.1)"></div>
-        <div style="display:flex;justify-content:space-between;align-items:baseline"><span style="font-size:14px;font-weight:500">= 최종 환불금액</span><span style="font-size:17.5px;font-weight:500;font-variant-numeric:tabular-nums;color:#030213">{{ rfRefundLine }}</span></div>
+        <div style="display:flex;justify-content:space-between;align-items:baseline"><span style="font-size:14px;font-weight:500">= 최종 환불금액</span><span style="font-size:19px;font-weight:600;font-variant-numeric:tabular-nums;color:#4a3aa8">{{ rfRefundLine }}</span></div>
       </div>
-      <sc-if value="{{ rfSingle }}" hint-placeholder-val="{{ false }}"><div style="margin-top:14px;padding-top:12px;border-top:1px solid rgba(0,0,0,0.1);display:flex;justify-content:space-between;font-size:12.25px"><span style="color:#4b5563">환불 방법</span><span style="font-variant-numeric:tabular-nums;font-weight:500">{{ rfSingleText }}</span></div></sc-if>
-      <sc-if value="{{ rfMulti }}" hint-placeholder-val="{{ false }}"><div style="margin-top:16px;padding-top:14px;border-top:1px solid rgba(0,0,0,0.1);display:flex;flex-direction:column;gap:10px">
+      <sc-if value="{{ rfSingle }}" hint-placeholder-val="{{ false }}"><div style="margin-top:14px;padding-top:12px;border-top:1px solid #f0f0f2;display:flex;justify-content:space-between;font-size:12.25px"><span style="color:#4b5563">환불 방법</span><span style="font-variant-numeric:tabular-nums;font-weight:500">{{ rfSingleText }}</span></div></sc-if>
+      <sc-if value="{{ rfMulti }}" hint-placeholder-val="{{ false }}"><div style="margin-top:16px;padding-top:14px;border-top:1px solid #f0f0f2;display:flex;flex-direction:column;gap:10px">
         <div style="font-size:12.25px;font-weight:500;color:#030213">결제수단별 환불</div>
         <sc-for list="{{ rfPayRows }}" as="p" hint-placeholder-count="2">
-          <div style="display:flex;flex-direction:column;gap:6px;padding:10px 12px;border:1px solid rgba(0,0,0,0.1);border-radius:6.75px;background:#ffffff">
+          <div style="display:flex;flex-direction:column;gap:6px;padding:10px 12px;border-radius:10px;background:#fafafb">
             <div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px;font-size:14px">
               <span style="font-weight:500;white-space:nowrap">{{ p.method }}</span>
               <span style="font-size:12.25px;color:#717182;font-variant-numeric:tabular-nums;white-space:nowrap">원결제 {{ p.paid }}</span>

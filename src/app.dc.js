@@ -1304,13 +1304,13 @@ class Component extends DCLogic {
       const optText = o => o.price != null ? won(o.price) : (RF.fixOf(C, RF.svcKey({ key: vKey(o) })) != null ? won(RF.fixOf(C, RF.svcKey({ key: vKey(o) }))) + ' (보완)' : '단가 확인 필요');
       // 항목별 기록: 해당 행 바로 아래 작은 태그로 표시 (주차순)
       const recs = V.map((v, vi) => ({ v, vi })).filter(x => (x.v.label || '').split(' · ')[0] === g.title);
-      return { sep: gi ? '1px solid rgba(0,0,0,0.1)' : '0', title: g.title, optLabel: g.optLabel, week, pick, qty,
+      return { sep: gi ? '1px solid #ececef' : '0', title: g.title, optLabel: g.optLabel, week, pick, qty,
         hasRecs: recs.length > 0, recSum: won(recs.reduce((t, x) => t + ((RS.visits[x.vi] || {}).price || 0), 0)) + '원',
         recs: recs.map(x => ({ week: x.v.week ? x.v.week + '주' : '', label: (x.v.label.split(' · ')[1] || '1회'),
           del: () => this.setState({ rfVisits: V.filter((_, j) => j !== x.vi) }) })), hasOpts: g.opts.length > 1, noOpts: g.opts.length <= 1,
         single: g.opts[0] ? g.opts[0].label + ' · ' + optText(g.opts[0]) + (g.opts[0].price != null ? '원' : '') : '',
         opts: g.opts.map((o, i) => { const on = String(i) === String(pick) || (g.opts.length === 1);
-          return { v: String(i), label: o.label, price: optText(o), bd: on ? '#030213' : 'rgba(0,0,0,0.1)', dot: on ? '#030213' : 'transparent', fg: on ? '#0a0a0a' : '#4b5563',
+          return { v: String(i), label: o.label, price: optText(o), bd: on ? '#7c6ce8' : 'rgba(0,0,0,0.18)', dot: on ? '#7c6ce8' : 'transparent', fg: on ? '#0a0a0a' : '#4b5563',
             pick: () => upd({ pick: String(i) }) }; }),
         onWeek: e => upd({ week: e.target.value }), onPick: e => upd({ pick: e.target.value }),
         dec: () => upd({ qty: Math.max(1, qty - 1) }), inc: () => upd({ qty: Math.min(20, qty + 1) }),
@@ -1345,7 +1345,7 @@ class Component extends DCLogic {
     const rfDraft = () => ({ used: s.rfUsed || null, visits: V, les: s.rfLes || null, vars: s.rfVar || null, alloc: s.rfAlloc || null, reason: rfReason });
     const reasons = ['개인 사정', '이사 · 거리', '건강상 사유', '시술 불만족'].map(r => {
       const on = r === rfReason; return { label: r, pick: () => this.setState({ rfReason: r }),
-        bd: on ? '#030213' : 'rgba(0,0,0,0.1)', bg: on ? '#e9ebef' : '#fff', fg: on ? '#030213' : '#4b5563' }; });
+        bd: on ? PUR.bd : 'rgba(0,0,0,0.08)', bg: on ? PUR.bg : '#fff', fg: on ? PUR.fg : '#4b5563' }; });
     const rDocRows = rItems.map(r => ({ kind: r.kind, name: r.docName, reg: C.cap ? '—' : (C.items[rItems.indexOf(r)].qty || '—'),
       used: r.used, price: r.price, amt: r.amt }))
       // 정산서: 서비스 기록을 항목별 1줄로 묶음 — 예) 염증주사 (4주차 2~5부위, 8주차 1부위)
