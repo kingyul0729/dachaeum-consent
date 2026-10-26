@@ -450,7 +450,7 @@ test('PGM-0041 흑자 1cm 1개: 총 등록금액 330,000원 표시·저장, 병�
   assert.match(await body(p), /1개 330,000원~/);
   await click(p, '흑자 제거');
   await p.locator('input[placeholder="치료 부위 입력"]').first().fill('왼쪽 볼');
-  await p.locator('input[placeholder="크기"]').first().fill('1'); await p.locator('input[placeholder="크기"]').first().blur(); await p.waitForTimeout(300);
+  await click(p, '1cm 이하');   // 크기는 구간 버튼으로 선택 (소수점 입력 없음)
   await click(p, '카드');
   assert.match(await body(p), /330,000/);
   await signAndSave(p);

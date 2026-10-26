@@ -283,8 +283,7 @@ body,body *{word-break:keep-all;overflow-wrap:break-word;line-break:strict}
                   <sc-if value="{{ l.canDel }}" hint-placeholder-val="{{ false }}"><div sc-camel-on-click="{{ l.del }}" style="height:31.5px;padding:0 6px;display:flex;align-items:center;font-size:12.25px;color:#717182;cursor:pointer;flex:none">삭제</div></sc-if>
                 </div>
                 <div style="display:flex;align-items:center;gap:10px;padding-left:30px">
-                  <div style="position:relative;width:110px;flex:none"><input value="{{ l.size }}" sc-camel-on-change="{{ l.onSize }}" sc-camel-input-mode="decimal" placeholder="크기" style="width:100%;box-sizing:border-box;height:31.5px;padding:0 34px 0 12px;border:1px solid transparent;border-radius:6.75px;font-family:inherit;text-align:right"><span style="position:absolute;right:11px;top:13px;font-size:12.25px;color:#717182">cm</span></div>
-                  <div style="flex:1;min-width:0;font-size:12.25px;color:#4b5563">{{ l.tier }}</div>
+                  <div style="flex:1;min-width:0;display:flex;flex-wrap:wrap;gap:6px"><sc-for list="{{ l.sizeOpts }}" as="z" hint-placeholder-count="3"><div sc-camel-on-click="{{ z.pick }}" style="height:31.5px;padding:0 12px;box-sizing:border-box;border-radius:6.75px;display:flex;align-items:center;font-size:13px;cursor:pointer;border:1px solid {{ z.bd }};background:{{ z.bg }};color:{{ z.fg }}">{{ z.label }}</div></sc-for></div>
                   <div style="font-size:14px;font-weight:500;text-align:right;font-variant-numeric:tabular-nums;flex:none">{{ l.priceText }}</div>
                 </div>
               </div>
@@ -401,12 +400,12 @@ body,body *{word-break:keep-all;overflow-wrap:break-word;line-break:strict}
             <div style="margin-top:12px;font-size:12px;font-weight:600">1. 프로그램 구성</div>
 <sc-if value="{{ isLesion }}" hint-placeholder-val="{{ false }}">
 <div style="margin-top:7px;border-top:1.2px solid #1c1f23;font-size:var(--tbl,11.5px);line-height:1.5;font-variant-numeric:tabular-nums">
-<div style="display:grid;grid-template-columns:44px minmax(0,1fr) 70px 90px 60px 120px;background:#f7f8f9;border-bottom:1px solid #d5d9de;font-weight:500">
-<div style="padding:8px 10px;text-align:center">No</div><div style="padding:6px 14px">치료 부위</div><div style="padding:6px 14px;text-align:right">크기</div><div style="padding:6px 14px">적용 기준</div><div style="padding:6px 10px;text-align:right">개수</div><div style="padding:6px 20px 6px 14px;text-align:right">병변별 계약금액</div>
+<div style="display:grid;grid-template-columns:44px minmax(0,1fr) 110px 60px 120px;background:#f7f8f9;border-bottom:1px solid #d5d9de;font-weight:500">
+<div style="padding:8px 10px;text-align:center">No</div><div style="padding:6px 14px">치료 부위</div><div style="padding:6px 14px">크기</div><div style="padding:6px 10px;text-align:right">개수</div><div style="padding:6px 20px 6px 14px;text-align:right">병변별 계약금액</div>
 </div>
 <sc-for list="{{ lesionRows }}" as="l" hint-placeholder-count="2">
-<div style="display:grid;grid-template-columns:44px minmax(0,1fr) 70px 90px 60px 120px;border-bottom:1px solid #e3e6ea">
-<div style="padding:8px 10px;text-align:center">{{ l.no }}</div><div style="padding:6px 14px;font-weight:600;color:#111418">{{ l.siteText }}</div><div style="padding:6px 14px;text-align:right">{{ l.sizeText }}</div><div style="padding:6px 14px">{{ l.tier }}</div><div style="padding:6px 10px;text-align:right">1개</div><div style="padding:6px 20px 6px 14px;text-align:right">{{ l.priceText }}</div>
+<div style="display:grid;grid-template-columns:44px minmax(0,1fr) 110px 60px 120px;border-bottom:1px solid #e3e6ea">
+<div style="padding:8px 10px;text-align:center">{{ l.no }}</div><div style="padding:6px 14px;font-weight:600;color:#111418">{{ l.siteText }}</div><div style="padding:6px 14px">{{ l.tier }}</div><div style="padding:6px 10px;text-align:right">1개</div><div style="padding:6px 20px 6px 14px;text-align:right">{{ l.priceText }}</div>
 </div>
 </sc-for>
 <div style="border-bottom:1.2px solid #1c1f23"></div>
@@ -808,7 +807,7 @@ body,body *{word-break:keep-all;overflow-wrap:break-word;line-break:strict}
         </div>
         <div style="margin-top:22px;font-size:15px;font-weight:600">{{ p1ListTitle }}</div>
         <div style="margin-top:6px">
-          <div style="display:grid;grid-template-columns:minmax(0,1fr) 90px 120px;gap:12px;padding:8px 0;border-bottom:1px solid #d5d9de;font-size:13px;color:#8a929a"><span>시술명</span><span style="text-align:right">횟수</span><span style="text-align:right">{{ p1UnitHead }}</span></div>
+          <div style="display:grid;grid-template-columns:minmax(0,1fr) 90px 120px;gap:12px;padding:8px 0;border-bottom:1px solid #d5d9de;font-size:13px;color:#8a929a"><span>시술명</span><span style="text-align:right">{{ p1QtyHead }}</span><span style="text-align:right">{{ p1UnitHead }}</span></div>
           <sc-for list="{{ p1Rows }}" as="r" hint-placeholder-count="4">
             <div style="display:grid;grid-template-columns:minmax(0,1fr) 90px 120px;gap:12px;align-items:baseline;padding:11px 0;border-bottom:1px solid #eef0f2;font-size:14.5px"><span style="min-width:0">{{ r.name }}</span><span style="text-align:right;color:#4b5563;font-variant-numeric:tabular-nums">{{ r.q }}</span><span style="text-align:right;color:#4b5563;font-variant-numeric:tabular-nums">{{ r.u }}</span></div>
           </sc-for>
@@ -847,12 +846,12 @@ body,body *{word-break:keep-all;overflow-wrap:break-word;line-break:strict}
           <div style="margin-top:12px;font-size:12px;font-weight:600">1. 프로그램 구성</div>
 <sc-if value="{{ isLesion }}" hint-placeholder-val="{{ false }}">
 <div style="margin-top:7px;border-top:1.2px solid #1c1f23;font-size:var(--tbl,11.5px);line-height:1.5;font-variant-numeric:tabular-nums">
-<div style="display:grid;grid-template-columns:44px minmax(0,1fr) 70px 90px 60px 120px;background:#f7f8f9;border-bottom:1px solid #d5d9de;font-weight:500">
-<div style="padding:8px 10px;text-align:center">No</div><div style="padding:6px 14px">치료 부위</div><div style="padding:6px 14px;text-align:right">크기</div><div style="padding:6px 14px">적용 기준</div><div style="padding:6px 10px;text-align:right">개수</div><div style="padding:6px 20px 6px 14px;text-align:right">병변별 계약금액</div>
+<div style="display:grid;grid-template-columns:44px minmax(0,1fr) 110px 60px 120px;background:#f7f8f9;border-bottom:1px solid #d5d9de;font-weight:500">
+<div style="padding:8px 10px;text-align:center">No</div><div style="padding:6px 14px">치료 부위</div><div style="padding:6px 14px">크기</div><div style="padding:6px 10px;text-align:right">개수</div><div style="padding:6px 20px 6px 14px;text-align:right">병변별 계약금액</div>
 </div>
 <sc-for list="{{ lesionRows }}" as="l" hint-placeholder-count="2">
-<div style="display:grid;grid-template-columns:44px minmax(0,1fr) 70px 90px 60px 120px;border-bottom:1px solid #e3e6ea">
-<div style="padding:8px 10px;text-align:center">{{ l.no }}</div><div style="padding:6px 14px;font-weight:600;color:#111418">{{ l.siteText }}</div><div style="padding:6px 14px;text-align:right">{{ l.sizeText }}</div><div style="padding:6px 14px">{{ l.tier }}</div><div style="padding:6px 10px;text-align:right">1개</div><div style="padding:6px 20px 6px 14px;text-align:right">{{ l.priceText }}</div>
+<div style="display:grid;grid-template-columns:44px minmax(0,1fr) 110px 60px 120px;border-bottom:1px solid #e3e6ea">
+<div style="padding:8px 10px;text-align:center">{{ l.no }}</div><div style="padding:6px 14px;font-weight:600;color:#111418">{{ l.siteText }}</div><div style="padding:6px 14px">{{ l.tier }}</div><div style="padding:6px 10px;text-align:right">1개</div><div style="padding:6px 20px 6px 14px;text-align:right">{{ l.priceText }}</div>
 </div>
 </sc-for>
 <div style="border-bottom:1.2px solid #1c1f23"></div>

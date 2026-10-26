@@ -923,10 +923,12 @@ class Component extends DCLogic {
     const setLesion = (k, f, v) => this.setState(st => { const a = [...(st.lesions || [{ site: '', size: '' }])];
       a[k] = { ...a[k], [f]: v }; return { lesions: a }; });
     const lesionRows = LS.map((l, k) => { const t = tierOf(l.size);
-      return { no: k + 1, site: l.site, size: l.size, siteText: l.site || '—', sizeText: l.size ? l.size + 'cm' : '—',
+      return { no: k + 1, site: l.site, size: l.size, siteText: l.site || '—', sizeText: t ? t.label : '—',
         tier: t ? t.label : (l.size ? '3cm 초과 · 상담' : '—'), price: t ? t.price : 0, priceText: t ? won(t.price) + '원' : '—',
         onSite: e => setLesion(k, 'site', e.target.value),
-        onSize: e => setLesion(k, 'size', e.target.value.replace(/[^0-9.]/g, '')),
+        // 크기는 소수점 측정 대신 구간(1cm 이하 · 2cm 이하 · 3cm 이하)을 눌러 선택
+        sizeOpts: tiers.map(z => { const on = !!t && t === z; return { label: z.label, pick: () => setLesion(k, 'size', String(z.max)),
+          bd: on ? PUR.bd : 'rgba(0,0,0,0.1)', bg: on ? PUR.bg : '#ffffff', fg: on ? PUR.fg : '#3f444b' }; }),
         del: () => this.setState(st => ({ lesions: (st.lesions || LS).filter((_, j) => j !== k) })), canDel: LS.length > 1 }; });
     const lesionTotal = lesionRows.reduce((t, r) => t + r.price, 0);
     const lesionOk = LS.length > 0 && lesionRows.every(r => r.site && r.price);
@@ -1159,7 +1161,7 @@ class Component extends DCLogic {
     const nextOk = pg === 1 ? !!s.ck1 : pg === 2 ? rulesOk : false;
     const pgGo = n => { this.setState({ pPage: n }); setTimeout(() => { const sc = document.querySelector('[data-sign-scroll]'); if (sc) sc.scrollTop = 0; }, 30); };
     const unitOf = t => /^[\d,]+$/.test(t || '') ? t + '원' : '';
-    const p1Rows = isLesion ? lesionRows.map(r => ({ name: '흑자 ' + r.no + ' · ' + r.siteText + ' ' + r.sizeText, q: r.tier, u: r.priceText }))
+    const p1Rows = isLesion ? lesionRows.map(r => ({ name: '흑자 ' + r.no + ' · ' + r.siteText, q: r.tier, u: r.priceText }))
       : docItems.filter(i => !i.isAdd && i.kind === '시술').map(i => ({ name: i.name, q: i.qtyText || '', u: unitOf(i.priceText) }))
         .concat(docItems.filter(i => !i.isAdd && i.kind !== '시술').map(i => ({ name: i.name, q: '포함', u: '' })))
         .concat(docItems.filter(i => i.isAdd).map(i => ({ name: i.name, q: i.addPrice ? '+' + won(i.addPrice) + '원' : '추가', u: '' })));
@@ -1171,7 +1173,7 @@ class Component extends DCLogic {
         : pg === 2 ? '계약 전 꼭 확인해야 할 이용 및 환불 규정입니다.\n' + (needTrace ? '점선의 회색 글씨 두 곳을 눌러서 직접 따라 써 주세요. ' : needSn ? '확인 문장을 눌러 회색 숫자를 따라 써 주세요. ' : '') + '중요한 말을 누르면 빨간 밑줄이 그어져요.'
         : '아래 서명란을 눌러 서명해 주세요.',
       docDisp: pg === 2 ? 'block' : 'none', pg3: pg === 3,
-      sig3El: s.sigImg ? React.createElement('img', { src: s.sigImg, alt: '서명', style: { maxWidth: '100%', maxHeight: 200, display: 'block', margin: '0 auto' } }) : null, hasSig3: !!s.sigImg, noSig3: !s.sigImg, p1Rows, p1ListTitle: isLesion ? '등록 흑자' : '시술 구성', p1UnitHead: isLesion ? '금액' : '1회 단가',
+      sig3El: s.sigImg ? React.createElement('img', { src: s.sigImg, alt: '서명', style: { maxWidth: '100%', maxHeight: 200, display: 'block', margin: '0 auto' } }) : null, hasSig3: !!s.sigImg, noSig3: !s.sigImg, p1Rows, p1ListTitle: isLesion ? '등록 흑자' : '시술 구성', p1UnitHead: isLesion ? '금액' : '1회 단가', p1QtyHead: isLesion ? '크기' : '횟수',
       hasP1List: p1ListNum > totalNum && totalNum > 0, p1ListText: won(p1ListNum) + '원',
       toggleCk1: () => this.setState(st => ({ ck1: !st.ck1 })), ck1Bd: s.ck1 ? '#1c1f23' : '#9aa0a7', ck1Bg: s.ck1 ? '#1c1f23' : '#ffffff', ck1Mark: s.ck1 ? '✓' : '',
       hasPgMsg: !!pgMsg, pgMsg, showNext: pg < 3, nextBg: nextOk ? '#1c1f23' : '#d5d9de', nextFg: nextOk ? '#ffffff' : '#8a929a',
@@ -1210,7 +1212,7 @@ class Component extends DCLogic {
       preBal: balIn, priorDep,
       cap: capped ? Number(capN) : null, svcVisit: svcNote,
       items: isLesion ? lesionRows.map(r => ({ kind: '시술', lesionUnit: true, qty: 5, price: r.price,
-          name: '흑자 ' + r.no + ' · ' + r.site + ' ' + r.sizeText + ' (' + r.tier + ')' })) :
+          name: '흑자 ' + r.no + ' · ' + r.site + ' (' + r.tier + ')' })) :
         // 환불 정산단가(settleUnit) 기준. 정산 제외 항목은 차감 대상에서 빠짐. 판매금액 0원(S/V)이어도 정산단가는 유지
         (cur.items || []).filter(i => !isSvcItem(i) && i.settleType !== '정산 제외').map(i => ({
         kind: i.kind === '서비스권' ? '서비스' : '시술', settleType: i.settleType || '',
@@ -1423,7 +1425,7 @@ class Component extends DCLogic {
                if (!p1ok) { this.setState({ tried1: true }); return this.flash('환자 정보를 확인해 주세요'); }
                // 횟수 묶음(예: 정상가 1회·3회)은 줄을 펼친 뒤 횟수까지 골라야 선택됨
                if (!cur) return this.flash(s.oGrp ? '횟수를 선택해 주세요 (+ 버튼으로 1회 · 3회 등 선택)' : '프로그램을 선택해 주세요');
-               if (isLesion && !lesionOk) return this.flash('흑자별 부위와 크기(3cm 이하)를 입력해 주세요');
+               if (isLesion && !lesionOk) return this.flash('흑자별 부위를 입력하고 크기를 선택해 주세요');
                if (discKey === 'pre' && !preTier) return this.flash('선결제권 기준을 선택해 주세요');
                if (discKey === 'pre' && !preNew && !balIn) return this.flash('선결제권 할인은 확인된 보유 잔액이 있거나 신규 구매하는 경우에만 적용할 수 있습니다');
                if (!totalNum) return this.flash('총 등록금액을 입력해 주세요');
