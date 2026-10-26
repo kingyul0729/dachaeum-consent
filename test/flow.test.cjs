@@ -15,6 +15,7 @@ async function open(seed, opt = {}) {
   const p = await ctx.newPage();
   p.errors = []; p.dialogs = []; p.on('pageerror', e => p.errors.push(e.message));
   p.on('dialog', d => { p.dialogs.push(d.message()); if (opt.handle) return opt.handle(d); d.accept(opt.answer ? opt.answer(d) : undefined); });
+  if (opt.now) await p.clock.setFixedTime(new Date(opt.now));
   await p.goto(URL);
   await p.evaluate(([c, extra]) => { localStorage.clear(); if (c) localStorage.setItem('dachaeum.v3.contracts', JSON.stringify(c));
     Object.entries(extra || {}).forEach(([k, v]) => localStorage.setItem(k, v)); }, [seed || null, opt.storage || null]);
@@ -1629,4 +1630,28 @@ test('환자 화면 1/3 등록 내용 → 2/3 규정(동그라미·따라 쓰기
   assert.equal((d.html.match(/<img[^>]*alt="(결제금액의 10%|1회 정상가)"/g) || []).length, 2, '따라 쓴 글씨');
   await doneOk(p);
   assert.deepEqual(p.errors, []);
+});
+
+test('11월 이벤트: 기간 전에는 숨김, 리프팅 패키지(리투오 스페셜 옵션)는 1회 정상가로 저장, 내 맘대로 피부관리는 모공 케어 정상가 입력 필요', async () => {
+  const p0 = await open(null, { now: '2026-10-31T10:00:00' });
+  await click(p0, '새 동의서 작성'); await click(p0, '이벤트');
+  assert.doesNotMatch(await body(p0), /\[11월\]/, '11월 전에는 이벤트 탭에 없음');
+  const p = await open(null, { now: '2026-11-05T10:00:00' });
+  await click(p, '새 동의서 작성'); await click(p, '이벤트');
+  const b0 = await body(p);
+  assert.match(b0, /\[11월\] 리프팅 & 스킨부스터 패키지/); assert.match(b0, /\[11월\] 내 맘대로 피부관리/);
+  await p.goto(URL); await p.waitForTimeout(1500);
+  await toStep2(p, 'PGM-EV-N11L3B', '울쎄라 200샷 + 리투오 5cc + LDM Triple (스페셜 옵션)');
+  const b = (await body(p)).replace(/\s+/g, ' ');
+  assert.match(b, /정상가 1,705,000원/); assert.match(b, /최종 계약금액 1,260,000원/);
+  await click(p, '카드'); await click(p, '동의서 미리보기 · 서명');
+  await agree(p); await sign(p);
+  await click(p, '동의하고 저장'); await p.waitForTimeout(700); await doneOk(p);
+  const [c] = await contracts(p);
+  assert.equal(c.total, 1260000); assert.equal(c.event, 'EV-N11-LIFT'); assert.equal(c.evMonths, 3);
+  assert.deepEqual(c.items.map(i => [i.name, i.price]), [['울쎄라 200샷', 880000], ['리투오 5cc', 660000], ['LDM Triple (12분)', 165000]], '환불 기준 = 1회 정상가');
+  await p.goto(URL); await p.waitForTimeout(1500);
+  await toStep2(p, 'PGM-EV-N11C', '총 3회 자유 선택 (동일 관리 중복 가능)');
+  assert.equal(await p.locator('input[placeholder="1회 정상가"]').count(), 1, '모공·피부결 케어만 1회 정상가 입력');
+  assert.deepEqual(p0.errors.concat(p.errors), []);
 });
