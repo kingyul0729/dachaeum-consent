@@ -946,7 +946,7 @@ class Component extends DCLogic {
       const ad = famAll.flatMap(q => q.adds || []).find(a => a.name === nm) || {};
       return { label: String(nm).replace(/\s*\(.*?\)/g, '') + ' 추가', price: Number(ad.price || 0) ? '+' + won(ad.price) + '원' : '', on, mark: on ? '✓' : '',
         bd: on ? PUR.bd : 'rgba(0,0,0,0.18)', bg: on ? '#7c6ce8' : '#ffffff', fg: on ? '#ffffff' : 'transparent',
-        pick: () => tgt ? this.setState({ progId: tgt.id, prog: -1 }) : this.flash('이 조합의 프로그램이 없습니다') }; }) : [];
+        pick: () => tgt ? this.setState({ progId: tgt.id, prog: -1 }) : this.flash('선택한 옵션 조합의 프로그램이 없습니다') }; }) : [];
     const selListNum = cur && !isLesion ? listOfProg(cur) : 0;
     // 할인·선결제권: 2단계에서 하나만 선택 → 최종 계약금액 확정 (3단계에서는 다시 계산하지 않음)
     // 이벤트 설정(가격 관리 → 이벤트)을 할인 선택·금액·결제 안내가 함께 참조
@@ -1425,7 +1425,7 @@ class Component extends DCLogic {
                if (!cur) return this.flash(s.oGrp ? '횟수를 선택해 주세요 (+ 버튼으로 1회 · 3회 등 선택)' : '프로그램을 선택해 주세요');
                if (isLesion && !lesionOk) return this.flash('흑자별 부위와 크기(3cm 이하)를 입력해 주세요');
                if (discKey === 'pre' && !preTier) return this.flash('선결제권 기준을 선택해 주세요');
-               if (discKey === 'pre' && !preNew && !balIn) return this.flash('선결제권 할인은 확인한 보유 잔액이 있거나 신규 구매할 때만 적용할 수 있습니다');
+               if (discKey === 'pre' && !preNew && !balIn) return this.flash('선결제권 할인은 확인된 보유 잔액이 있거나 신규 구매하는 경우에만 적용할 수 있습니다');
                if (!totalNum) return this.flash('총 등록금액을 입력해 주세요');
                if (isManual && !manualUnit) return this.flash('환불용 1회 정상가를 입력해 주세요');
                { const miss = unitFixLines.find(l => !fixVal(l.key)); if (miss) { this.setState({ tried3: true }); return this.flash('‘' + miss.name + '’의 환불용 1회 정상가를 입력해 주세요'); } }
@@ -1563,7 +1563,7 @@ class Component extends DCLogic {
       isPreDisc: discKey === 'pre', isRetDisc: discKey === 'ret',
       tierOpts: Object.keys(PR.PREPAID_TIER).map(t => ({ label: t, ...chip(preTier === t), pick: () => this.setState({ preTier: t }) })),
       retOpts: PR.RET_PERIODS.map(t => ({ label: t, ...chip((s.retPeriod || '1개월 이내') === t), pick: () => this.setState({ retPeriod: t }) })),
-      discNote: isYearSB ? (discKey === 'pre' ? '선결제권 사용 · 1년 이내 혜택가 제외, 정상가 기준 계산' : '리프팅 후 1년 이내 혜택가 · 지인 소개·재티켓팅·이벤트 추가 할인 불가') : noPreHair ? (hairRate ? '제모 결합할인 적용' : '지정 결합가') + ' · 추가 할인 불가' : noRet ? '여드름 4주 프로그램 · 재티켓팅 제외' : '',
+      discNote: isYearSB ? (discKey === 'pre' ? '선결제권 사용 · 1년 이내 혜택가 제외 · 정상가 기준으로 계산' : '리프팅 후 1년 이내 혜택가 · 지인 소개·재티켓팅·이벤트 추가 할인 불가') : noPreHair ? (hairRate ? '제모 결합할인 적용' : '지정 결합가') + ' · 추가 할인 불가' : noRet ? '여드름 4주 프로그램 · 재티켓팅 제외' : '',
       hasDiscNote: !!cur && (isYearSB || noPreHair || noRet),
       hasHairOff: hairRate > 0, hairOffLabel: '제모 결합 ' + hairElig.length + '부위 ' + Math.round(hairRate * 100) + '%', hairOffText: '− ' + won(hairOff) + '원', hairSumText: won(hairSum) + '원',
       hasDisc: !!discRate, discLabel, discBaseText: won(discBase) + '원',
@@ -1649,7 +1649,7 @@ class Component extends DCLogic {
       exitRefundSign: () => this.setState({ screen: 'refund' }),
       ...rf,
       saveSig: () => { if (this._saving) return;
-        if (!s.ckRefund) return this.flash('환불 규정 확인에 체크해 주세요');
+        if (!s.ckRefund) return this.flash('이용 및 환불 규정 동의에 체크해 주세요');
         if (writeLeft) return this.flash(WRITE_MSG);
         if (!s.sigImg) return this.flash('서명이 필요합니다');
         if (s.signFrom === 'resign' && !sameAsContract()) return this.flash(RESIGN_MSG);

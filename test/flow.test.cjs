@@ -847,7 +847,7 @@ test('선결제권 보유 잔액: 충분(1,000,000)·부족(300,000)·0원(할�
   // 잔액 0원 + 신규 구매 없음 → 선결제권 할인 불가
   await toStep2(p, 'PGM-0018', '여드름 8주 프로그램', '잔액없음');
   await click(p, '선결제권'); await click(p, '300'); await click(p, '동의서 미리보기 · 서명');
-  assert.match(await body(p), /선결제권 할인은 확인한 보유 잔액이 있거나 신규 구매할 때만 적용할 수 있습니다/);
+  assert.match(await body(p), /선결제권 할인은 확인된 보유 잔액이 있거나 신규 구매하는 경우에만 적용할 수 있습니다/);
   assert.doesNotMatch(await body(p), /동의하고 저장|확인했어요/, '확정 전에는 서명 화면으로 넘어가지 않음');
   // 충분
   await balIn.fill('1000000'); await p.waitForTimeout(300);
