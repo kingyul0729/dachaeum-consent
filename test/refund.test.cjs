@@ -381,3 +381,19 @@ test('가격표_최종 반영: 판매가·1회 정상가', () => {
   assert.deepEqual([T('PGM-0086'), T('PGM-0086B'), T('PGM-0231')], [990000, 330000, 99000]);
   assert.deepEqual(['PGM-0232', 'PGM-0233', 'PGM-0234', 'PGM-0235'].map(T), [55000, 440000, 55000, 440000], '백옥·신데렐라');
 });
+
+test('제모 다부위 할인: 인중·겨드랑이만 제외, 남성 결합 제모 상품도 부위 수에 포함되고 단독이면 다른 할인 가능 / 다부위 할인은 다른 할인과 중복 없음', () => {
+  const all = require('../data/programs.json').programs, P = id => all.find(p => p.id === id);
+  const thigh = P('PGM-0158'), calf = P('PGM-0156'), arm = P('PGM-0160'), lip = P('PGM-0154'), pit = P('PGM-0149'), beard = P('PGM-0038');
+  assert.equal(PR.hairCombo([thigh, calf]).rate, 0.1, '허벅지 + 종아리 = 2부위 10%');
+  assert.equal(PR.hairCombo([thigh, calf, arm]).rate, 0.2, '3부위 20%');
+  assert.equal(PR.hairCombo([thigh, lip, pit]).rate, 0, '인중·겨드랑이는 부위 수에서 제외');
+  const c = PR.hairCombo([beard, thigh]);
+  assert.deepEqual([c.elig.length, c.rate, c.off], [2, 0.1, Math.round((880000 + Number(thigh.total)) * 0.1)], '남성 전체수염도 부위 수에 포함');
+  const run = (cur, disc, hairRate = 0) => PR.discount({ cur, held: false, hairParts: [cur], hairRate, listNum: Number(cur.total), optAddSum: 0, all, disc, preTier: '300' });
+  for (const id of ['PGM-0037', 'PGM-0038', 'PGM-0040', 'PGM-0216', 'PGM-0217']) {
+    assert.deepEqual(run(P(id), 'none').allowed, ['none', 'ref', 'ret', 'pre'], id + ' 단독: 일반 제모와 같은 할인');
+    assert.equal(run(P(id), 'pre').totalNum, Math.round(Number(P(id).total) * 0.9), id + ' 선결제권 300 = 10%');
+  }
+  assert.deepEqual(run(beard, 'pre', 0.1).allowed, ['none'], '다부위 할인 적용 중이면 다른 할인 없음');
+});

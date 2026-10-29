@@ -9,11 +9,11 @@
 
   // 이름 규칙은 가격 데이터의 원래 이름(baseName)으로 판단 → 가격 관리에서 표시 이름을 바꿔도 규칙·연결 유지
   const nm = p => (p && (p.baseName || p.name)) || '';
-  // 제모: 남성 지정 결합상품 / 결합할인 제외 부위
+  // 제모: 남성 결합상품(판정만 유지, 할인은 일반 제모와 같음) / 다부위 할인 제외 부위(인중·겨드랑이)
   const hairFixed = p => /하관|전체수염|턱밑라인/.test(nm(p));
   const hairExcluded = p => /인중|겨드랑이/.test(nm(p));
   function hairCombo(parts) {
-    const elig = parts.filter(p => !hairExcluded(p) && !hairFixed(p));
+    const elig = parts.filter(p => !hairExcluded(p));
     const rate = elig.length >= 3 ? 0.2 : elig.length === 2 ? 0.1 : 0;
     const off = Math.round(elig.reduce((t, p) => t + Number(p.total || 0), 0) * rate);
     const sum = parts.reduce((t, p) => t + Number(p.total || 0), 0);
@@ -33,8 +33,8 @@
   function discount({ cur, held, hairParts, hairRate, listNum, optAddSum, all, disc, preTier, evDef, rateEvents }) {
     const isEvProg = !!(cur && cur.event);
     const isYearSB = isYearSkinBooster(cur);
-    const isComboFixed = held ? !!(cur && cur.cat === '제모' && hairFixed(cur)) : (hairParts || []).some(hairFixed);
-    const noPreHair = isComboFixed || hairRate > 0;
+    const isComboFixed = false;   // 남성 결합 제모 상품도 일반 제모와 같은 할인 기준
+    const noPreHair = hairRate > 0;   // 제모 다부위 할인은 선결제권 등 다른 할인과 중복 없음
     const noRet = !!(cur && cur.cat === '여드름' && /4주/.test(nm(cur)));
     const RE = (!isEvProg && !noPreHair && !isYearSB && cur ? (rateEvents || []) : []);
     const evOf = k => String(k).startsWith('ev:') ? RE.find(e => 'ev:' + e.id === k) || null : null;
