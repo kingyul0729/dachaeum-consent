@@ -299,10 +299,10 @@ test('예약금 계산: 목표 = 계약 총액 10%, 이미 납부·사용한 금
   assert.equal(r4.depAmt, 0, '남은 미납금액 5,000이 있어도 목표 10,000 이미 충족');
 });
 
-test('리프팅 후 혜택가 7개(인모드 FX + 스킨부스터 리프팅 할인가 6개): 지인 소개·재티켓팅·할인율 이벤트 선택 불가, 혜택가 그대로 / 선결제권은 정상가 기준', () => {
+test('리프팅 후 혜택가 8개(인모드 FX · 스타룩스 얼굴 전체 3회 + 스킨부스터 리프팅 할인가 6개): 지인 소개·재티켓팅·할인율 이벤트 선택 불가, 혜택가 그대로 / 선결제권은 정상가 기준', () => {
   const all = require('../data/programs.json').programs;
   const ids = all.filter(p => PR.isYearSkinBooster(p)).map(p => p.id).sort();
-  assert.deepEqual(ids, ['PGM-0085B', 'PGM-SB-1D1', 'PGM-SB-1D3', 'PGM-SB-2D1', 'PGM-SB-2D3', 'PGM-SB-3D1', 'PGM-SB-3D3']);
+  assert.deepEqual(ids, ['PGM-0085B', 'PGM-0086B', 'PGM-SB-1D1', 'PGM-SB-1D3', 'PGM-SB-2D1', 'PGM-SB-2D3', 'PGM-SB-3D1', 'PGM-SB-3D3']);
   for (const id of ids) {
     const cur = all.find(p => p.id === id), price = Number(cur.total);
     const ev = [{ id: 'EV-R-X', kind: 'rate', name: '가을 이벤트', rate: 0.1, programs: [id] }];
@@ -362,4 +362,22 @@ test('이용기간 만료 후 해지: 환불 없음 (만료일 당일까지는 �
   const pre = RF.settle({ ...C, program: '선결제권 300만원' }, { used: [0, 0, 0], asOf: '2030-01-01' });
   assert.equal(pre.expired, false); assert.equal(pre.refundNum, 3240000);
   assert.equal(RF.MSG_EXPIRED, '이용기간 만료로 환불 대상 아님');
+});
+
+test('가격표_최종 반영: 판매가·1회 정상가', () => {
+  const all = require('../data/programs.json').programs, P = id => all.find(p => p.id === id), T = id => Number(P(id).total);
+  assert.deepEqual(['PGM-0069', 'PGM-0071', 'PGM-0073', 'PGM-0075'].map(T), [2530000, 2870000, 3190000, 3740000], '울쎄라 + 올리지오 패키지');
+  assert.deepEqual(['PGM-0070', 'PGM-0072', 'PGM-0074', 'PGM-0076'].map(T), [2530000, 2870000, 3190000, 3740000], '울쎄라 + 세르프 패키지 (기존과 같음)');
+  assert.equal(T('PGM-SB-ANA1'), 99000);
+  const ana = all.flatMap(p => (p.items || []).concat(p.adds || [])).filter(i => /어나프라/.test(i.name));
+  assert.ok(ana.length && ana.every(i => i.settleUnit === '99000'), '어나프라주 1회 정상가 99,000');
+  assert.deepEqual([T('PGM-0121'), T('PGM-0118'), T('PGM-0212'), T('PGM-0213')], [132000, 132000, 275000, 55000], '보톡스');
+  assert.deepEqual(['PGM-0214', 'PGM-0215', 'PGM-0216', 'PGM-0217', 'PGM-0218', 'PGM-0219'].map(T), [990000, 1100000, 770000, 1100000, 165000, 165000], '남성 얼굴 제모');
+  assert.equal(T('PGM-0038'), 880000, '전체수염(이마 제외) 5회는 그대로');
+  assert.deepEqual(['PGM-0220', 'PGM-0221', 'PGM-0222'].map(T), [110000, 440000, 250000], '바스큐라 589');
+  assert.deepEqual(['PGM-0223', 'PGM-0224', 'PGM-0225', 'PGM-0226', 'PGM-0227', 'PGM-0228', 'PGM-0229', 'PGM-0230'].map(T), [1650000, 990000, 880000, 77000, 330000, 390000, 132000, 500000], '모공·잔주름');
+  for (const [id, lt] of [['PGM-0223', 2970000], ['PGM-0224', 1815000], ['PGM-0225', 1386000]])
+    assert.equal(P(id).items.reduce((t, i) => t + Number(i.unitPrice) * Number(i.qty), 0), lt, id + ' 1회 정상가 합계 = 가격표 정가');
+  assert.deepEqual([T('PGM-0086'), T('PGM-0086B'), T('PGM-0231')], [990000, 330000, 99000]);
+  assert.deepEqual(['PGM-0232', 'PGM-0233', 'PGM-0234', 'PGM-0235'].map(T), [55000, 440000, 55000, 440000], '백옥·신데렐라');
 });
